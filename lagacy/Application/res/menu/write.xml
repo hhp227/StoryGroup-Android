@@ -1,9 +1,0 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.hhp227.application.WriteActivity" >
-
-    <item android:id="@+id/action_send"
-          android:title="전송"
-          android:showAsAction="ifRoom" />
-
-</menu>
