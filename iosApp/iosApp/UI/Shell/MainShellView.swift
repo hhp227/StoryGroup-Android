@@ -40,7 +40,9 @@ struct MainShellView: View {
 
     let onLogout: () -> Void
 
-    @StateObject private var profileModel: ProfileViewModel
+    @StateObject private var profileViewModel: ProfileViewModel
+
+    @StateObject private var homeViewModel: HomeViewModel
 
     @State private var current: SGDestination = .home
 
@@ -52,14 +54,16 @@ struct MainShellView: View {
                 TabShellView(
                     current: $current,
                     showSettings: $showSettings,
-                    profile: profileModel.uiState.profile,
+                    profile: profileViewModel.uiState.profile,
+                    homeViewModel: homeViewModel,
                     onLogout: onLogout
                 )
             } else {
                 DrawerShellView(
                     current: $current,
                     showSettings: $showSettings,
-                    profile: profileModel.uiState.profile,
+                    profile: profileViewModel.uiState.profile,
+                    homeViewModel: homeViewModel,
                     onLogout: onLogout
                 )
             }
@@ -67,11 +71,16 @@ struct MainShellView: View {
         .sheet(isPresented: $showSettings) {
             SGSettingsView(theme: theme)
         }
-        .onAppear { profileModel.load() }
+        .onAppear {
+            // 로그인 세션 진입 시마다 내 정보/홈 피드 갱신(재로그인 포함) — Compose App.kt 미러
+            profileViewModel.onAction(.load)
+            homeViewModel.onAction(.refresh)
+        }
     }
 
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
-        _profileModel = StateObject(wrappedValue: ProfileViewModel(container: container))
+        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(container: container))
+        _homeViewModel = StateObject(wrappedValue: HomeViewModel(container: container))
         self.theme = theme
         self.onLogout = onLogout
     }
@@ -83,6 +92,8 @@ struct DestinationView: View {
 
     let profile: Profile?
 
+    let homeViewModel: HomeViewModel
+
     let onOpenSettings: () -> Void
 
     let onLogout: () -> Void
@@ -90,7 +101,7 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView()
+            HomeView(viewModel: homeViewModel)
         case .groups:
             GroupsView()
         case .friends:

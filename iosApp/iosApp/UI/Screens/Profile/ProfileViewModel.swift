@@ -2,13 +2,21 @@ import Foundation
 import Shared
 
 /// 내 정보(GET /api/users/me) — composeApp ProfileViewModel.kt와 1:1 미러. 프로필 화면/드로어 헤더가 공유한다.
-final class ProfileViewModel: ObservableObject {
+final class ProfileViewModel: MviViewModel {
+    typealias Event = Never
+
     @Published private(set) var uiState = UiState()
 
     private let getMyProfileUseCase: GetMyProfileUseCase
 
-    /// 로그인 직후 호출 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지)
-    func load() {
+    func onAction(_ action: Action) {
+        switch action {
+        case .load: load()
+        }
+    }
+
+    /// 로그인 직후 발화 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지)
+    private func load() {
         if uiState.isLoading { return }
 
         uiState.isLoading = true
@@ -33,5 +41,9 @@ final class ProfileViewModel: ObservableObject {
         var isLoading = false
         var profile: Profile? = nil
         var error: String? = nil
+    }
+
+    enum Action {
+        case load
     }
 }

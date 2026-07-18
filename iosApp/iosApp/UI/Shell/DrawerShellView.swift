@@ -11,6 +11,8 @@ struct DrawerShellView: View {
 
     let profile: Profile?
 
+    let homeViewModel: HomeViewModel
+
     let onLogout: () -> Void
 
     @State private var drawerOpen = false
@@ -28,6 +30,7 @@ struct DrawerShellView: View {
                 DestinationView(
                     destination: current,
                     profile: profile,
+                    homeViewModel: homeViewModel,
                     onOpenSettings: { showSettings = true },
                     onLogout: onLogout
                 )

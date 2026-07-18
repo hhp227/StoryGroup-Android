@@ -27,6 +27,9 @@
 		A1010017AABBCCDDEEFF0017 /* SGSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011018AABBCCDDEEFF0018 /* SGSettingsView.swift */; };
 		A1010018AABBCCDDEEFF0018 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011019AABBCCDDEEFF0019 /* ProfileViewModel.swift */; };
 		A1010019AABBCCDDEEFF0019 /* RegisterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101AAABBCCDDEEFF001A /* RegisterViewModel.swift */; };
+		A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */; };
+		A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101CAABBCCDDEEFF001C /* TimeFormats.swift */; };
+		A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101DAABBCCDDEEFF001D /* MviViewModel.swift */; };
 		A1010004AABBCCDDEEFF0004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011004AABBCCDDEEFF0004 /* Assets.xcassets */; };
 		A1010005AABBCCDDEEFF0005 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -53,6 +56,9 @@
 		A1011018AABBCCDDEEFF0018 /* SGSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SGSettingsView.swift; sourceTree = "<group>"; };
 		A1011019AABBCCDDEEFF0019 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		A101101AAABBCCDDEEFF001A /* RegisterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterViewModel.swift; sourceTree = "<group>"; };
+		A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		A101101CAABBCCDDEEFF001C /* TimeFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormats.swift; sourceTree = "<group>"; };
+		A101101DAABBCCDDEEFF001D /* MviViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MviViewModel.swift; sourceTree = "<group>"; };
 		A1011004AABBCCDDEEFF0004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1011006AABBCCDDEEFF0006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -96,9 +102,11 @@
 			isa = PBXGroup;
 			children = (
 				A1013002AABBCCDDEEFF0002 /* Components */,
+				A1013010AABBCCDDEEFF0010 /* Mvi */,
 				A1013003AABBCCDDEEFF0003 /* Screens */,
 				A101300CAABBCCDDEEFF000C /* Shell */,
 				A101300DAABBCCDDEEFF000D /* Theme */,
+				A101300EAABBCCDDEEFF000E /* Util */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -165,6 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				A1011012AABBCCDDEEFF0012 /* HomeView.swift */,
+				A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -210,6 +219,22 @@
 				A1011007AABBCCDDEEFF0007 /* SGTheme.swift */,
 			);
 			path = Theme;
+			sourceTree = "<group>";
+		};
+		A101300EAABBCCDDEEFF000E /* Util */ = {
+			isa = PBXGroup;
+			children = (
+				A101101CAABBCCDDEEFF001C /* TimeFormats.swift */,
+			);
+			path = Util;
+			sourceTree = "<group>";
+		};
+		A1013010AABBCCDDEEFF0010 /* Mvi */ = {
+			isa = PBXGroup;
+			children = (
+				A101101DAABBCCDDEEFF001D /* MviViewModel.swift */,
+			);
+			path = Mvi;
 			sourceTree = "<group>";
 		};
 		7332ACCB08708982CBFABD2D /* Products */ = {
@@ -346,6 +371,9 @@
 				A1010009AABBCCDDEEFF0009 /* LoginViewModel.swift in Sources */,
 				A1010018AABBCCDDEEFF0018 /* ProfileViewModel.swift in Sources */,
 				A1010019AABBCCDDEEFF0019 /* RegisterViewModel.swift in Sources */,
+				A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */,
+				A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */,
+				A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */,
 				A1010006AABBCCDDEEFF0006 /* SGTheme.swift in Sources */,
 				A101000BAABBCCDDEEFF000B /* SGComponents.swift in Sources */,
 				A101000CAABBCCDDEEFF000C /* MainShellView.swift in Sources */,

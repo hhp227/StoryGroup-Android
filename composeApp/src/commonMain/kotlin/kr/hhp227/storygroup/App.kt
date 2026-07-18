@@ -14,6 +14,7 @@ import kr.hhp227.storygroup.ui.screens.auth.LoginScreen
 import kr.hhp227.storygroup.ui.screens.auth.LoginViewModel
 import kr.hhp227.storygroup.ui.screens.auth.RegisterScreen
 import kr.hhp227.storygroup.ui.screens.auth.RegisterViewModel
+import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.shell.MainShell
 import kr.hhp227.storygroup.ui.theme.NightMode
@@ -39,13 +40,20 @@ fun App(container: AppContainer) {
         if (loginUiState.isLoggedIn) {
             val profileViewModel = viewModel { ProfileViewModel(container.getMyProfileUseCase) }
             val profileUiState by profileViewModel.uiState.collectAsState()
+            val homeViewModel = viewModel {
+                HomeViewModel(container.getMyGroupsUseCase, container.getGroupPostsUseCase)
+            }
 
-            // 로그인 세션 진입 시마다 내 정보 갱신(재로그인 포함)
-            LaunchedEffect(Unit) { profileViewModel.load() }
+            // 로그인 세션 진입 시마다 내 정보/홈 피드 갱신(재로그인 포함)
+            LaunchedEffect(Unit) {
+                profileViewModel.onAction(ProfileViewModel.Action.Load)
+                homeViewModel.onAction(HomeViewModel.Action.Refresh)
+            }
             MainShell(
                 themeState = themeState,
                 profile = profileUiState.profile,
-                onLogout = loginViewModel::logout
+                homeViewModel = homeViewModel,
+                onLogout = { loginViewModel.onAction(LoginViewModel.Action.Logout) }
             )
         } else {
             AuthFlow(
@@ -73,9 +81,9 @@ private fun AuthFlow(
         AuthScreen.LOGIN -> LoginScreen(
             uiState = loginUiState,
             justRegistered = justRegistered,
-            onLogin = loginViewModel::login,
+            onAction = loginViewModel::onAction,
             onNavigateToRegister = {
-                loginViewModel.clearError()
+                loginViewModel.onAction(LoginViewModel.Action.ClearError)
                 justRegistered = false
                 authScreen = AuthScreen.REGISTER
             }
@@ -84,18 +92,22 @@ private fun AuthFlow(
             val registerViewModel = viewModel { RegisterViewModel(container.registerUseCase) }
             val registerUiState by registerViewModel.uiState.collectAsState()
 
-            LaunchedEffect(registerUiState.isRegistered) {
-                if (registerUiState.isRegistered) {
-                    registerViewModel.consumeRegistered()
-                    justRegistered = true
-                    authScreen = AuthScreen.LOGIN
+            // 일회성 이벤트 수집 — 가입 완료 시 안내 문구와 함께 로그인으로 복귀
+            LaunchedEffect(registerViewModel) {
+                registerViewModel.event.collect { event ->
+                    when (event) {
+                        RegisterViewModel.Event.Registered -> {
+                            justRegistered = true
+                            authScreen = AuthScreen.LOGIN
+                        }
+                    }
                 }
             }
             RegisterScreen(
                 uiState = registerUiState,
-                onRegister = registerViewModel::register,
+                onAction = registerViewModel::onAction,
                 onNavigateToLogin = {
-                    registerViewModel.clearError()
+                    registerViewModel.onAction(RegisterViewModel.Action.ClearError)
                     authScreen = AuthScreen.LOGIN
                 }
             )

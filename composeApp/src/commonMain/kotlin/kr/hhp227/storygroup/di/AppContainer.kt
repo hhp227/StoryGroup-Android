@@ -2,12 +2,18 @@ package kr.hhp227.storygroup.di
 
 import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
+import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
+import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
@@ -26,10 +32,14 @@ class AppContainer(
     private val apiClient = createApiClient(tokenStorage)
     private val authRepository: AuthRepository = AuthRepositoryImpl(apiClient, tokenStorage)
     private val userRepository: UserRepository = UserRepositoryImpl(apiClient)
+    private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
+    private val postRepository: PostRepository = PostRepositoryImpl(apiClient)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
     val logoutUseCase = LogoutUseCase(authRepository)
     val registerUseCase = RegisterUseCase(authRepository)
     val getMyProfileUseCase = GetMyProfileUseCase(userRepository)
+    val getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository)
+    val getGroupPostsUseCase = GetGroupPostsUseCase(postRepository)
 }

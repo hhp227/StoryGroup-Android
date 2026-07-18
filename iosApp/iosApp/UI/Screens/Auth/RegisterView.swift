@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 가입 — 웹 /register·Compose RegisterScreen 미러. 성공 시 상위(AuthFlowView)가 로그인으로 되돌린다.
 struct RegisterView: View {
-    @StateObject private var model: RegisterViewModel
+    @StateObject private var registerViewModel: RegisterViewModel
     @Environment(\.sgColors) private var colors
     let onRegistered: () -> Void
     let onNavigateToLogin: () -> Void
@@ -15,7 +15,7 @@ struct RegisterView: View {
         onRegistered: @escaping () -> Void,
         onNavigateToLogin: @escaping () -> Void
     ) {
-        _model = StateObject(wrappedValue: RegisterViewModel(container: container))
+        _registerViewModel = StateObject(wrappedValue: RegisterViewModel(container: container))
         self.onRegistered = onRegistered
         self.onNavigateToLogin = onNavigateToLogin
     }
@@ -36,39 +36,39 @@ struct RegisterView: View {
                 SGTextField(
                     label: "이름",
                     text: $name,
-                    enabled: !model.uiState.isLoading
+                    enabled: !registerViewModel.uiState.isLoading
                 )
                 Spacer().frame(height: 16)
                 SGTextField(
                     label: "이메일",
                     text: $email,
                     keyboard: .emailAddress,
-                    enabled: !model.uiState.isLoading
+                    enabled: !registerViewModel.uiState.isLoading
                 )
                 Spacer().frame(height: 16)
                 SGTextField(
                     label: "비밀번호",
                     text: $password,
                     isSecure: true,
-                    enabled: !model.uiState.isLoading
+                    enabled: !registerViewModel.uiState.isLoading
                 )
 
-                if let error = model.uiState.error {
+                if let error = registerViewModel.uiState.error {
                     Spacer().frame(height: 12)
                     Text(error).font(.caption).foregroundColor(colors.rust)
                 }
                 Spacer().frame(height: 24)
 
                 SGPrimaryButton(
-                    title: model.uiState.isLoading ? "가입하는 중..." : "가입하기",
+                    title: registerViewModel.uiState.isLoading ? "가입하는 중..." : "가입하기",
                     enabled: !name.isEmpty && !email.isEmpty && !password.isEmpty,
-                    isLoading: model.uiState.isLoading,
+                    isLoading: registerViewModel.uiState.isLoading,
                     action: {
-                        model.register(
+                        registerViewModel.onAction(.register(
                             name: name.trimmingCharacters(in: .whitespaces),
                             email: email.trimmingCharacters(in: .whitespaces),
                             password: password
-                        )
+                        ))
                     }
                 )
                 Spacer().frame(height: 20)
@@ -82,16 +82,16 @@ struct RegisterView: View {
                             .font(.subheadline.bold())
                             .foregroundColor(colors.accent)
                     }
-                    .disabled(model.uiState.isLoading)
+                    .disabled(registerViewModel.uiState.isLoading)
                 }
             }
             .padding(.horizontal, 24)
         }
         .background(colors.paper.ignoresSafeArea())
-        .onChange(of: model.uiState.isRegistered) { isRegistered in
-            if isRegistered {
-                model.consumeRegistered()
-                onRegistered()
+        // 일회성 이벤트 수신 — Compose AuthFlow의 event.collect 미러
+        .onReceive(registerViewModel.event) { event in
+            switch event {
+            case .registered: onRegistered()
             }
         }
     }

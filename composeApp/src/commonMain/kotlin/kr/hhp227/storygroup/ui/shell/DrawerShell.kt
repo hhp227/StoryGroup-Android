@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 레거시 쉘: 구 앱 드로어(프로필 헤더 + 라운지·그룹·친구·채팅 + 알림·설정·로그아웃 보강) */
@@ -50,6 +51,7 @@ internal fun DrawerShell(
     currentDestination: MainDestination,
     onDestinationSelected: (MainDestination) -> Unit,
     profile: Profile?,
+    homeViewModel: HomeViewModel,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -121,6 +123,7 @@ internal fun DrawerShell(
             DestinationContent(
                 destination = currentDestination,
                 profile = profile,
+                homeViewModel = homeViewModel,
                 onOpenSettings = onOpenSettings,
                 onLogout = onLogout,
                 // 드로어 쉘은 하단 바가 없어 시스템 내비바 인셋을 콘텐츠가 직접 소화

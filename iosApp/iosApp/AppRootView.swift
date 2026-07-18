@@ -6,7 +6,7 @@ struct AppRootView: View {
 
     @StateObject private var theme = SGThemeState()
 
-    @StateObject private var session: LoginViewModel
+    @StateObject private var loginViewModel: LoginViewModel
 
     @Environment(\.colorScheme) private var systemScheme
 
@@ -22,10 +22,10 @@ struct AppRootView: View {
 
     var body: some View {
         Group {
-            if session.uiState.isLoggedIn {
-                MainShellView(container: container, theme: theme, onLogout: { session.logout() })
+            if loginViewModel.uiState.isLoggedIn {
+                MainShellView(container: container, theme: theme, onLogout: { loginViewModel.onAction(.logout) })
             } else {
-                AuthFlowView(container: container, session: session)
+                AuthFlowView(container: container, loginViewModel: loginViewModel)
             }
         }
         // Compose CompositionLocalProvider(LocalSgColors provides sg) 미러 — 하위 전체에 테마 전파
@@ -35,7 +35,7 @@ struct AppRootView: View {
 
     init(container: AppContainer) {
         self.container = container
-        _session = StateObject(wrappedValue: LoginViewModel(container: container))
+        _loginViewModel = StateObject(wrappedValue: LoginViewModel(container: container))
     }
 }
 
@@ -43,7 +43,7 @@ struct AppRootView: View {
 struct AuthFlowView: View {
     let container: AppContainer
 
-    @ObservedObject var session: LoginViewModel
+    @ObservedObject var loginViewModel: LoginViewModel
 
     @State private var showRegister = false
 
@@ -61,10 +61,10 @@ struct AuthFlowView: View {
             )
         } else {
             LoginView(
-                session: session,
+                loginViewModel: loginViewModel,
                 justRegistered: justRegistered,
                 onNavigateToRegister: {
-                    session.clearError()
+                    loginViewModel.onAction(.clearError)
                     justRegistered = false
                     showRegister = true
                 }

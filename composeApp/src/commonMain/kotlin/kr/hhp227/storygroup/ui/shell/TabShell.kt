@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 레일 전환 폭 — M3 window size class의 compact/medium 경계(600dp) */
@@ -45,6 +46,7 @@ internal fun TabShell(
     currentDestination: MainDestination,
     onDestinationSelected: (MainDestination) -> Unit,
     profile: Profile?,
+    homeViewModel: HomeViewModel,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -122,6 +124,7 @@ internal fun TabShell(
                 DestinationContent(
                     destination = currentDestination,
                     profile = profile,
+                    homeViewModel = homeViewModel,
                     onOpenSettings = onOpenSettings,
                     onLogout = onLogout,
                     // 레일 모드는 하단 바가 없어 내비바 인셋을 콘텐츠가 직접 소화(탭 모드는 하단 바가 소화)

@@ -30,11 +30,11 @@ import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 가입 — 웹 /register 미러. 성공 시 상위(AuthFlow)가 로그인 화면으로 되돌린다 */
+/** 가입 — 웹 /register 미러. 성공 시 상위(AuthFlow)가 Event.Registered를 받아 로그인으로 되돌린다(MVI) */
 @Composable
 fun RegisterScreen(
     uiState: RegisterViewModel.UiState,
-    onRegister: (name: String, email: String, password: String) -> Unit,
+    onAction: (RegisterViewModel.Action) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -93,7 +93,7 @@ fun RegisterScreen(
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
             text = if (uiState.isLoading) "가입하는 중..." else "가입하기",
-            onClick = { onRegister(name.trim(), email.trim(), password) },
+            onClick = { onAction(RegisterViewModel.Action.Register(name.trim(), email.trim(), password)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = name.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
             isLoading = uiState.isLoading

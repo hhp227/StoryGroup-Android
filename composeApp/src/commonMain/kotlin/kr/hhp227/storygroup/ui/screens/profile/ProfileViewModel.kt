@@ -2,23 +2,34 @@ package kr.hhp227.storygroup.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
+import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /** 내 정보(GET /api/users/me) — 프로필 화면/드로어 헤더가 공유한다. iosApp ProfileViewModel.swift와 1:1 미러 */
 class ProfileViewModel(
     private val getMyProfileUseCase: GetMyProfileUseCase
-) : ViewModel() {
+) : ViewModel(), MviViewModel<ProfileViewModel.UiState, ProfileViewModel.Action, Nothing> {
     private val _uiState = MutableStateFlow(UiState())
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    /** 로그인 직후 호출 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지) */
-    fun load() {
+    override val event: Flow<Nothing> = emptyFlow()
+
+    override fun onAction(action: Action) {
+        when (action) {
+            Action.Load -> load()
+        }
+    }
+
+    /** 로그인 직후 발화 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지) */
+    private fun load() {
         if (_uiState.value.isLoading) return
 
         _uiState.update { it.copy(isLoading = true, error = null) }
@@ -38,4 +49,8 @@ class ProfileViewModel(
         val profile: Profile? = null,
         val error: String? = null
     )
+
+    sealed interface Action {
+        data object Load : Action
+    }
 }

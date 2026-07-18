@@ -31,12 +31,12 @@ import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 로그인 — 웹 /login 미러. 상태는 LoginViewModel(UiState)에서 내려받는다 */
+/** 로그인 — 웹 /login 미러. 상태는 UiState로 내려받고 액션은 Action으로 올린다(MVI) */
 @Composable
 fun LoginScreen(
     uiState: LoginViewModel.UiState,
     justRegistered: Boolean,
-    onLogin: (email: String, password: String) -> Unit,
+    onAction: (LoginViewModel.Action) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -98,7 +98,7 @@ fun LoginScreen(
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
             text = if (uiState.isLoading) "로그인하는 중..." else "로그인",
-            onClick = { onLogin(email.trim(), password) },
+            onClick = { onAction(LoginViewModel.Action.Login(email.trim(), password)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = email.isNotBlank() && password.isNotBlank(),
             isLoading = uiState.isLoading

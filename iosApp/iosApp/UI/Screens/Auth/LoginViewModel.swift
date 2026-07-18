@@ -1,16 +1,27 @@
 import Foundation
 import Shared
 
-/// 세션 홀더 — composeApp LoginViewModel.kt와 1:1 미러(같은 UiState·로직, shared 유스케이스 소비).
+/// 세션 홀더 — composeApp LoginViewModel.kt와 1:1 미러(같은 UiState·Action·로직, shared 유스케이스 소비).
 /// shared suspend 함수는 메인 스레드에서만 호출 가능하므로 Task { @MainActor in }로 감싼다.
-final class LoginViewModel: ObservableObject {
+final class LoginViewModel: MviViewModel {
+    // 세션 전환은 일회성이 아니라 상태(isLoggedIn) — 이벤트 없음
+    typealias Event = Never
+
     @Published private(set) var uiState: UiState
 
     private let loginUseCase: LoginUseCase
 
     private let logoutUseCase: LogoutUseCase
 
-    func login(email: String, password: String) {
+    func onAction(_ action: Action) {
+        switch action {
+        case .login(let email, let password): login(email: email, password: password)
+        case .logout: logout()
+        case .clearError: uiState.error = nil
+        }
+    }
+
+    private func login(email: String, password: String) {
         if uiState.isLoading { return }
 
         uiState.isLoading = true
@@ -27,15 +38,11 @@ final class LoginViewModel: ObservableObject {
         }
     }
 
-    func logout() {
+    private func logout() {
         Task { @MainActor in
             try? await logoutUseCase.invoke()
             uiState.isLoggedIn = false
         }
-    }
-
-    func clearError() {
-        uiState.error = nil
     }
 
     init(container: AppContainer) {
@@ -48,6 +55,12 @@ final class LoginViewModel: ObservableObject {
         var isLoading = false
         var isLoggedIn = false
         var error: String? = nil
+    }
+
+    enum Action {
+        case login(email: String, password: String)
+        case logout
+        case clearError
     }
 }
 

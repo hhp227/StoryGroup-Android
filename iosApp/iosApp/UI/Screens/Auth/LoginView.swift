@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 로그인 — 웹 /login·Compose LoginScreen 미러
+/// 로그인 — 웹 /login·Compose LoginScreen 미러. 액션은 Action으로 올린다(MVI)
 struct LoginView: View {
-    @ObservedObject var session: LoginViewModel
+    @ObservedObject var loginViewModel: LoginViewModel
 
     @Environment(\.sgColors) private var colors
 
@@ -40,26 +40,26 @@ struct LoginView: View {
                     label: "이메일",
                     text: $email,
                     keyboard: .emailAddress,
-                    enabled: !session.uiState.isLoading
+                    enabled: !loginViewModel.uiState.isLoading
                 )
                 Spacer().frame(height: 16)
                 SGTextField(
                     label: "비밀번호",
                     text: $password,
                     isSecure: true,
-                    enabled: !session.uiState.isLoading
+                    enabled: !loginViewModel.uiState.isLoading
                 )
-                if let error = session.uiState.error {
+                if let error = loginViewModel.uiState.error {
                     Spacer().frame(height: 12)
                     Text(error).font(.caption).foregroundColor(colors.rust)
                 }
                 Spacer().frame(height: 24)
                 SGPrimaryButton(
-                    title: session.uiState.isLoading ? "로그인하는 중..." : "로그인",
+                    title: loginViewModel.uiState.isLoading ? "로그인하는 중..." : "로그인",
                     enabled: !email.isEmpty && !password.isEmpty,
-                    isLoading: session.uiState.isLoading,
+                    isLoading: loginViewModel.uiState.isLoading,
                     action: {
-                        session.login(email: email.trimmingCharacters(in: .whitespaces), password: password)
+                        loginViewModel.onAction(.login(email: email.trimmingCharacters(in: .whitespaces), password: password))
                     }
                 )
                 Spacer().frame(height: 20)
@@ -72,7 +72,7 @@ struct LoginView: View {
                             .font(.subheadline.bold())
                             .foregroundColor(colors.accent)
                     }
-                    .disabled(session.uiState.isLoading)
+                    .disabled(loginViewModel.uiState.isLoading)
                 }
             }
             .padding(.horizontal, 24)

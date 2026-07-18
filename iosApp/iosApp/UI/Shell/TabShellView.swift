@@ -11,6 +11,8 @@ struct TabShellView: View {
 
     let profile: Profile?
 
+    let homeViewModel: HomeViewModel
+
     let onLogout: () -> Void
 
     var body: some View {
@@ -25,6 +27,7 @@ struct TabShellView: View {
             DestinationView(
                 destination: current,
                 profile: profile,
+                homeViewModel: homeViewModel,
                 onOpenSettings: { showSettings = true },
                 onLogout: onLogout
             )

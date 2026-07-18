@@ -18,6 +18,7 @@ import kr.hhp227.storygroup.ui.screens.chat.ChatScreen
 import kr.hhp227.storygroup.ui.screens.friend.FriendsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupsScreen
 import kr.hhp227.storygroup.ui.screens.home.HomeScreen
+import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.screens.notification.NotificationsScreen
 import kr.hhp227.storygroup.ui.screens.profile.ProfileScreen
 import kr.hhp227.storygroup.shared.domain.model.Profile
@@ -40,7 +41,12 @@ enum class MainDestination(val label: String, val icon: ImageVector, val inTabs:
  * 화면(콘텐츠)은 두 쉘이 완전 공유. 설정은 쉘 위를 덮는 전체 화면.
  */
 @Composable
-fun MainShell(themeState: ThemeState, profile: Profile?, onLogout: () -> Unit) {
+fun MainShell(
+    themeState: ThemeState,
+    profile: Profile?,
+    homeViewModel: HomeViewModel,
+    onLogout: () -> Unit
+) {
     var currentDestination by remember { mutableStateOf(MainDestination.HOME) }
     var showSettings by remember { mutableStateOf(false) }
 
@@ -53,6 +59,7 @@ fun MainShell(themeState: ThemeState, profile: Profile?, onLogout: () -> Unit) {
             currentDestination = currentDestination,
             onDestinationSelected = { currentDestination = it },
             profile = profile,
+            homeViewModel = homeViewModel,
             onOpenSettings = { showSettings = true },
             onLogout = onLogout
         )
@@ -60,6 +67,7 @@ fun MainShell(themeState: ThemeState, profile: Profile?, onLogout: () -> Unit) {
             currentDestination = currentDestination,
             onDestinationSelected = { currentDestination = it },
             profile = profile,
+            homeViewModel = homeViewModel,
             onOpenSettings = { showSettings = true },
             onLogout = onLogout
         )
@@ -71,12 +79,13 @@ fun MainShell(themeState: ThemeState, profile: Profile?, onLogout: () -> Unit) {
 internal fun DestinationContent(
     destination: MainDestination,
     profile: Profile?,
+    homeViewModel: HomeViewModel,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (destination) {
-        MainDestination.HOME -> HomeScreen(modifier)
+        MainDestination.HOME -> HomeScreen(homeViewModel, modifier)
         MainDestination.GROUPS -> GroupsScreen(modifier)
         MainDestination.FRIENDS -> FriendsScreen(modifier)
         MainDestination.CHAT -> ChatScreen(modifier)
