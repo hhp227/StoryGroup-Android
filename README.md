@@ -1,6 +1,6 @@
 # StoryGroup (KMP)
 
-StoryGroup Android/iOS 앱이 함께 쓰는 **KMP 프로젝트**. UI는 각 플랫폼 네이티브(Android View/DataBinding, iOS SwiftUI)로 두고, 로직만 `:shared`에서 공유한다.
+StoryGroup Android/iOS 앱이 함께 쓰는 **KMP 프로젝트**. UI는 각 플랫폼 네이티브(Android View/DataBinding, iOS SwiftUI)로 두고, 로직만 `:shared`에서 공유한다. (구 ConCafe 템플릿 베이스 — 패키지 `kr.hhp227.storygroup`으로 개편됨)
 
 ## 모듈
 

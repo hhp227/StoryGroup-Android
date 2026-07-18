@@ -19,13 +19,13 @@ private let samplePosts = [
 
 /// 홈(라운지) 피드 — 웹 메인 피드·Compose HomeScreen 미러
 struct HomeView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 ForEach(samplePosts) { post in
-                    FeedPostCard(post: post, colors: colors)
+                    FeedPostCard(post: post)
                 }
             }
             .padding(16)
@@ -37,13 +37,13 @@ struct HomeView: View {
 private struct FeedPostCard: View {
     let post: FeedPostUiModel
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard(colors: colors) {
+        SGCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName, colors: colors)
+                    SGAvatar(name: post.authorName)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
                         HStack(spacing: 0) {

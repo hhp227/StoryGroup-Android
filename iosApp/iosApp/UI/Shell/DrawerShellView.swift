@@ -3,7 +3,7 @@ import Shared
 
 /// 레거시 쉘: 구 앱 드로어(프로필 헤더 + 목적지 + 설정·로그아웃 보강) — Compose DrawerShell 미러
 struct DrawerShellView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     @Binding var current: SGDestination
 
@@ -20,7 +20,6 @@ struct DrawerShellView: View {
             VStack(spacing: 0) {
                 SGHeader(
                     title: current.label,
-                    colors: colors,
                     leadingIcon: "line.3.horizontal",
                     onLeading: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } },
                     showsNotifications: current != .notifications,
@@ -28,7 +27,6 @@ struct DrawerShellView: View {
                 )
                 DestinationView(
                     destination: current,
-                    colors: colors,
                     profile: profile,
                     onOpenSettings: { showSettings = true },
                     onLogout: onLogout
@@ -39,7 +37,6 @@ struct DrawerShellView: View {
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
                     .onTapGesture { withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false } }
-
                 drawerContent
                     .transition(.move(edge: .leading))
             }
@@ -51,7 +48,7 @@ struct DrawerShellView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Spacer().frame(height: 40)
-                SGAvatar(name: profile?.name ?? "?", colors: colors, size: 64, background: colors.accentSoft, foreground: colors.accent)
+                SGAvatar(name: profile?.name ?? "?", size: 64, background: colors.accentSoft, foreground: colors.accent)
                 Text(profile?.name ?? "불러오는 중...").font(.headline).foregroundColor(colors.onAccent)
                 Text(profile?.email ?? "").font(.caption).foregroundColor(colors.onAccent)
             }

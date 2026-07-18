@@ -4,7 +4,7 @@ import SwiftUI
 struct SGSettingsView: View {
     @ObservedObject var theme: SGThemeState
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
         NavigationView {

@@ -4,7 +4,7 @@ import SwiftUI
 struct LoginView: View {
     @ObservedObject var session: LoginViewModel
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     let justRegistered: Bool
 
@@ -27,7 +27,7 @@ struct LoginView: View {
                     .foregroundColor(colors.inkSoft)
                 Spacer().frame(height: 28)
                 if justRegistered {
-                    SGCard(colors: colors) {
+                    SGCard {
                         Text("가입이 완료됐습니다. 로그인해주세요.")
                             .font(.subheadline)
                             .foregroundColor(colors.moss)
@@ -39,7 +39,6 @@ struct LoginView: View {
                 SGTextField(
                     label: "이메일",
                     text: $email,
-                    colors: colors,
                     keyboard: .emailAddress,
                     enabled: !session.uiState.isLoading
                 )
@@ -47,7 +46,6 @@ struct LoginView: View {
                 SGTextField(
                     label: "비밀번호",
                     text: $password,
-                    colors: colors,
                     isSecure: true,
                     enabled: !session.uiState.isLoading
                 )
@@ -58,7 +56,6 @@ struct LoginView: View {
                 Spacer().frame(height: 24)
                 SGPrimaryButton(
                     title: session.uiState.isLoading ? "로그인하는 중..." : "로그인",
-                    colors: colors,
                     enabled: !email.isEmpty && !password.isEmpty,
                     isLoading: session.uiState.isLoading,
                     action: {

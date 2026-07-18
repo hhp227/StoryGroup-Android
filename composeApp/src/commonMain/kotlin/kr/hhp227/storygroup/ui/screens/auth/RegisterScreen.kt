@@ -37,7 +37,6 @@ fun RegisterScreen(
     onRegister: (name: String, email: String, password: String) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    val sg = SgTheme.colors
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -45,7 +44,7 @@ fun RegisterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(sg.paper)
+            .background(SgTheme.colors.paper)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
@@ -55,13 +54,13 @@ fun RegisterScreen(
             "같이할 사람들을 위한 자리",
             style = SgTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = sg.ink
+            color = SgTheme.colors.ink
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "StoryGroup에 가입하고 그룹을 만들어보세요.",
             style = SgTheme.typography.bodyMedium,
-            color = sg.inkSoft
+            color = SgTheme.colors.inkSoft
         )
         Spacer(Modifier.height(28.dp))
         SgTextField(
@@ -89,7 +88,7 @@ fun RegisterScreen(
         )
         if (uiState.error != null) {
             Spacer(Modifier.height(12.dp))
-            Text(uiState.error!!, style = SgTheme.typography.bodySmall, color = sg.rust)
+            Text(uiState.error!!, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
         }
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
@@ -101,13 +100,13 @@ fun RegisterScreen(
         )
         Spacer(Modifier.height(20.dp))
         Row {
-            Text("이미 계정이 있나요?", style = SgTheme.typography.bodyMedium, color = sg.inkSoft)
+            Text("이미 계정이 있나요?", style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
             Text(
                 "로그인",
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = sg.accent,
+                color = SgTheme.colors.accent,
                 modifier = Modifier.clickable(enabled = !uiState.isLoading, onClick = onNavigateToLogin)
             )
         }

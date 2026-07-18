@@ -16,7 +16,7 @@ private let sampleGroups = [
 
 /// 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups·Compose GroupsScreen 미러
 struct GroupsView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
         ScrollView {
@@ -26,7 +26,7 @@ struct GroupsView: View {
                     groupActionButton("그룹 찾기") { /* TODO: 그룹 찾기 */ }
                 }
                 ForEach(sampleGroups) { group in
-                    GroupCard(group: group, colors: colors)
+                    GroupCard(group: group)
                 }
             }
             .padding(16)
@@ -52,12 +52,12 @@ struct GroupsView: View {
 private struct GroupCard: View {
     let group: GroupUiModel
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard(colors: colors) {
+        SGCard {
             HStack(spacing: 12) {
-                SGAvatar(name: group.name, colors: colors, size: 48, background: colors.accent2Soft, foreground: colors.accent2)
+                SGAvatar(name: group.name, size: 48, background: colors.accent2Soft, foreground: colors.accent2)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(group.name).font(.headline).foregroundColor(colors.ink)
                     Text("멤버 \(group.memberCount)명").font(.caption).foregroundColor(colors.inkSoft)

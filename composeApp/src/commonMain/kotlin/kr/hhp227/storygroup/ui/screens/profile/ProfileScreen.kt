@@ -38,8 +38,6 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sg = SgTheme.colors
-
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -57,40 +55,39 @@ fun ProfileScreen(
                     Text(
                         profile?.name ?: "불러오는 중...",
                         style = SgTheme.typography.titleLarge,
-                        color = sg.ink
+                        color = SgTheme.colors.ink
                     )
                     Spacer(Modifier.height(2.dp))
-                    Text(profile?.email ?: "", style = SgTheme.typography.bodyMedium, color = sg.inkSoft)
+                    Text(profile?.email ?: "", style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
                     if (profile?.statusMessage != null) {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             profile.statusMessage!!,
                             style = SgTheme.typography.bodySmall,
-                            color = sg.inkFaint
+                            color = SgTheme.colors.inkFaint
                         )
                     }
                 }
             }
         }
-
         SgCard(modifier = Modifier.fillMaxWidth()) {
             ProfileMenuRow(
                 icon = Icons.Default.ManageAccounts,
                 label = "계정 설정",
                 onClick = { /* TODO: 프로필 편집/비밀번호 변경 */ }
             )
-            Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.Default.Settings,
                 label = "앱 설정",
                 onClick = onOpenSettings
             )
-            Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.AutoMirrored.Filled.Logout,
                 label = "로그아웃",
                 onClick = onLogout,
-                tint = sg.rust
+                tint = SgTheme.colors.rust
             )
         }
     }
@@ -103,8 +100,6 @@ private fun ProfileMenuRow(
     onClick: () -> Unit,
     tint: Color? = null
 ) {
-    val sg = SgTheme.colors
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,8 +107,8 @@ private fun ProfileMenuRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = label, tint = tint ?: sg.inkSoft, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = label, tint = tint ?: SgTheme.colors.inkSoft, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(12.dp))
-        Text(label, style = SgTheme.typography.bodyLarge, color = tint ?: sg.ink)
+        Text(label, style = SgTheme.typography.bodyLarge, color = tint ?: SgTheme.colors.ink)
     }
 }

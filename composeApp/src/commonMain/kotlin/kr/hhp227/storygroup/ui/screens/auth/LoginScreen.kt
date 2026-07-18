@@ -39,14 +39,13 @@ fun LoginScreen(
     onLogin: (email: String, password: String) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    val sg = SgTheme.colors
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(sg.paper)
+            .background(SgTheme.colors.paper)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
@@ -56,13 +55,13 @@ fun LoginScreen(
             "다시 만나서 반가워요",
             style = SgTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = sg.ink
+            color = SgTheme.colors.ink
         )
         Spacer(Modifier.height(8.dp))
         Text(
             "이메일과 비밀번호로 로그인하세요.",
             style = SgTheme.typography.bodyMedium,
-            color = sg.inkSoft
+            color = SgTheme.colors.inkSoft
         )
         Spacer(Modifier.height(28.dp))
         if (justRegistered) {
@@ -70,7 +69,7 @@ fun LoginScreen(
                 Text(
                     "가입이 완료됐습니다. 로그인해주세요.",
                     style = SgTheme.typography.bodyMedium,
-                    color = sg.moss,
+                    color = SgTheme.colors.moss,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
@@ -94,7 +93,7 @@ fun LoginScreen(
         )
         if (uiState.error != null) {
             Spacer(Modifier.height(12.dp))
-            Text(uiState.error!!, style = SgTheme.typography.bodySmall, color = sg.rust)
+            Text(uiState.error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
         }
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
@@ -106,13 +105,13 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(20.dp))
         Row {
-            Text("아직 계정이 없나요?", style = SgTheme.typography.bodyMedium, color = sg.inkSoft)
+            Text("아직 계정이 없나요?", style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
             Text(
                 "가입하기",
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = sg.accent,
+                color = SgTheme.colors.accent,
                 modifier = Modifier.clickable(enabled = !uiState.isLoading, onClick = onNavigateToRegister)
             )
         }

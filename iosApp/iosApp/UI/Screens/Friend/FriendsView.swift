@@ -15,13 +15,13 @@ private let sampleFriends = [
 
 /// 친구 목록 — 웹 /search(친구 기본 화면)·Compose FriendsScreen 미러
 struct FriendsView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
                 ForEach(sampleFriends) { friend in
-                    FriendRow(friend: friend, colors: colors)
+                    FriendRow(friend: friend)
                 }
             }
             .padding(16)
@@ -33,12 +33,12 @@ struct FriendsView: View {
 private struct FriendRow: View {
     let friend: FriendUiModel
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard(colors: colors) {
+        SGCard {
             HStack(spacing: 12) {
-                SGAvatar(name: friend.name, colors: colors)
+                SGAvatar(name: friend.name)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(friend.name).font(.subheadline.bold()).foregroundColor(colors.ink)
                     Text(friend.email).font(.caption).foregroundColor(colors.inkFaint)

@@ -38,8 +38,6 @@ enum SGDestination: String, CaseIterable, Identifiable {
 struct MainShellView: View {
     @ObservedObject var theme: SGThemeState
 
-    let colors: SGColors
-
     let onLogout: () -> Void
 
     @StateObject private var profileModel: ProfileViewModel
@@ -52,7 +50,6 @@ struct MainShellView: View {
         Group {
             if theme.navStyle == .tabs {
                 TabShellView(
-                    colors: colors,
                     current: $current,
                     showSettings: $showSettings,
                     profile: profileModel.uiState.profile,
@@ -60,7 +57,6 @@ struct MainShellView: View {
                 )
             } else {
                 DrawerShellView(
-                    colors: colors,
                     current: $current,
                     showSettings: $showSettings,
                     profile: profileModel.uiState.profile,
@@ -69,15 +65,14 @@ struct MainShellView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SGSettingsView(theme: theme, colors: colors)
+            SGSettingsView(theme: theme)
         }
         .onAppear { profileModel.load() }
     }
 
-    init(container: AppContainer, theme: SGThemeState, colors: SGColors, onLogout: @escaping () -> Void) {
+    init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
         _profileModel = StateObject(wrappedValue: ProfileViewModel(container: container))
         self.theme = theme
-        self.colors = colors
         self.onLogout = onLogout
     }
 }
@@ -85,8 +80,6 @@ struct MainShellView: View {
 /// 두 쉘이 공유하는 목적지 → 화면 매핑 — Compose DestinationContent 미러
 struct DestinationView: View {
     let destination: SGDestination
-
-    let colors: SGColors
 
     let profile: Profile?
 
@@ -97,17 +90,17 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView(colors: colors)
+            HomeView()
         case .groups:
-            GroupsView(colors: colors)
+            GroupsView()
         case .friends:
-            FriendsView(colors: colors)
+            FriendsView()
         case .chat:
-            ChatView(colors: colors)
+            ChatView()
         case .notifications:
-            NotificationsView(colors: colors)
+            NotificationsView()
         case .profile:
-            ProfileView(colors: colors, profile: profile, onOpenSettings: onOpenSettings, onLogout: onLogout)
+            ProfileView(profile: profile, onOpenSettings: onOpenSettings, onLogout: onLogout)
         }
     }
 }

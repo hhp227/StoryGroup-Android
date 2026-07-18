@@ -23,11 +23,13 @@ struct AppRootView: View {
     var body: some View {
         Group {
             if session.uiState.isLoggedIn {
-                MainShellView(container: container, theme: theme, colors: colors, onLogout: { session.logout() })
+                MainShellView(container: container, theme: theme, onLogout: { session.logout() })
             } else {
-                AuthFlowView(container: container, session: session, colors: colors)
+                AuthFlowView(container: container, session: session)
             }
         }
+        // Compose CompositionLocalProvider(LocalSgColors provides sg) 미러 — 하위 전체에 테마 전파
+        .environment(\.sgColors, colors)
         .preferredColorScheme(theme.nightMode == .system ? nil : (isDark ? .dark : .light))
     }
 
@@ -43,8 +45,6 @@ struct AuthFlowView: View {
 
     @ObservedObject var session: LoginViewModel
 
-    let colors: SGColors
-
     @State private var showRegister = false
 
     @State private var justRegistered = false
@@ -53,7 +53,6 @@ struct AuthFlowView: View {
         if showRegister {
             RegisterView(
                 container: container,
-                colors: colors,
                 onRegistered: {
                     justRegistered = true
                     showRegister = false
@@ -63,7 +62,6 @@ struct AuthFlowView: View {
         } else {
             LoginView(
                 session: session,
-                colors: colors,
                 justRegistered: justRegistered,
                 onNavigateToRegister: {
                     session.clearError()

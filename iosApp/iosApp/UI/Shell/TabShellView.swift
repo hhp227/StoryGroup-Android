@@ -3,7 +3,7 @@ import Shared
 
 /// 기본 쉘: 웹 미러 헤더(linen+보더) + 하단 5탭 — Compose TabShell 미러
 struct TabShellView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     @Binding var current: SGDestination
 
@@ -17,7 +17,6 @@ struct TabShellView: View {
         VStack(spacing: 0) {
             SGHeader(
                 title: current == .home ? "우리들의 이야기" : current.label,
-                colors: colors,
                 showsNotifications: current != .notifications,
                 onNotifications: { current = .notifications },
                 showsSettings: current == .profile,
@@ -25,7 +24,6 @@ struct TabShellView: View {
             )
             DestinationView(
                 destination: current,
-                colors: colors,
                 profile: profile,
                 onOpenSettings: { showSettings = true },
                 onLogout: onLogout

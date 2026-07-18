@@ -5,12 +5,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerValue
@@ -119,7 +123,11 @@ internal fun DrawerShell(
                 profile = profile,
                 onOpenSettings = onOpenSettings,
                 onLogout = onLogout,
-                modifier = Modifier.padding(padding).fillMaxSize()
+                // 드로어 쉘은 하단 바가 없어 시스템 내비바 인셋을 콘텐츠가 직접 소화
+                modifier = Modifier
+                    .padding(padding)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .fillMaxSize()
             )
         }
     }
@@ -170,6 +178,8 @@ private fun DrawerHeader(profile: Profile?) {
         modifier = Modifier
             .fillMaxWidth()
             .background(sg.accent)
+            // accent가 상태바 뒤까지 채워지도록 배경 뒤에 인셋 패딩
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(16.dp)
     ) {
         Spacer(Modifier.height(48.dp))

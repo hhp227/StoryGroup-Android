@@ -3,9 +3,12 @@ package kr.hhp227.storygroup.ui.screens.settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
@@ -32,10 +35,8 @@ import kr.hhp227.storygroup.ui.theme.ThemeState
 /** 앱 설정(테마) — 무드/화면 모드/내비게이션 스타일. 쉘 위를 덮는 전체 화면 */
 @Composable
 fun AppSettingsScreen(themeState: ThemeState, onBack: () -> Unit) {
-    val sg = SgTheme.colors
-
     Scaffold(
-        backgroundColor = sg.paper,
+        backgroundColor = SgTheme.colors.paper,
         topBar = {
             SgTopBar(
                 title = "앱 설정",
@@ -50,6 +51,8 @@ fun AppSettingsScreen(themeState: ThemeState, onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .padding(padding)
+                // 하단 바 없는 전체 화면이라 시스템 내비바 인셋을 직접 소화
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {

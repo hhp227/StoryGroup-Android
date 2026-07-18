@@ -5,19 +5,12 @@ import SwiftUI
 /// 웹 미러 헤더(linen + 하단 stone-border) — Compose SgTopBar 미러
 struct SGHeader: View {
     let title: String
-
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     var leadingIcon: String? = nil
-
     var onLeading: (() -> Void)? = nil
-
     var showsNotifications: Bool = false
-
     var onNotifications: (() -> Void)? = nil
-
     var showsSettings: Bool = false
-
     var onSettings: (() -> Void)? = nil
 
     var body: some View {
@@ -53,9 +46,12 @@ struct SGHeader: View {
 
 /// 웹 .card 미러(linen 바탕 + stone 보더) — Compose SgCard 미러
 struct SGCard<Content: View>: View {
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
 
     var body: some View {
         content
@@ -69,25 +65,15 @@ struct SGCard<Content: View>: View {
                     )
             )
     }
-
-    init(colors: SGColors, @ViewBuilder content: () -> Content) {
-        self.colors = colors
-        self.content = content()
-    }
 }
 
 /// 웹 .field 미러(라벨 위 배치 + linen 입력창) — Compose SgTextField 미러
 struct SGTextField: View {
     let label: String
-
     @Binding var text: String
-
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     var isSecure: Bool = false
-
     var keyboard: UIKeyboardType = .default
-
     var enabled: Bool = true
 
     var body: some View {
@@ -121,13 +107,9 @@ struct SGTextField: View {
 /// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러
 struct SGPrimaryButton: View {
     let title: String
-
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     var enabled: Bool = true
-
     var isLoading: Bool = false
-
     let action: () -> Void
 
     private var isActive: Bool { enabled && !isLoading }
@@ -156,13 +138,9 @@ struct SGPrimaryButton: View {
 /// 이니셜 원형 아바타 — Compose SgAvatar 미러
 struct SGAvatar: View {
     let name: String
-
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     var size: CGFloat = 40
-
     var background: Color? = nil
-
     var foreground: Color? = nil
 
     var body: some View {
@@ -180,11 +158,8 @@ struct SGAvatar: View {
 /// 빈 상태 — Compose SgEmptyState 미러
 struct SGEmptyState: View {
     let title: String
-
     let subtitle: String
-
-    let colors: SGColors
-
+    @Environment(\.sgColors) private var colors
     var systemImage: String? = nil
 
     var body: some View {
@@ -213,8 +188,7 @@ struct SGEmptyState: View {
 /// 리스트 구획 라벨 — Compose SgSectionTitle 미러
 struct SGSectionTitle: View {
     let text: String
-
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
         Text(text)

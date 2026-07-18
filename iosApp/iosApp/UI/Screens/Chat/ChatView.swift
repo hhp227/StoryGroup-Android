@@ -19,22 +19,23 @@ private let sampleRooms = [
 
 /// 채팅 허브 — 웹 /dm·Compose ChatScreen 미러(그룹 채팅 + 다이렉트 메시지, 라운지 제외)
 struct ChatView: View {
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     private var groupRooms: [ChatRoomUiModel] { sampleRooms.filter { $0.isGroup } }
+
     private var directRooms: [ChatRoomUiModel] { sampleRooms.filter { !$0.isGroup } }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
-                SGSectionTitle(text: "그룹 채팅", colors: colors)
+                SGSectionTitle(text: "그룹 채팅")
                 ForEach(groupRooms) { room in
-                    ChatRoomRow(room: room, colors: colors)
+                    ChatRoomRow(room: room)
                 }
                 Spacer().frame(height: 12)
-                SGSectionTitle(text: "다이렉트 메시지", colors: colors)
+                SGSectionTitle(text: "다이렉트 메시지")
                 ForEach(directRooms) { room in
-                    ChatRoomRow(room: room, colors: colors)
+                    ChatRoomRow(room: room)
                 }
             }
             .padding(16)
@@ -46,14 +47,13 @@ struct ChatView: View {
 private struct ChatRoomRow: View {
     let room: ChatRoomUiModel
 
-    let colors: SGColors
+    @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard(colors: colors) {
+        SGCard {
             HStack(spacing: 12) {
                 SGAvatar(
                     name: room.name,
-                    colors: colors,
                     background: room.isGroup ? colors.accent2Soft : colors.accentSoft,
                     foreground: room.isGroup ? colors.accent2 : colors.accent
                 )

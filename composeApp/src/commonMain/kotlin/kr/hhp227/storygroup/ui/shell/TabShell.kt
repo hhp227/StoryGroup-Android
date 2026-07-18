@@ -5,10 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Divider
@@ -51,7 +55,11 @@ internal fun TabShell(
 
         Row(Modifier.fillMaxSize()) {
             if (useRail) {
-                NavigationRail(backgroundColor = sg.linen, elevation = 0.dp) {
+                NavigationRail(
+                    backgroundColor = sg.linen,
+                    elevation = 0.dp,
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
+                ) {
                     MainDestination.entries.filter { it.inTabs }.forEach { destination ->
                         NavigationRailItem(
                             selected = destination == currentDestination,
@@ -92,7 +100,8 @@ internal fun TabShell(
                 },
                 bottomBar = {
                     if (!useRail) {
-                        Column {
+                        // M2 BottomNavigation은 인셋을 모름 — linen을 시스템 내비바 뒤까지 깔고 그만큼 패딩
+                        Column(Modifier.background(sg.linen).windowInsetsPadding(WindowInsets.navigationBars)) {
                             Divider(color = sg.stoneBorder, thickness = 1.dp)
                             BottomNavigation(backgroundColor = sg.linen, elevation = 0.dp) {
                                 MainDestination.entries.filter { it.inTabs }.forEach { destination ->
@@ -115,7 +124,11 @@ internal fun TabShell(
                     profile = profile,
                     onOpenSettings = onOpenSettings,
                     onLogout = onLogout,
-                    modifier = Modifier.padding(padding).fillMaxSize()
+                    // 레일 모드는 하단 바가 없어 내비바 인셋을 콘텐츠가 직접 소화(탭 모드는 하단 바가 소화)
+                    modifier = Modifier
+                        .padding(padding)
+                        .let { if (useRail) it.windowInsetsPadding(WindowInsets.navigationBars) else it }
+                        .fillMaxSize()
                 )
             }
         }

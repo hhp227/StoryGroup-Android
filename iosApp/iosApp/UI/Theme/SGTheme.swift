@@ -31,21 +31,16 @@ final class SGThemeState: ObservableObject {
     @Published var mood: SGMood {
         didSet { defaults.set(mood.rawValue, forKey: Self.keyMood) }
     }
-
     @Published var nightMode: SGNightMode {
         didSet { defaults.set(nightMode.rawValue, forKey: Self.keyNightMode) }
     }
-
     @Published var navStyle: SGNavStyle {
         didSet { defaults.set(navStyle.rawValue, forKey: Self.keyNavStyle) }
     }
 
     private let defaults: UserDefaults
-
     private static let keyMood = "sg_theme_mood"
-
     private static let keyNightMode = "sg_theme_night_mode"
-
     private static let keyNavStyle = "sg_theme_nav_style"
 
     init(defaults: UserDefaults = .standard) {
@@ -58,36 +53,21 @@ final class SGThemeState: ObservableObject {
 
 struct SGColors {
     let paper: Color
-
     let linen: Color
-
     let ink: Color
-
     let inkSoft: Color
-
     let inkFaint: Color
-
     let stoneBorder: Color
-
     let accent: Color
-
     let accentSoft: Color
-
     let onAccent: Color
-
     let accent2: Color
-
     let accent2Soft: Color
-
     let moss: Color
-
     let amber: Color
-
     let rust: Color
-
     /// 웹 radius-card 미러(warm 18 / vibrant 12)
     let radiusCard: CGFloat
-
     /// 웹 radius-btn 미러(warm은 nil=캡슐, vibrant 8)
     let radiusButton: CGFloat?
 
@@ -134,6 +114,19 @@ struct SGColors {
                 radiusCard: 12, radiusButton: 8
             )
         }
+    }
+}
+
+// Compose LocalSgColors(SgTheme.colors) 미러 — 루트(AppRootView)에서 한 번 주입하면
+// 모든 뷰가 파라미터 전달 없이 @Environment(\.sgColors)로 읽는다.
+private struct SGColorsKey: EnvironmentKey {
+    static let defaultValue = SGColors.palette(mood: .warm, dark: false)
+}
+
+extension EnvironmentValues {
+    var sgColors: SGColors {
+        get { self[SGColorsKey.self] }
+        set { self[SGColorsKey.self] = newValue }
     }
 }
 
