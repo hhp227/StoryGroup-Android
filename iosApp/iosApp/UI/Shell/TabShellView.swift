@@ -17,16 +17,7 @@ struct TabShellView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 홈은 화면이 콜랩싱 상단바(검색·알림 포함)를 직접 그린다 — 레거시 라운지 CollapsingToolbar 미러
-            if current != .home {
-                SGHeader(
-                    title: current.label,
-                    showsNotifications: current != .notifications,
-                    onNotifications: { current = .notifications },
-                    showsSettings: current == .profile,
-                    onSettings: { showSettings = true }
-                )
-            }
+            // 상단바는 각 목적지의 기본 NavigationBar가 담당(DestinationView) — 커스텀 SGHeader 제거
             // switch로 갈아끼우면 뷰가 파괴돼 스크롤 위치가 초기화됨 — 전 목적지를 유지하고
             // 표시만 전환한다(네이티브 TabView의 탭 상태 유지 동작 미러, 커스텀 탭바라 직접 구현)
             ZStack {

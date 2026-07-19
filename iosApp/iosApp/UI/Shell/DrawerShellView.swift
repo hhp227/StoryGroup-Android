@@ -20,16 +20,7 @@ struct DrawerShellView: View {
     var body: some View {
         ZStack(alignment: .leading) {
             VStack(spacing: 0) {
-                // 홈은 화면이 콜랩싱 상단바를 직접 그린다(햄버거는 homeMenuAction으로 전달)
-                if current != .home {
-                    SGHeader(
-                        title: current.label,
-                        leadingIcon: "line.3.horizontal",
-                        onLeading: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } },
-                        showsNotifications: current != .notifications,
-                        onNotifications: { current = .notifications }
-                    )
-                }
+                // 상단바는 각 목적지의 기본 NavigationBar가 담당(햄버거는 menuAction으로 전달)
                 // 탭 쉘과 동일 — 목적지 전환 시 뷰를 유지해 스크롤 위치를 보존한다
                 ZStack {
                     ForEach(SGDestination.allCases) { destination in
@@ -40,7 +31,7 @@ struct DrawerShellView: View {
                             onOpenNotifications: { current = .notifications },
                             onOpenSettings: { showSettings = true },
                             onLogout: onLogout,
-                            homeMenuAction: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }
+                            menuAction: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }
                         )
                         .opacity(destination == current ? 1 : 0)
                         .allowsHitTesting(destination == current)

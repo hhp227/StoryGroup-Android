@@ -86,7 +86,9 @@ struct MainShellView: View {
     }
 }
 
-/// 두 쉘이 공유하는 목적지 → 화면 매핑 — Compose DestinationContent 미러
+/// 두 쉘이 공유하는 목적지 → 화면 매핑 — Compose DestinationContent 미러.
+/// 상단바는 전 탭 기본 NavigationBar로 통일(사용자 지시) — 홈은 콜랩싱 헤더 때문에
+/// HomeView가 자체 NavigationView를 갖고, 나머지는 여기서 공통으로 감싼다.
 struct DestinationView: View {
     let destination: SGDestination
 
@@ -100,14 +102,43 @@ struct DestinationView: View {
 
     let onLogout: () -> Void
 
-    /// 드로어 쉘이 홈 콜랩싱 상단바에 얹는 햄버거 액션(탭 쉘은 nil) — Compose homeNavigationIcon 미러
-    var homeMenuAction: (() -> Void)? = nil
+    /// 드로어 쉘의 햄버거 액션(탭 쉘은 nil) — 모든 탭의 내비바 leading에 노출
+    var menuAction: (() -> Void)? = nil
 
     var body: some View {
+        if destination == .home {
+            HomeView(viewModel: homeViewModel, onNotifications: onOpenNotifications, onMenu: menuAction)
+        } else {
+            NavigationView {
+                screen
+                    .navigationTitle(destination.label)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            if let menuAction {
+                                Button(action: menuAction) { Image(systemName: "line.3.horizontal") }
+                            }
+                        }
+                        ToolbarItemGroup(placement: .navigationBarTrailing) {
+                            // 알림은 탭에서 빠지고 내비바 종 아이콘으로 진입(알림 화면에서는 숨김)
+                            if destination != .notifications {
+                                Button(action: onOpenNotifications) { Image(systemName: "bell.fill") }
+                            }
+                            if destination == .profile {
+                                Button(action: onOpenSettings) { Image(systemName: "gearshape.fill") }
+                            }
+                        }
+                    }
+            }
+            // 탭 콘텐츠 영역 안의 단일 컬럼 — iPad에서 사이드바로 갈라지지 않게
+            .navigationViewStyle(.stack)
+        }
+    }
+
+    @ViewBuilder private var screen: some View {
         switch destination {
-        // 홈은 셸 상단바 없이 화면이 콜랩싱 헤더(레거시 라운지 CollapsingToolbar 미러)를 직접 그린다
         case .home:
-            HomeView(viewModel: homeViewModel, onNotifications: onOpenNotifications, onMenu: homeMenuAction)
+            EmptyView() // body에서 HomeView로 분기 — 여기 올 일 없음
         case .groups:
             GroupsView()
         case .friends:
