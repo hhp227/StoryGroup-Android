@@ -1,5 +1,7 @@
 package kr.hhp227.storygroup.ui.shell
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Groups
@@ -9,25 +11,23 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.ui.screens.chat.ChatScreen
 import kr.hhp227.storygroup.ui.screens.friend.FriendsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupsScreen
-import kr.hhp227.storygroup.ui.screens.group.GroupsViewModel
 import kr.hhp227.storygroup.ui.screens.home.HomeScreen
-import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.screens.notification.NotificationsScreen
 import kr.hhp227.storygroup.ui.screens.profile.ProfileScreen
-import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.screens.settings.AppSettingsScreen
 import kr.hhp227.storygroup.ui.theme.NavStyle
+import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.theme.ThemeState
 
 /** 내비 목적지 — 탭/레일은 5개(홈·그룹·친구·채팅·프로필), 알림은 상단바 종 아이콘으로 진입(레거시 드로어는 전부 노출) */
@@ -42,57 +42,67 @@ enum class MainDestination(val label: String, val icon: ImageVector, val inTabs:
 
 /**
  * 내비게이션 쉘 — 설정>내비게이션 스타일에 따라 하단 탭/레거시 드로어를 교체한다.
- * 화면(콘텐츠)은 두 쉘이 완전 공유. 설정은 쉘 위를 덮는 전체 화면.
+ * 화면(콘텐츠)은 두 쉘이 완전 공유. 화면별 ViewModel은 각 화면이 default parameter로 선언한다.
  */
 @Composable
 fun MainShell(
     themeState: ThemeState,
-    profile: Profile?,
-    homeViewModel: HomeViewModel,
-    groupsViewModel: GroupsViewModel,
     onOpenGroupDetail: (Group) -> Unit,
+    onCreatePost: () -> Unit,
+    // 홈(라운지) 글쓰기 성공 신호 — HomeScreen이 소비하고 onHomeRefreshHandled로 소거한다
+    homeRefreshRequested: Boolean,
+    onHomeRefreshHandled: () -> Unit,
     onLogout: () -> Unit
 ) {
-    // 상세(NavHost 목적지)로 나갔다 돌아와도 탭 선택이 유지되게 saveable로 승격
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
 
-    if (showSettings) {
-        AppSettingsScreen(themeState = themeState, onBack = { showSettings = false })
-        return
-    }
-    when (themeState.navStyle) {
-        NavStyle.TABS -> TabShell(
-            currentDestination = currentDestination,
-            onDestinationSelected = { currentDestination = it },
-            profile = profile,
-            homeViewModel = homeViewModel,
-            groupsViewModel = groupsViewModel,
-            onOpenGroupDetail = onOpenGroupDetail,
-            onOpenSettings = { showSettings = true },
-            onLogout = onLogout
-        )
-        NavStyle.DRAWER -> DrawerShell(
-            currentDestination = currentDestination,
-            onDestinationSelected = { currentDestination = it },
-            profile = profile,
-            homeViewModel = homeViewModel,
-            groupsViewModel = groupsViewModel,
-            onOpenGroupDetail = onOpenGroupDetail,
-            onOpenSettings = { showSettings = true },
-            onLogout = onLogout
-        )
+    // 설정은 쉘을 대체하지 않고 위에 얹는다 — 쉘(탭 상태·스크롤)이 설정을 다녀와도 유지되도록
+    Box {
+        when (themeState.navStyle) {
+            NavStyle.TABS -> TabShell(
+                currentDestination = currentDestination,
+                onDestinationSelected = { currentDestination = it },
+                onOpenGroupDetail = onOpenGroupDetail,
+                onCreatePost = onCreatePost,
+                homeRefreshRequested = homeRefreshRequested,
+                onHomeRefreshHandled = onHomeRefreshHandled,
+                onOpenSettings = { showSettings = true },
+                onLogout = onLogout
+            )
+            NavStyle.DRAWER -> DrawerShell(
+                currentDestination = currentDestination,
+                onDestinationSelected = { currentDestination = it },
+                onOpenGroupDetail = onOpenGroupDetail,
+                onCreatePost = onCreatePost,
+                homeRefreshRequested = homeRefreshRequested,
+                onHomeRefreshHandled = onHomeRefreshHandled,
+                onOpenSettings = { showSettings = true },
+                onLogout = onLogout
+            )
+        }
+        if (showSettings) {
+            // Surface가 아래 쉘로의 터치 전파를 막는다
+            Surface(color = SgTheme.colors.paper) {
+                AppSettingsScreen(themeState = themeState, onBack = { showSettings = false })
+            }
+        }
     }
 }
 
-/** 두 쉘이 공유하는 목적지 → 화면 매핑 */
+/**
+ * 두 쉘이 공유하는 목적지 → 화면 매핑 — iOS 셸의 keep-alive ZStack 미러.
+ * 전 목적지를 컴포지션에 유지하고 현재 것만 측정/배치한다 — dispose가 없으므로 스크롤 위치와
+ * Paging 프레젠터가 탭 전환·풀스크린 목적지(NavHost 오버레이) 왕복에도 그대로 살아있다.
+ * (숨은 목적지는 측정/그리기/히트테스트 비용이 없다)
+ */
 @Composable
 internal fun DestinationContent(
     destination: MainDestination,
-    profile: Profile?,
-    homeViewModel: HomeViewModel,
-    groupsViewModel: GroupsViewModel,
     onOpenGroupDetail: (Group) -> Unit,
+    onCreatePost: () -> Unit,
+    homeRefreshRequested: Boolean,
+    onHomeRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
@@ -100,64 +110,70 @@ internal fun DestinationContent(
     // 드로어 쉘이 화면 소유 상단바(홈·그룹)에 얹는 메뉴 아이콘(탭 쉘은 없음)
     menuNavigationIcon: (@Composable () -> Unit)? = null
 ) {
-    // enum 전환이라 목적지를 떠나면 컴포저블이 dispose됨 — 스크롤 위치(rememberLazyListState 등
-    // rememberSaveable 기반 상태)가 초기화되지 않게 목적지별로 보존/복원한다.
-    // 풀스크린 목적지(그룹 상세)는 App의 NavHost가 담당하고, 탭 전환은 여기 enum이 담당한다.
-    val stateHolder = rememberSaveableStateHolder()
+    Layout(
+        content = {
+            MainDestination.entries.forEach { dest ->
+                key(dest) {
+                    Box {
+                        DestinationScreen(
+                            destination = dest,
+                            onOpenGroupDetail = onOpenGroupDetail,
+                            onCreatePost = onCreatePost,
+                            homeRefreshRequested = homeRefreshRequested,
+                            onHomeRefreshHandled = onHomeRefreshHandled,
+                            onOpenNotifications = onOpenNotifications,
+                            onOpenSettings = onOpenSettings,
+                            onLogout = onLogout,
+                            menuNavigationIcon = menuNavigationIcon
+                        )
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    ) { measurables, constraints ->
+        // 현재 목적지만 측정/배치 — 나머지는 컴포지션(상태)만 유지된다
+        val placeable = measurables[MainDestination.entries.indexOf(destination)].measure(constraints)
 
-    stateHolder.SaveableStateProvider(destination.name) {
-        DestinationScreen(
-            destination = destination,
-            profile = profile,
-            homeViewModel = homeViewModel,
-            groupsViewModel = groupsViewModel,
-            onOpenGroupDetail = onOpenGroupDetail,
-            onOpenNotifications = onOpenNotifications,
-            onOpenSettings = onOpenSettings,
-            onLogout = onLogout,
-            menuNavigationIcon = menuNavigationIcon,
-            modifier = modifier
-        )
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place(0, 0)
+        }
     }
 }
 
 @Composable
 private fun DestinationScreen(
     destination: MainDestination,
-    profile: Profile?,
-    homeViewModel: HomeViewModel,
-    groupsViewModel: GroupsViewModel,
     onOpenGroupDetail: (Group) -> Unit,
+    onCreatePost: () -> Unit,
+    homeRefreshRequested: Boolean,
+    onHomeRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
-    menuNavigationIcon: (@Composable () -> Unit)?,
-    modifier: Modifier = Modifier
+    menuNavigationIcon: (@Composable () -> Unit)?
 ) {
     when (destination) {
         // 홈은 셸 상단바 없이 화면이 콜랩싱 헤더(레거시 라운지 CollapsingToolbar 미러)를 직접 그린다
         MainDestination.HOME -> HomeScreen(
-            viewModel = homeViewModel,
+            onCreatePost = onCreatePost,
+            refreshRequested = homeRefreshRequested,
+            onRefreshHandled = onHomeRefreshHandled,
             onOpenNotifications = onOpenNotifications,
-            navigationIcon = menuNavigationIcon,
-            modifier = modifier
+            navigationIcon = menuNavigationIcon
         )
         // 그룹 탭도 화면이 상단바를 소유(홈과 동일) — 상세는 NavHost 풀스크린 목적지로 승격됨
         MainDestination.GROUPS -> GroupsScreen(
-            viewModel = groupsViewModel,
             onOpenGroup = onOpenGroupDetail,
             onOpenNotifications = onOpenNotifications,
-            navigationIcon = menuNavigationIcon,
-            modifier = modifier
+            navigationIcon = menuNavigationIcon
         )
-        MainDestination.FRIENDS -> FriendsScreen(modifier)
-        MainDestination.CHAT -> ChatScreen(modifier)
-        MainDestination.NOTIFICATIONS -> NotificationsScreen(modifier)
+        MainDestination.FRIENDS -> FriendsScreen()
+        MainDestination.CHAT -> ChatScreen()
+        MainDestination.NOTIFICATIONS -> NotificationsScreen()
         MainDestination.PROFILE -> ProfileScreen(
-            profile = profile,
             onOpenSettings = onOpenSettings,
-            onLogout = onLogout,
-            modifier = modifier
+            onLogout = onLogout
         )
     }
 }

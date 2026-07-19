@@ -10,10 +10,13 @@ final class AppContainer {
     let registerUseCase: RegisterUseCase
     let getMyProfileUseCase: GetMyProfileUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
+    let getMyGroupsPagingDataUseCase: GetMyGroupsPagingDataUseCase
     let getGroupUseCase: GetGroupUseCase
     let getGroupMembersUseCase: GetGroupMembersUseCase
     let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+    let createPostUseCase: CreatePostUseCase
+    let createLoungePostUseCase: CreateLoungePostUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -32,9 +35,12 @@ final class AppContainer {
         registerUseCase = RegisterUseCase(authRepository: authRepository)
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
+        getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository: groupRepository)
         getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
         getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
         getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
+        createPostUseCase = CreatePostUseCase(postRepository: postRepository)
+        createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
     }
 }

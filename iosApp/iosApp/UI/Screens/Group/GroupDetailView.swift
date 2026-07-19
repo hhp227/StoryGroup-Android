@@ -6,21 +6,28 @@ import class Shared.Group
 
 /// 그룹 상세 — 웹 /groups/[id]·Compose GroupDetailScreen 미러: 콜랩싱 커버(그라데이션 폴백+
 /// 이름/설명/역할 칩)+멤버 스트립+피드(Paging). 상단바는 루트 NavigationStack의 기본 내비바.
-/// VM은 여기서 lazy 생성(StateObject)하고, 페이징 구독은 내부 뷰가 VM 확정 후 생성한다.
+/// groupId만 받아 VM이 스스로 로드한다(목록 페이징 전환으로 스냅샷 lookup 불가 — Compose 미러).
+/// 계층은 Compose GroupDetailScreen과 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct GroupDetailView: View {
     @StateObject private var viewModel: GroupDetailViewModel
 
-    init(group: Group, factory: @escaping (Group) -> GroupDetailViewModel) {
-        _viewModel = StateObject(wrappedValue: factory(group))
-    }
+    /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
+    private let container: AppContainer
 
     var body: some View {
-        GroupDetailContent(viewModel: viewModel)
+        GroupDetailContent(viewModel: viewModel, container: container)
+    }
+
+    init(groupId: Int64, container: AppContainer) {
+        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(container: container, groupId: groupId))
+        self.container = container
     }
 }
 
 private struct GroupDetailContent: View {
     @ObservedObject var viewModel: GroupDetailViewModel
+
+    let container: AppContainer
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -36,14 +43,8 @@ private struct GroupDetailContent: View {
     /// 내비바 아래 노출 커버 높이 — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
     private let headerHeight: CGFloat = 114
 
-    init(viewModel: GroupDetailViewModel) {
-        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
-        // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
-        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
-
-        self.viewModel = viewModel
-        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
-    }
+    /// 그룹 글쓰기 시트 — Compose CreatePostRoute(groupId) 미러
+    @State private var showCreatePost = false
 
     var body: some View {
         GeometryReader { outer in
@@ -58,8 +59,19 @@ private struct GroupDetailContent: View {
             // 커버가 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
         }
-        .navigationTitle(viewModel.uiState.group.name)
+        // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러
+        .overlay(alignment: .bottomTrailing) {
+            SGFab(action: { showCreatePost = true }).padding(16)
+        }
+        // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
+        .navigationTitle(viewModel.uiState.group?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showCreatePost) {
+            // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
+            CreatePostView(container: container, groupId: viewModel.groupId) {
+                lazyPagingItems.refresh()
+            }
+        }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
         .navigationBarScrim(visible: barScrimVisible)
         // 상세 진입 시 신선화 — 목록에서 받은 그룹으로 먼저 그리고 최신화한다
@@ -74,7 +86,7 @@ private struct GroupDetailContent: View {
             let minY = raw - (headerRestMinY ?? raw)
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
-                groupCoverGradient(groupId: viewModel.uiState.group.id, colors: colors)
+                groupCoverGradient(groupId: viewModel.groupId, colors: colors)
                 // 웹 커버 하단 스크림(0.05→0.62) — 흰 텍스트 대비 확보
                 LinearGradient(
                     gradient: Gradient(colors: [Color.black.opacity(0.05), Color.black.opacity(0.62)]),
@@ -98,21 +110,23 @@ private struct GroupDetailContent: View {
         .frame(height: total)
     }
 
-    /// 웹 커버 스크림 위 그룹명/설명/역할 칩 미러
-    private var coverOverlay: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
-                Text(viewModel.uiState.group.name)
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                RoleChip(role: viewModel.uiState.group.myRole)
-            }
-            if let description = viewModel.uiState.group.description_, !description.isEmpty {
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.88))
-                    .lineLimit(2)
+    /// 웹 커버 스크림 위 그룹명/설명/역할 칩 미러 — 로드 전(nil)엔 자리만 비워 둔다
+    @ViewBuilder private var coverOverlay: some View {
+        if let group = viewModel.uiState.group {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(group.name)
+                        .font(.title3.bold())
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    RoleChip(role: group.myRole)
+                }
+                if let description = group.description_, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.88))
+                        .lineLimit(2)
+                }
             }
         }
     }
@@ -186,5 +200,15 @@ private struct GroupDetailContent: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    init(viewModel: GroupDetailViewModel, container: AppContainer) {
+        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
+        // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
+        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+
+        self.viewModel = viewModel
+        self.container = container
+        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

@@ -15,7 +15,7 @@ final class ProfileViewModel: MviViewModel {
         }
     }
 
-    /// 로그인 직후 발화 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지)
+    /// 갱신 — 이전 값은 로딩 중에도 유지
     private func load() {
         if uiState.isLoading { return }
 
@@ -35,6 +35,8 @@ final class ProfileViewModel: MviViewModel {
 
     init(container: AppContainer) {
         getMyProfileUseCase = container.getMyProfileUseCase
+        // 세션 수명(MainShellView)에 소유되어 "생성 = 세션 진입 1회" — 바로 로드한다(재로그인 시 재생성)
+        load()
     }
 
     struct UiState {

@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,12 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgAvatar
@@ -48,15 +52,53 @@ import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.collapsingParallax
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
+@Composable
+private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-detail-$groupId") {
+        GroupDetailViewModel(
+            groupId = groupId,
+            getGroupUseCase = container.getGroupUseCase,
+            getGroupMembersUseCase = container.getGroupMembersUseCase,
+            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
+        )
+    }
+}
+
 /**
  * 그룹 상세 — 웹 /groups/[id] 미러: 커버 배너(그라데이션 폴백+이름/설명/역할 칩)+멤버 스트립+피드.
  * 커버는 레거시 fragment_group_detail.xml처럼 콜랩싱(SgCollapsingHeaderScaffold).
- * iosApp GroupDetailView.swift와 1:1 미러
+ * 계층은 iosApp GroupDetailView.swift와 1:1 미러 — Screen=상태 소유(VM 선언), Content=구독+UI.
  */
 @Composable
 fun GroupDetailScreen(
+    groupId: Long,
+    onBack: () -> Unit,
+    onCreatePost: () -> Unit,
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
+    modifier: Modifier = Modifier,
+    // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴)
+    viewModel: GroupDetailViewModel = groupDetailViewModel(groupId)
+) {
+    GroupDetailContent(
+        viewModel = viewModel,
+        onBack = onBack,
+        onCreatePost = onCreatePost,
+        refreshRequested = refreshRequested,
+        onRefreshHandled = onRefreshHandled,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun GroupDetailContent(
     viewModel: GroupDetailViewModel,
     onBack: () -> Unit,
+    onCreatePost: () -> Unit,
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -71,11 +113,29 @@ fun GroupDetailScreen(
     LaunchedEffect(viewModel) {
         viewModel.onAction(GroupDetailViewModel.Action.Refresh)
     }
+    // 작성 화면에서 돌아온 결과 — 피드를 첫 페이지부터 다시 읽는다(Paging-CRUD 샘플 미러)
+    LaunchedEffect(refreshRequested) {
+        if (refreshRequested) {
+            lazyPagingItems.refresh()
+            onRefreshHandled()
+        }
+    }
     SgCollapsingHeaderScaffold(
-        title = uiState.group.name,
+        // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
+        title = uiState.group?.name.orEmpty(),
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+            }
+        },
+        // 레거시 fragment_group_detail.xml의 fab 미러
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreatePost,
+                backgroundColor = sg.accent,
+                contentColor = sg.onAccent
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "글쓰기")
             }
         },
         header = { listState ->
@@ -84,7 +144,7 @@ fun GroupDetailScreen(
                 Modifier
                     .matchParentSize()
                     .collapsingParallax(listState)
-                    .background(groupCoverBrush(uiState.group.id, sg))
+                    .background(groupCoverBrush(viewModel.groupId, sg))
             )
             // 웹 커버 하단 스크림(0.05→0.62) 위 그룹명/설명/역할 칩 미러
             Box(
@@ -95,34 +155,36 @@ fun GroupDetailScreen(
                     )
                 )
             )
-            Column(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        uiState.group.name,
-                        style = SgTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    RoleChip(uiState.group.myRole)
-                }
-                if (!uiState.group.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        uiState.group.description.orEmpty(),
-                        style = SgTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.88f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            uiState.group?.let { group ->
+                Column(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            group.name,
+                            style = SgTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        RoleChip(group.myRole)
+                    }
+                    if (!group.description.isNullOrBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            group.description.orEmpty(),
+                            style = SgTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.88f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         },

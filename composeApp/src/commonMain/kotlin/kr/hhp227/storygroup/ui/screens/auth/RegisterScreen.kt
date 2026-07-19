@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,20 +28,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 가입 — 웹 /register 미러. 성공 시 상위(AuthFlow)가 Event.Registered를 받아 로그인으로 되돌린다(MVI) */
+@Composable
+private fun registerViewModel(): RegisterViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel { RegisterViewModel(container.registerUseCase) }
+}
+
+/**
+ * 가입 — 웹 /register 미러. VM은 화면이 default parameter로 선언하고
+ * Event.Registered도 화면이 수집해 onRegistered로 알린다(ConCafe 패턴, iosApp RegisterView 미러)
+ */
 @Composable
 fun RegisterScreen(
-    uiState: RegisterViewModel.UiState,
-    onAction: (RegisterViewModel.Action) -> Unit,
-    onNavigateToLogin: () -> Unit
+    onRegistered: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    viewModel: RegisterViewModel = registerViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val onAction = viewModel::onAction
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    // 일회성 이벤트 수집 — 가입 완료 시 상위가 안내 문구와 함께 로그인으로 복귀시킨다
+    LaunchedEffect(viewModel) {
+        viewModel.event.collect { event ->
+            when (event) {
+                RegisterViewModel.Event.Registered -> onRegistered()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -107,7 +132,11 @@ fun RegisterScreen(
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = SgTheme.colors.accent,
-                modifier = Modifier.clickable(enabled = !uiState.isLoading, onClick = onNavigateToLogin)
+                modifier = Modifier.clickable(enabled = !uiState.isLoading) {
+                    // 화면을 떠나며 자기 에러를 정리한다(이전엔 AuthFlow 몫)
+                    onAction(RegisterViewModel.Action.ClearError)
+                    onNavigateToLogin()
+                }
             )
         }
     }

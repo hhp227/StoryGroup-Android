@@ -9,16 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
@@ -45,11 +47,38 @@ import storygroup.composeapp.generated.resources.header
 
 /**
  * 홈(라운지) 피드 — 웹 메인 피드 미러 + 레거시 CollapsingToolbar 헤더(SgCollapsingHeaderScaffold).
- * iosApp HomeView.swift와 1:1 미러
+ * ViewModel은 화면이 default parameter로 세션 스코프에 선언한다(ConCafe 패턴).
+ * 화면·프레젠터는 셸의 keep-alive 컨테이너 안에서 dispose되지 않아 스크롤이 유지된다.
+ * 계층은 iosApp HomeView.swift와 1:1 미러 — Screen=상태 소유(VM 선언), Content=구독+UI.
  */
 @Composable
 fun HomeScreen(
+    onCreatePost: () -> Unit,
+    // 글쓰기 성공 신호(라운지) — 소비 후 onRefreshHandled로 소거한다
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    modifier: Modifier = Modifier,
+    navigationIcon: (@Composable () -> Unit)? = null,
+    viewModel: HomeViewModel = sessionViewModel { HomeViewModel(it.getLoungePostsPagingDataUseCase) }
+) {
+    HomeContent(
+        viewModel = viewModel,
+        onCreatePost = onCreatePost,
+        refreshRequested = refreshRequested,
+        onRefreshHandled = onRefreshHandled,
+        onOpenNotifications = onOpenNotifications,
+        navigationIcon = navigationIcon,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun HomeContent(
     viewModel: HomeViewModel,
+    onCreatePost: () -> Unit,
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
@@ -61,6 +90,13 @@ fun HomeScreen(
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
+    // 작성 화면에서 돌아온 결과 — 라운지 피드를 첫 페이지부터 다시 읽는다
+    LaunchedEffect(refreshRequested) {
+        if (refreshRequested) {
+            viewModel.onAction(HomeViewModel.Action.Refresh)
+            onRefreshHandled()
+        }
+    }
     SgCollapsingHeaderScaffold(
         title = "우리들의 이야기",
         navigationIcon = navigationIcon,
@@ -70,6 +106,16 @@ fun HomeScreen(
             }
             IconButton(onClick = onOpenNotifications) {
                 Icon(Icons.Default.Notifications, contentDescription = "알림")
+            }
+        },
+        // 레거시 fragment_lounge.xml의 fab(ic_add_white_24dp) 미러
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreatePost,
+                backgroundColor = sg.accent,
+                contentColor = sg.onAccent
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "글쓰기")
             }
         },
         header = { listState ->

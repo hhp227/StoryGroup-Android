@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,6 +60,7 @@ fun SgCollapsingHeaderScaffold(
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    floatingActionButton: (@Composable () -> Unit)? = null,
     headerHeight: Dp = CollapsingHeaderHeight,
     header: @Composable BoxScope.(listState: LazyListState) -> Unit,
     content: LazyListScope.() -> Unit
@@ -109,6 +111,12 @@ fun SgCollapsingHeaderScaffold(
             actions = actions,
             modifier = Modifier.align(Alignment.TopCenter)
         )
+        // 레거시 fab(bottom|end, fab_margin) 미러 — 스크롤과 무관하게 화면 우하단 고정
+        if (floatingActionButton != null) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+                floatingActionButton()
+            }
+        }
     }
 }
 

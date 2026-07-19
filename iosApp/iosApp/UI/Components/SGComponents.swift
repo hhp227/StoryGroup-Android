@@ -8,12 +8,19 @@ import struct SwiftUI.Group
 /// 웹 미러 헤더(linen + 하단 stone-border) — Compose SgTopBar 미러
 struct SGHeader: View {
     let title: String
+
     @Environment(\.sgColors) private var colors
+
     var leadingIcon: String? = nil
+
     var onLeading: (() -> Void)? = nil
+
     var showsNotifications: Bool = false
+
     var onNotifications: (() -> Void)? = nil
+
     var showsSettings: Bool = false
+
     var onSettings: (() -> Void)? = nil
 
     var body: some View {
@@ -50,11 +57,8 @@ struct SGHeader: View {
 /// 웹 .card 미러(linen 바탕 + stone 보더) — Compose SgCard 미러
 struct SGCard<Content: View>: View {
     @Environment(\.sgColors) private var colors
-    private let content: Content
 
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
+    private let content: Content
 
     var body: some View {
         content
@@ -68,15 +72,24 @@ struct SGCard<Content: View>: View {
                     )
             )
     }
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
 }
 
 /// 웹 .field 미러(라벨 위 배치 + linen 입력창) — Compose SgTextField 미러
 struct SGTextField: View {
     let label: String
+
     @Binding var text: String
+
     @Environment(\.sgColors) private var colors
+
     var isSecure: Bool = false
+
     var keyboard: UIKeyboardType = .default
+
     var enabled: Bool = true
 
     var body: some View {
@@ -110,9 +123,13 @@ struct SGTextField: View {
 /// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러
 struct SGPrimaryButton: View {
     let title: String
+
     @Environment(\.sgColors) private var colors
+
     var enabled: Bool = true
+
     var isLoading: Bool = false
+
     let action: () -> Void
 
     private var isActive: Bool { enabled && !isLoading }
@@ -141,9 +158,13 @@ struct SGPrimaryButton: View {
 /// 이니셜 원형 아바타 — Compose SgAvatar 미러
 struct SGAvatar: View {
     let name: String
+
     @Environment(\.sgColors) private var colors
+
     var size: CGFloat = 40
+
     var background: Color? = nil
+
     var foreground: Color? = nil
 
     var body: some View {
@@ -161,8 +182,11 @@ struct SGAvatar: View {
 /// 빈 상태 — Compose SgEmptyState 미러
 struct SGEmptyState: View {
     let title: String
+
     let subtitle: String
+
     @Environment(\.sgColors) private var colors
+
     var systemImage: String? = nil
 
     var body: some View {
@@ -191,6 +215,7 @@ struct SGEmptyState: View {
 /// 리스트 구획 라벨 — Compose SgSectionTitle 미러
 struct SGSectionTitle: View {
     let text: String
+
     @Environment(\.sgColors) private var colors
 
     var body: some View {
@@ -254,7 +279,9 @@ struct SGPostCard: View {
 /// 추가 로딩/실패 표시 — Compose SgPagingFooter 미러(실패 시엔 수동 재시도만 노출)
 struct SGPagingFooter: View {
     let error: String?
+
     let isLoadingMore: Bool
+
     let onRetry: () -> Void
 
     @Environment(\.sgColors) private var colors
@@ -275,6 +302,25 @@ struct SGPagingFooter: View {
 }
 
 // MARK: - 내비바 스크림 수동 제어
+
+/// 글쓰기 FAB — 레거시 fab(bottom|end, ic_add_white_24dp) 미러, Compose FloatingActionButton 대응
+struct SGFab: View {
+    @Environment(\.sgColors) private var colors
+
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(colors.onAccent)
+                .frame(width: 56, height: 56)
+                .background(colors.accent)
+                .clipShape(Circle())
+                .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 3)
+        }
+    }
+}
 
 /// 시스템 내비바 배경 표시 여부를 화면 스크롤 상태로 올려보내는 프리퍼런스.
 /// keep-alive ZStack에 스크롤뷰가 여러 개라 UIKit의 자동 전환(scrollEdge→standard)이

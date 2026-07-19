@@ -10,7 +10,9 @@ final class HomeViewModel: MviViewModel {
 
     @Published private(set) var uiState = UiState()
 
-    // 재로그인 시 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행
+    // 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행.
+    // HomeView(keep-alive ZStack) 소유라 "생성 = 세션 진입 1회" — 초기값으로 즉시 시작해도
+    // 외부에서 직후 refresh를 쏘지 않으므로 안전하다(refresh는 글쓰기 성공 갱신용)
     private let refreshTrigger = CurrentValueSubject<Int, Never>(0)
 
     private var cancellables = Set<AnyCancellable>()
@@ -21,7 +23,7 @@ final class HomeViewModel: MviViewModel {
 
     func onAction(_ action: Action) {
         switch action {
-        // 로그인 세션 진입 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
+        // 글쓰기 성공 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
         case .refresh:
             refreshTrigger.send(refreshTrigger.value + 1)
         }

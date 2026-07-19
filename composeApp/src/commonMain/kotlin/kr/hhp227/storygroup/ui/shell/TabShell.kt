@@ -29,10 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.shared.domain.model.Group
-import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgTopBar
-import kr.hhp227.storygroup.ui.screens.group.GroupsViewModel
-import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 레일 전환 폭 — M3 window size class의 compact/medium 경계(600dp) */
@@ -46,10 +43,10 @@ private val RailBreakpoint = 600.dp
 internal fun TabShell(
     currentDestination: MainDestination,
     onDestinationSelected: (MainDestination) -> Unit,
-    profile: Profile?,
-    homeViewModel: HomeViewModel,
-    groupsViewModel: GroupsViewModel,
     onOpenGroupDetail: (Group) -> Unit,
+    onCreatePost: () -> Unit,
+    homeRefreshRequested: Boolean,
+    onHomeRefreshHandled: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -124,10 +121,10 @@ internal fun TabShell(
             ) { padding ->
                 DestinationContent(
                     destination = currentDestination,
-                    profile = profile,
-                    homeViewModel = homeViewModel,
-                    groupsViewModel = groupsViewModel,
                     onOpenGroupDetail = onOpenGroupDetail,
+                    onCreatePost = onCreatePost,
+                    homeRefreshRequested = homeRefreshRequested,
+                    onHomeRefreshHandled = onHomeRefreshHandled,
                     onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                     onOpenSettings = onOpenSettings,
                     onLogout = onLogout,

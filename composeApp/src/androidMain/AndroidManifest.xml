@@ -11,9 +11,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <!-- adjustResize: 키보드가 창을 팬(pan)시키며 상단바까지 밀어올리지 않게 —
+             ime 인셋으로 전달되어 화면의 imePadding이 소화한다(작성 화면 상단바 고정) -->
         <activity
             android:exported="true"
-            android:name="kr.hhp227.storygroup.MainActivity">
+            android:name="kr.hhp227.storygroup.MainActivity"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

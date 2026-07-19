@@ -16,4 +16,10 @@ interface PostRepository {
      * 수행되어 실패도 LoadState.Error로 흘러 재시도와 통합되고, refresh마다 재해석된다(재로그인 대응).
      */
     fun getLoungePostsPagingData(): Flow<PagingData<Post>>
+
+    /** 게시글 작성 — POST /api/groups/{id}/posts, 생성된 게시글을 돌려준다 */
+    suspend fun createPost(groupId: Long, text: String): Result<Post>
+
+    /** 라운지에 게시 — 홈 피드 작성 진입점(웹 메인 피드 폼 미러), 라운지 해석 포함 */
+    suspend fun createLoungePost(text: String): Result<Post>
 }

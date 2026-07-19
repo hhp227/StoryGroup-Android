@@ -11,11 +11,10 @@ struct DrawerShellView: View {
 
     @Binding var showSettings: Bool
 
+    /// 화면이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
+    let container: AppContainer
+
     let profile: Profile?
-
-    let homeViewModel: HomeViewModel
-
-    let groupsViewModel: GroupsViewModel
 
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
@@ -36,9 +35,8 @@ struct DrawerShellView: View {
                     ForEach(SGDestination.allCases) { destination in
                         DestinationView(
                             destination: destination,
+                            container: container,
                             profile: profile,
-                            homeViewModel: homeViewModel,
-                            groupsViewModel: groupsViewModel,
                             onOpenGroup: onOpenGroup,
                             onOpenSettings: { showSettings = true },
                             onLogout: onLogout

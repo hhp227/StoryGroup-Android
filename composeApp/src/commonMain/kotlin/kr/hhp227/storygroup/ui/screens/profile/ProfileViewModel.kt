@@ -28,7 +28,12 @@ class ProfileViewModel(
         }
     }
 
-    /** 로그인 직후 발화 — 재로그인 시에도 항상 새로 가져온다(이전 값은 로딩 중에도 유지) */
+    init {
+        // 세션 스코프라 "생성 = 세션 진입 1회" — 여기서 바로 로드한다(재로그인 시 재생성)
+        load()
+    }
+
+    /** 갱신 — 이전 값은 로딩 중에도 유지 */
     private fun load() {
         if (_uiState.value.isLoading) return
 

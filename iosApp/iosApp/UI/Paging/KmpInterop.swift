@@ -34,6 +34,33 @@ extension GetGroupPostsPagingDataUseCase {
     }
 }
 
+// Kotlin: getMyGroupsPagingDataUseCase() → Flow<PagingData<Group>>
+extension GetMyGroupsPagingDataUseCase {
+    func callAsFunction() -> GroupPagingPublisher {
+        GroupPagingPublisher(adapter: pagingFlow())
+    }
+}
+
+// Kotlin의 Flow<PagingData<Group>> 대응 퍼블리셔 — PostPagingPublisher의 Group 타입 대응
+struct GroupPagingPublisher: Publisher {
+    typealias Output = PagingData<Group>
+
+    typealias Failure = Never
+
+    fileprivate let adapter: GroupPagingFlowAdapter
+
+    func cachedIn() -> GroupPagingPublisher {
+        GroupPagingPublisher(adapter: adapter.cachedIn())
+    }
+
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
+        KotlinFlowPublisher<Output> { onEach in
+            self.adapter.subscribe(onEach: onEach)
+        }
+        .receive(subscriber: subscriber)
+    }
+}
+
 // Kotlin의 Flow<PagingData<Post>> 대응 퍼블리셔.
 // cachedIn()은 cachedIn(viewModelScope) 대응 — 캐시가 구독(cancellables) 수명에 묶인다
 struct PostPagingPublisher: Publisher {
@@ -66,6 +93,16 @@ extension Publisher where Failure == Never {
         let adapter = KmpPagingBridgeAdapter(bridge)
 
         adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<Post>) }
+        return LazyPagingItems(bridge: adapter)
+    }
+
+    // Group 타입 대응 — 반환 타입 오버로드(호출부의 LazyPagingItems<Group> 프로퍼티 타입으로 선택된다)
+    func collectAsLazyPagingItems() -> LazyPagingItems<Group> {
+        let subject = PagingDataSubject<Group>()
+        let bridge = unsafeDowncast(subject.bridge, to: SwiftUiPagingBridge<Group>.self)
+        let adapter = KmpPagingBridgeAdapter(bridge)
+
+        adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<Group>) }
         return LazyPagingItems(bridge: adapter)
     }
 }

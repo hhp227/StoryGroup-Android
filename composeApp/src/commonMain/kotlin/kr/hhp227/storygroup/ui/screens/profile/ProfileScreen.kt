@@ -20,24 +20,29 @@ import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import kr.hhp227.storygroup.shared.domain.model.Profile
+import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴 */
+/** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴. VM은 드로어 헤더와 공유하는 세션 스코프 */
 @Composable
 fun ProfileScreen(
-    profile: Profile?,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val profile = uiState.profile
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
