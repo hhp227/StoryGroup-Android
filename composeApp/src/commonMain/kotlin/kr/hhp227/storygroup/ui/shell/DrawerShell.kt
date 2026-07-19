@@ -102,30 +102,39 @@ internal fun DrawerShell(
         Scaffold(
             backgroundColor = sg.paper,
             topBar = {
-                SgTopBar(
-                    title = currentDestination.label,
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "메뉴")
-                        }
-                    },
-                    actions = {
-                        // 탭 쉘과 동일하게 상단바 우측에서도 알림 진입(알림 화면에서는 숨김)
-                        if (currentDestination != MainDestination.NOTIFICATIONS) {
-                            IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
-                                Icon(Icons.Default.Notifications, contentDescription = "알림")
+                // 홈은 화면이 콜랩싱 상단바를 직접 그린다(메뉴 아이콘은 homeNavigationIcon으로 전달)
+                if (currentDestination != MainDestination.HOME) {
+                    SgTopBar(
+                        title = currentDestination.label,
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "메뉴")
+                            }
+                        },
+                        actions = {
+                            // 탭 쉘과 동일하게 상단바 우측에서도 알림 진입(알림 화면에서는 숨김)
+                            if (currentDestination != MainDestination.NOTIFICATIONS) {
+                                IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
+                                    Icon(Icons.Default.Notifications, contentDescription = "알림")
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         ) { padding ->
             DestinationContent(
                 destination = currentDestination,
                 profile = profile,
                 homeViewModel = homeViewModel,
+                onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                 onOpenSettings = onOpenSettings,
                 onLogout = onLogout,
+                homeNavigationIcon = {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(Icons.Default.Menu, contentDescription = "메뉴")
+                    }
+                },
                 // 드로어 쉘은 하단 바가 없어 시스템 내비바 인셋을 콘텐츠가 직접 소화
                 modifier = Modifier
                     .padding(padding)

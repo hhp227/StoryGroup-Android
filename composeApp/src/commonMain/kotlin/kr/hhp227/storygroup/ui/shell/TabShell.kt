@@ -24,7 +24,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -78,27 +77,25 @@ internal fun TabShell(
             Scaffold(
                 backgroundColor = sg.paper,
                 topBar = {
-                    SgTopBar(
-                        title = if (currentDestination == MainDestination.HOME) "우리들의 이야기" else currentDestination.label,
-                        actions = {
-                            if (currentDestination == MainDestination.HOME) {
-                                IconButton(onClick = { /* TODO: 검색 */ }) {
-                                    Icon(Icons.Default.Search, contentDescription = "검색")
+                    // 홈은 화면이 콜랩싱 상단바(검색·알림 포함)를 직접 그린다 — 레거시 라운지 CollapsingToolbar 미러
+                    if (currentDestination != MainDestination.HOME) {
+                        SgTopBar(
+                            title = currentDestination.label,
+                            actions = {
+                                // 알림은 탭에서 빠지고 상단바 종 아이콘으로 진입(알림 화면에서는 숨김)
+                                if (currentDestination != MainDestination.NOTIFICATIONS) {
+                                    IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
+                                        Icon(Icons.Default.Notifications, contentDescription = "알림")
+                                    }
+                                }
+                                if (currentDestination == MainDestination.PROFILE) {
+                                    IconButton(onClick = onOpenSettings) {
+                                        Icon(Icons.Default.Settings, contentDescription = "앱 설정")
+                                    }
                                 }
                             }
-                            // 알림은 탭에서 빠지고 상단바 종 아이콘으로 진입(알림 화면에서는 숨김)
-                            if (currentDestination != MainDestination.NOTIFICATIONS) {
-                                IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
-                                    Icon(Icons.Default.Notifications, contentDescription = "알림")
-                                }
-                            }
-                            if (currentDestination == MainDestination.PROFILE) {
-                                IconButton(onClick = onOpenSettings) {
-                                    Icon(Icons.Default.Settings, contentDescription = "앱 설정")
-                                }
-                            }
-                        }
-                    )
+                        )
+                    }
                 },
                 bottomBar = {
                     if (!useRail) {
@@ -125,6 +122,7 @@ internal fun TabShell(
                     destination = currentDestination,
                     profile = profile,
                     homeViewModel = homeViewModel,
+                    onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                     onOpenSettings = onOpenSettings,
                     onLogout = onLogout,
                     // 레일 모드는 하단 바가 없어 내비바 인셋을 콘텐츠가 직접 소화(탭 모드는 하단 바가 소화)

@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,12 +81,51 @@ internal fun DestinationContent(
     destination: MainDestination,
     profile: Profile?,
     homeViewModel: HomeViewModel,
+    onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+    // 드로어 쉘이 홈 콜랩싱 상단바에 얹는 메뉴 아이콘(탭 쉘은 없음)
+    homeNavigationIcon: (@Composable () -> Unit)? = null
+) {
+    // enum 전환이라 목적지를 떠나면 컴포저블이 dispose됨 — 스크롤 위치(rememberLazyListState 등
+    // rememberSaveable 기반 상태)가 초기화되지 않게 목적지별로 보존/복원한다.
+    // Navigation Compose는 미도입 상태(백스택이 필요해지는 그룹 상세 때 saveState/restoreState로 대체 검토).
+    val stateHolder = rememberSaveableStateHolder()
+
+    stateHolder.SaveableStateProvider(destination.name) {
+        DestinationScreen(
+            destination = destination,
+            profile = profile,
+            homeViewModel = homeViewModel,
+            onOpenNotifications = onOpenNotifications,
+            onOpenSettings = onOpenSettings,
+            onLogout = onLogout,
+            homeNavigationIcon = homeNavigationIcon,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+private fun DestinationScreen(
+    destination: MainDestination,
+    profile: Profile?,
+    homeViewModel: HomeViewModel,
+    onOpenNotifications: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onLogout: () -> Unit,
+    homeNavigationIcon: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     when (destination) {
-        MainDestination.HOME -> HomeScreen(homeViewModel, modifier)
+        // 홈은 셸 상단바 없이 화면이 콜랩싱 헤더(레거시 라운지 CollapsingToolbar 미러)를 직접 그린다
+        MainDestination.HOME -> HomeScreen(
+            viewModel = homeViewModel,
+            onOpenNotifications = onOpenNotifications,
+            navigationIcon = homeNavigationIcon,
+            modifier = modifier
+        )
         MainDestination.GROUPS -> GroupsScreen(modifier)
         MainDestination.FRIENDS -> FriendsScreen(modifier)
         MainDestination.CHAT -> ChatScreen(modifier)

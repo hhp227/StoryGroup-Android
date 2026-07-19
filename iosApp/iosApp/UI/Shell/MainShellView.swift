@@ -94,14 +94,20 @@ struct DestinationView: View {
 
     let homeViewModel: HomeViewModel
 
+    let onOpenNotifications: () -> Void
+
     let onOpenSettings: () -> Void
 
     let onLogout: () -> Void
 
+    /// 드로어 쉘이 홈 콜랩싱 상단바에 얹는 햄버거 액션(탭 쉘은 nil) — Compose homeNavigationIcon 미러
+    var homeMenuAction: (() -> Void)? = nil
+
     var body: some View {
         switch destination {
+        // 홈은 셸 상단바 없이 화면이 콜랩싱 헤더(레거시 라운지 CollapsingToolbar 미러)를 직접 그린다
         case .home:
-            HomeView(viewModel: homeViewModel)
+            HomeView(viewModel: homeViewModel, onNotifications: onOpenNotifications, onMenu: homeMenuAction)
         case .groups:
             GroupsView()
         case .friends:
