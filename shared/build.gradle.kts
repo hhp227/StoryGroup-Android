@@ -31,8 +31,9 @@ kotlin {
             baseName = "Shared"
             isStatic = true
             // Swift에서 PagingData<T>를 접두사 없는 타입으로 다루기 위해(Paging_commonPagingData 방지)
-            // — State.pagingData가 Android와 1:1 대응 (Paging-CRUD 샘플과 동일 구성)
-            export(libs.cash.paging.common)
+            // — State.pagingData가 Android와 1:1 대응 (Paging-CRUD 샘플과 동일 구성).
+            // ⚠️cash 모듈은 export 금지: 클래스 동명 최상위 함수 등이 ObjC 헤더 생성을 깨뜨린다.
+            //   Swift가 쓰는 건 androidx 실체(PagingData)뿐이라 이것만 export하면 된다.
             export(libs.androidx.paging.common)
             xcframework.add(this)
         }
