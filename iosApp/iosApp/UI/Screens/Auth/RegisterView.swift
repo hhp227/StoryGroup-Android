@@ -3,22 +3,18 @@ import SwiftUI
 /// 가입 — 웹 /register·Compose RegisterScreen 미러. 성공 시 상위(AuthFlowView)가 로그인으로 되돌린다.
 struct RegisterView: View {
     @StateObject private var registerViewModel: RegisterViewModel
+    
     @Environment(\.sgColors) private var colors
+    
     let onRegistered: () -> Void
+    
     let onNavigateToLogin: () -> Void
+    
     @State private var name = ""
+    
     @State private var email = ""
+    
     @State private var password = ""
-
-    init(
-        container: AppContainer,
-        onRegistered: @escaping () -> Void,
-        onNavigateToLogin: @escaping () -> Void
-    ) {
-        _registerViewModel = StateObject(wrappedValue: RegisterViewModel(container: container))
-        self.onRegistered = onRegistered
-        self.onNavigateToLogin = onNavigateToLogin
-    }
 
     var body: some View {
         ScrollView {
@@ -32,7 +28,6 @@ struct RegisterView: View {
                     .font(.subheadline)
                     .foregroundColor(colors.inkSoft)
                 Spacer().frame(height: 28)
-
                 SGTextField(
                     label: "이름",
                     text: $name,
@@ -52,13 +47,11 @@ struct RegisterView: View {
                     isSecure: true,
                     enabled: !registerViewModel.uiState.isLoading
                 )
-
                 if let error = registerViewModel.uiState.error {
                     Spacer().frame(height: 12)
                     Text(error).font(.caption).foregroundColor(colors.rust)
                 }
                 Spacer().frame(height: 24)
-
                 SGPrimaryButton(
                     title: registerViewModel.uiState.isLoading ? "가입하는 중..." : "가입하기",
                     enabled: !name.isEmpty && !email.isEmpty && !password.isEmpty,
@@ -72,7 +65,6 @@ struct RegisterView: View {
                     }
                 )
                 Spacer().frame(height: 20)
-
                 HStack(spacing: 6) {
                     Text("이미 계정이 있나요?")
                         .font(.subheadline)
@@ -94,5 +86,15 @@ struct RegisterView: View {
             case .registered: onRegistered()
             }
         }
+    }
+    
+    init(
+        container: AppContainer,
+        onRegistered: @escaping () -> Void,
+        onNavigateToLogin: @escaping () -> Void
+    ) {
+        _registerViewModel = StateObject(wrappedValue: RegisterViewModel(container: container))
+        self.onRegistered = onRegistered
+        self.onNavigateToLogin = onNavigateToLogin
     }
 }
