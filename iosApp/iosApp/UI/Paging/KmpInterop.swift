@@ -15,6 +15,11 @@ import Shared
 // 이 파일에 필요한 LazyPagingItems만 스코프 임포트한다
 import class Paging.LazyPagingItems
 
+// shared 프레임워크는 의존 모듈(paging-common) 클래스를 모듈 접두사로 노출한다
+// (모듈 전체 export는 ObjC 헤더 생성을 깨뜨려서 쓰지 않음). 실체는 androidx PagingData —
+// 이름만 복원해 Android(State.pagingData: PagingData<Post>)와 1:1 표기를 유지한다.
+typealias PagingData<T: AnyObject> = Paging_commonPagingData<T>
+
 // Kotlin: getLoungePostsPagingDataUseCase() → Flow<PagingData<Post>>
 extension GetLoungePostsPagingDataUseCase {
     func callAsFunction() -> PostPagingPublisher {

@@ -30,11 +30,10 @@ kotlin {
         target.binaries.framework {
             baseName = "Shared"
             isStatic = true
-            // Swift에서 PagingData<T>를 접두사 없는 타입으로 다루기 위해(Paging_commonPagingData 방지)
-            // — State.pagingData가 Android와 1:1 대응 (Paging-CRUD 샘플과 동일 구성).
-            // ⚠️cash 모듈은 export 금지: 클래스 동명 최상위 함수 등이 ObjC 헤더 생성을 깨뜨린다.
-            //   Swift가 쓰는 건 androidx 실체(PagingData)뿐이라 이것만 export하면 된다.
-            export(libs.androidx.paging.common)
+            // ⚠️paging-common은 export 금지(cash·androidx 모두): alpha02 모듈 전체를 ObjC로
+            //   내보내면 헤더 생성이 깨져 앱 컴파일이 실패한다(사용자 Mac에서 확인).
+            //   PagingData는 접두사 이름(Paging_commonPagingData)으로 노출되고,
+            //   앱의 KmpInterop.swift가 typealias로 PagingData 이름을 복원한다.
             xcframework.add(this)
         }
     }
@@ -46,10 +45,8 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             // 페이징은 데이터 계층 소속 — Repository가 Flow<PagingData>를 노출하므로 api
-            // (androidx.paging은 jvm 타깃 미지원이라 Cash 멀티플랫폼 포크 사용.
-            //  androidx paging-common은 cash가 위임하는 실체 — 프레임워크 export 조건으로 api 선언)
+            // (androidx.paging은 jvm 타깃 미지원이라 Cash 멀티플랫폼 포크 사용)
             api(libs.cash.paging.common)
-            api(libs.androidx.paging.common)
             // HttpClient가 AuthRepository/createApiClient의 공개 시그니처에 노출되므로 api
             api(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
