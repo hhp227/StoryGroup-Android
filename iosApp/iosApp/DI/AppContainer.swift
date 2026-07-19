@@ -10,6 +10,8 @@ final class AppContainer {
     let registerUseCase: RegisterUseCase
     let getMyProfileUseCase: GetMyProfileUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
+    let getGroupUseCase: GetGroupUseCase
+    let getGroupMembersUseCase: GetGroupMembersUseCase
     let getGroupPostsUseCase: GetGroupPostsUseCase
 
     init() {
@@ -29,6 +31,8 @@ final class AppContainer {
         registerUseCase = RegisterUseCase(authRepository: authRepository)
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
+        getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
+        getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
         getGroupPostsUseCase = GetGroupPostsUseCase(postRepository: postRepository)
     }
 }

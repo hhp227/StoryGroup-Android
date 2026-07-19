@@ -13,6 +13,11 @@ struct DrawerShellView: View {
 
     let homeViewModel: HomeViewModel
 
+    let groupsViewModel: GroupsViewModel
+
+    /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenGroup: (Group) -> Void
+
     let onLogout: () -> Void
 
     @State private var drawerOpen = false
@@ -20,7 +25,7 @@ struct DrawerShellView: View {
     var body: some View {
         ZStack(alignment: .leading) {
             VStack(spacing: 0) {
-                // 상단바는 각 목적지의 기본 NavigationBar가 담당(햄버거는 menuAction으로 전달)
+                // 내비바는 루트 NavigationStack의 것 하나 — 제목·툴바(햄버거 포함)는 아래 modifier에서 구성
                 // 탭 쉘과 동일 — 목적지 전환 시 뷰를 유지해 스크롤 위치를 보존한다
                 ZStack {
                     ForEach(SGDestination.allCases) { destination in
@@ -28,10 +33,10 @@ struct DrawerShellView: View {
                             destination: destination,
                             profile: profile,
                             homeViewModel: homeViewModel,
-                            onOpenNotifications: { current = .notifications },
+                            groupsViewModel: groupsViewModel,
+                            onOpenGroup: onOpenGroup,
                             onOpenSettings: { showSettings = true },
-                            onLogout: onLogout,
-                            menuAction: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }
+                            onLogout: onLogout
                         )
                         .opacity(destination == current ? 1 : 0)
                         .allowsHitTesting(destination == current)
@@ -45,6 +50,27 @@ struct DrawerShellView: View {
                     .onTapGesture { withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false } }
                 drawerContent
                     .transition(.move(edge: .leading))
+            }
+        }
+        .navigationTitle(current == .home ? "우리들의 이야기" : current.label)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }) {
+                    Image(systemName: "line.3.horizontal")
+                }
+            }
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if current == .home {
+                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
+                }
+                // 탭 쉘과 동일하게 내비바 우측에서도 알림 진입(알림 화면에서는 숨김)
+                if current != .notifications {
+                    Button(action: { current = .notifications }) { Image(systemName: "bell.fill") }
+                }
+                if current == .profile {
+                    Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }
+                }
             }
         }
     }

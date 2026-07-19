@@ -13,11 +13,16 @@ struct TabShellView: View {
 
     let homeViewModel: HomeViewModel
 
+    let groupsViewModel: GroupsViewModel
+
+    /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenGroup: (Group) -> Void
+
     let onLogout: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            // 상단바는 각 목적지의 기본 NavigationBar가 담당(DestinationView) — 커스텀 SGHeader 제거
+            // 내비바는 루트 NavigationStack의 것 하나 — 제목·툴바는 아래 modifier에서 current별 구성
             // switch로 갈아끼우면 뷰가 파괴돼 스크롤 위치가 초기화됨 — 전 목적지를 유지하고
             // 표시만 전환한다(네이티브 TabView의 탭 상태 유지 동작 미러, 커스텀 탭바라 직접 구현)
             ZStack {
@@ -26,7 +31,8 @@ struct TabShellView: View {
                         destination: destination,
                         profile: profile,
                         homeViewModel: homeViewModel,
-                        onOpenNotifications: { current = .notifications },
+                        groupsViewModel: groupsViewModel,
+                        onOpenGroup: onOpenGroup,
                         onOpenSettings: { showSettings = true },
                         onLogout: onLogout
                     )
@@ -54,5 +60,21 @@ struct TabShellView: View {
             .background(colors.linen)
         }
         .background(colors.paper.ignoresSafeArea())
+        .navigationTitle(current == .home ? "우리들의 이야기" : current.label)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if current == .home {
+                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
+                }
+                // 알림은 탭에서 빠지고 내비바 종 아이콘으로 진입(알림 화면에서는 숨김)
+                if current != .notifications {
+                    Button(action: { current = .notifications }) { Image(systemName: "bell.fill") }
+                }
+                if current == .profile {
+                    Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }
+                }
+            }
+        }
     }
 }

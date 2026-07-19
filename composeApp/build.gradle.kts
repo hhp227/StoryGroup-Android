@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    // Navigation Compose 타입 세이프 라우트(@Serializable)용
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -34,6 +36,8 @@ kotlin {
             // ViewModel은 이제 composeApp 소유 — shared는 lifecycle에 의존하지 않는다
             implementation(libs.jetbrains.lifecycle.viewmodel)
             implementation(libs.jetbrains.lifecycle.viewmodel.compose)
+            // 풀스크린 목적지(그룹 상세 등)의 백스택 — 탭 전환은 여전히 셸 enum이 담당
+            implementation(libs.jetbrains.navigation.compose)
             implementation(projects.shared)
         }
         commonTest.dependencies {

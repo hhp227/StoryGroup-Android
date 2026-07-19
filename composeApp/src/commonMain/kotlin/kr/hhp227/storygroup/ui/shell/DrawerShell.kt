@@ -39,9 +39,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.group.GroupsViewModel
 import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
@@ -52,6 +54,8 @@ internal fun DrawerShell(
     onDestinationSelected: (MainDestination) -> Unit,
     profile: Profile?,
     homeViewModel: HomeViewModel,
+    groupsViewModel: GroupsViewModel,
+    onOpenGroupDetail: (Group) -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -102,8 +106,8 @@ internal fun DrawerShell(
         Scaffold(
             backgroundColor = sg.paper,
             topBar = {
-                // 홈은 화면이 콜랩싱 상단바를 직접 그린다(메뉴 아이콘은 homeNavigationIcon으로 전달)
-                if (currentDestination != MainDestination.HOME) {
+                // 홈·그룹은 화면이 상단바를 직접 그린다(메뉴 아이콘은 menuNavigationIcon으로 전달)
+                if (currentDestination != MainDestination.HOME && currentDestination != MainDestination.GROUPS) {
                     SgTopBar(
                         title = currentDestination.label,
                         navigationIcon = {
@@ -127,10 +131,12 @@ internal fun DrawerShell(
                 destination = currentDestination,
                 profile = profile,
                 homeViewModel = homeViewModel,
+                groupsViewModel = groupsViewModel,
+                onOpenGroupDetail = onOpenGroupDetail,
                 onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                 onOpenSettings = onOpenSettings,
                 onLogout = onLogout,
-                homeNavigationIcon = {
+                menuNavigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "메뉴")
                     }

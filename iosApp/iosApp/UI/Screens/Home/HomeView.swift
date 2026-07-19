@@ -2,15 +2,10 @@ import SwiftUI
 import Shared
 
 /// 홈(라운지) 피드 — 웹 메인 피드·Compose HomeScreen 미러(레거시 CollapsingToolbar 헤더 이식).
-/// 상단바는 기본 NavigationBar(사용자 지시): 최상단에선 투명(scrollEdgeAppearance)해 헤더 사진이
-/// 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
+/// 내비바(제목·툴바)는 셸이 루트 NavigationStack 위에 구성 — 최상단에선 투명(scrollEdgeAppearance)해
+/// 헤더 사진이 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
 struct HomeView: View {
     @ObservedObject var viewModel: HomeViewModel
-
-    var onNotifications: () -> Void = {}
-
-    /// 드로어 쉘의 햄버거 메뉴(탭 쉘은 nil) — Compose homeNavigationIcon 미러
-    var onMenu: (() -> Void)? = nil
 
     @Environment(\.sgColors) private var colors
 
@@ -25,35 +20,18 @@ struct HomeView: View {
     private let headerHeight: CGFloat = 114
 
     var body: some View {
-        NavigationView {
-            GeometryReader { outer in
-                ScrollView {
-                    VStack(spacing: 12) {
-                        parallaxHeader(topInset: outer.safeAreaInsets.top)
-                        feedContent
-                    }
-                    .padding(.bottom, 16)
+        GeometryReader { outer in
+            ScrollView {
+                VStack(spacing: 12) {
+                    parallaxHeader(topInset: outer.safeAreaInsets.top)
+                    feedContent
                 }
-                .background(colors.paper)
-                // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
-                .ignoresSafeArea(edges: .top)
+                .padding(.bottom, 16)
             }
-            .navigationTitle("우리들의 이야기")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if let onMenu {
-                        Button(action: onMenu) { Image(systemName: "line.3.horizontal") }
-                    }
-                }
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
-                    Button(action: onNotifications) { Image(systemName: "bell.fill") }
-                }
-            }
+            .background(colors.paper)
+            // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
+            .ignoresSafeArea(edges: .top)
         }
-        // 탭 콘텐츠 영역 안의 단일 컬럼 — iPad에서 사이드바로 갈라지지 않게
-        .navigationViewStyle(.stack)
     }
 
     /// 레거시 layout_collapseMode="parallax" 미러 — 목록이 위로 갈 때 이미지는 절반 속도로 따라간다.
@@ -100,79 +78,19 @@ struct HomeView: View {
         } else {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.uiState.posts, id: \.id) { post in
-                    FeedPostCard(post: post)
+                    SGPostCard(post: post)
                         .onAppear {
                             // 웹 sentinel 미러 — 마지막 카드가 보이면 다음 페이지를 읽는다
                             if post.id == viewModel.uiState.posts.last?.id { viewModel.onAction(.loadMore) }
                         }
                 }
-                feedFooter
+                SGPagingFooter(
+                    error: viewModel.uiState.error,
+                    isLoadingMore: viewModel.uiState.isLoadingMore,
+                    onRetry: { viewModel.onAction(.loadMore) }
+                )
             }
             .padding(.horizontal, 16)
         }
-    }
-
-    /// 추가 로딩/실패 표시 — 실패 시엔 수동 재시도만 노출(자동 재시도 루프 방지)
-    @ViewBuilder private var feedFooter: some View {
-        if let error = viewModel.uiState.error {
-            VStack(spacing: 4) {
-                Text(error).font(.caption).foregroundColor(colors.rust)
-                Button("다시 시도") { viewModel.onAction(.loadMore) }
-                    .font(.caption)
-                    .foregroundColor(colors.accent)
-            }
-            .padding(.vertical, 8)
-        } else if viewModel.uiState.isLoadingMore {
-            ProgressView().padding(8)
-        }
-    }
-}
-
-private struct FeedPostCard: View {
-    let post: Post
-
-    @Environment(\.sgColors) private var colors
-
-    var body: some View {
-        SGCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
-                    }
-                    Spacer()
-                    if post.isNotice {
-                        Text("공지")
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(colors.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(colors.accentSoft)
-                            .cornerRadius(colors.radiusButton ?? 12)
-                    }
-                }
-                if !post.text.isEmpty {
-                    Text(post.text)
-                        .font(.subheadline)
-                        .foregroundColor(colors.ink)
-                        .lineLimit(6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                // TODO: 첨부 이미지는 이미지 로딩 도입(다음 단계 ④) 후 실제 렌더링으로 교체
-                if !attachmentSummary.isEmpty {
-                    Text(attachmentSummary).font(.caption).foregroundColor(colors.inkSoft)
-                }
-            }
-            .padding(16)
-        }
-    }
-
-    private var attachmentSummary: String {
-        var parts: [String] = []
-        if !post.imageUrls.isEmpty { parts.append("사진 \(post.imageUrls.count)장") }
-        if !post.videoUrls.isEmpty { parts.append("동영상 \(post.videoUrls.count)개") }
-        return parts.joined(separator: " · ")
     }
 }

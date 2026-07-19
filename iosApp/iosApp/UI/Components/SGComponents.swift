@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 // 공용 컴포넌트 — Compose ui/components 미러
 
@@ -195,5 +196,78 @@ struct SGSectionTitle: View {
             .font(.caption.bold())
             .foregroundColor(colors.inkSoft)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
+/// 첨부는 요약 표기(이미지 로딩은 ④ 몫)
+struct SGPostCard: View {
+    let post: Post
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        SGCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    SGAvatar(name: post.authorName)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
+                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                    }
+                    Spacer()
+                    if post.isNotice {
+                        Text("공지")
+                            .font(.caption2.weight(.medium))
+                            .foregroundColor(colors.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(colors.accentSoft)
+                            .cornerRadius(colors.radiusButton ?? 12)
+                    }
+                }
+                if !post.text.isEmpty {
+                    Text(post.text)
+                        .font(.subheadline)
+                        .foregroundColor(colors.ink)
+                        .lineLimit(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if !attachmentSummary.isEmpty {
+                    Text(attachmentSummary).font(.caption).foregroundColor(colors.inkSoft)
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    private var attachmentSummary: String {
+        var parts: [String] = []
+        if !post.imageUrls.isEmpty { parts.append("사진 \(post.imageUrls.count)장") }
+        if !post.videoUrls.isEmpty { parts.append("동영상 \(post.videoUrls.count)개") }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// 추가 로딩/실패 표시 — Compose SgPagingFooter 미러(실패 시엔 수동 재시도만 노출)
+struct SGPagingFooter: View {
+    let error: String?
+    let isLoadingMore: Bool
+    let onRetry: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        if let error {
+            VStack(spacing: 4) {
+                Text(error).font(.caption).foregroundColor(colors.rust)
+                Button("다시 시도", action: onRetry)
+                    .font(.caption)
+                    .foregroundColor(colors.accent)
+            }
+            .padding(.vertical, 8)
+        } else if isLoadingMore {
+            ProgressView().padding(8)
+        }
     }
 }

@@ -20,6 +20,9 @@
 		A1010010AABBCCDDEEFF0010 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011011AABBCCDDEEFF0011 /* RegisterView.swift */; };
 		A1010011AABBCCDDEEFF0011 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011012AABBCCDDEEFF0012 /* HomeView.swift */; };
 		A1010012AABBCCDDEEFF0012 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011013AABBCCDDEEFF0013 /* GroupsView.swift */; };
+		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
+		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
+		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
 		A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011014AABBCCDDEEFF0014 /* FriendsView.swift */; };
 		A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011015AABBCCDDEEFF0015 /* ChatView.swift */; };
 		A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */; };
@@ -49,6 +52,9 @@
 		A1011011AABBCCDDEEFF0011 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		A1011012AABBCCDDEEFF0012 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A1011013AABBCCDDEEFF0013 /* GroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
+		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
+		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
+		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
 		A1011014AABBCCDDEEFF0014 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		A1011015AABBCCDDEEFF0015 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -165,6 +171,9 @@
 			isa = PBXGroup;
 			children = (
 				A1011013AABBCCDDEEFF0013 /* GroupsView.swift */,
+				A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */,
+				A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */,
+				A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */,
 			);
 			path = Group;
 			sourceTree = "<group>";
@@ -383,6 +392,9 @@
 				A1010010AABBCCDDEEFF0010 /* RegisterView.swift in Sources */,
 				A1010011AABBCCDDEEFF0011 /* HomeView.swift in Sources */,
 				A1010012AABBCCDDEEFF0012 /* GroupsView.swift in Sources */,
+				A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */,
+				A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */,
+				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
 				A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */,
 				A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,
