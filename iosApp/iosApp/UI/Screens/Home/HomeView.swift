@@ -19,8 +19,10 @@ struct HomeView: View {
     /// 헤더가 아이템과 따로 미끄러지는 어색한 움직임이 생긴다(이전 구현의 버그).
     @State private var headerRestMinY: CGFloat?
 
-    /// 레거시 collapsing_toolbar_layout_height(256)의 2/3 — 사용자 조정(2026-07-19)
-    private let headerHeight: CGFloat = 170
+    /// 내비바 아래로 노출되는 이미지 높이 — Compose와 시각적 패리티(2026-07-19 사용자 조정).
+    /// Compose는 헤더 170dp 위에 툴바 56dp가 겹쳐 바 아래 노출이 114dp인데, iOS는 전체 슬롯을
+    /// topInset(상태바+내비바)+이 값으로 만들므로 노출 높이끼리 맞추려면 170이 아니라 114여야 한다.
+    private let headerHeight: CGFloat = 114
 
     var body: some View {
         NavigationView {
