@@ -91,8 +91,9 @@ private struct GroupDetailContent: View {
             .onAppear {
                 if headerRestMinY == nil { headerRestMinY = raw }
             }
-            // 피드 아이템이 내비바 영역에 닿는 시점(커버 노출분을 지나침)부터 바 배경을 켠다
-            .preference(key: NavigationBarScrimVisibleKey.self, value: minY <= -headerHeight)
+            // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다 — rest 보정값이 아니라
+            // 화면 기하(raw ≤ -headerHeight)로 판정(홈과 동일, 셸별 오프셋 차이 방지)
+            .preference(key: NavigationBarScrimVisibleKey.self, value: raw <= -headerHeight)
         }
         .frame(height: total)
     }

@@ -60,8 +60,11 @@ struct HomeView: View {
                 .onAppear {
                     if headerRestMinY == nil { headerRestMinY = raw }
                 }
-                // 피드 아이템이 내비바 영역에 닿는 시점(헤더 노출분을 지나침)부터 바 배경을 켠다
-                .preference(key: NavigationBarScrimVisibleKey.self, value: minY <= -headerHeight)
+                // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다.
+                // rest 보정값(minY)이 아니라 화면 기하(raw: 헤더 하단 raw+total ≤ 바 하단 topInset,
+                // 정리하면 raw ≤ -headerHeight)로 판정 — 셸(탭/드로어)별 첫 레이아웃 오프셋 차이로
+                // 전환 시점이 어긋나던 문제 방지
+                .preference(key: NavigationBarScrimVisibleKey.self, value: raw <= -headerHeight)
         }
         .frame(height: total)
     }
