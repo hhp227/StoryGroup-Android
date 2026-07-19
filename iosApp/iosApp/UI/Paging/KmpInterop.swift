@@ -14,7 +14,6 @@ import Shared
 // Paging 모듈 전체를 import하면 PagingData/LoadState 등이 Shared와 겹쳐 모호해지므로,
 // 이 파일에 필요한 LazyPagingItems만 스코프 임포트한다
 import class Paging.LazyPagingItems
-import Paging
 
 // Kotlin: getLoungePostsPagingDataUseCase() → Flow<PagingData<Post>>
 extension GetLoungePostsPagingDataUseCase {
