@@ -60,6 +60,8 @@ struct HomeView: View {
                 .onAppear {
                     if headerRestMinY == nil { headerRestMinY = raw }
                 }
+                // 피드 아이템이 내비바 영역에 닿는 시점(헤더 노출분을 지나침)부터 바 배경을 켠다
+                .preference(key: NavigationBarScrimVisibleKey.self, value: minY <= -headerHeight)
         }
         .frame(height: total)
     }

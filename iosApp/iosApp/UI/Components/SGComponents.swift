@@ -273,3 +273,60 @@ struct SGPagingFooter: View {
         }
     }
 }
+
+// MARK: - 내비바 스크림 수동 제어
+
+/// 시스템 내비바 배경 표시 여부를 화면 스크롤 상태로 올려보내는 프리퍼런스.
+/// keep-alive ZStack에 스크롤뷰가 여러 개라 UIKit의 자동 전환(scrollEdge→standard)이
+/// 어느 스크롤뷰를 추적할지 특정하지 못함 — 화면이 직접 임계값을 판정해 알린다.
+struct NavigationBarScrimVisibleKey: PreferenceKey {
+    static var defaultValue = false
+
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
+extension View {
+    /// 내비바 배경을 명시 제어 — false면 투명(헤더 사진이 비침), true면 기본 머티리얼.
+    /// iOS 15/16+ 공통으로 UIKit appearance를 직접 스왑한다.
+    func navigationBarScrim(visible: Bool) -> some View {
+        background(NavigationBarScrimSetter(visible: visible))
+    }
+}
+
+private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
+    let visible: Bool
+
+    func makeUIViewController(context: Context) -> Helper { Helper() }
+
+    func updateUIViewController(_ helper: Helper, context: Context) {
+        helper.visible = visible
+        helper.applyIfPossible()
+    }
+
+    /// SwiftUI 계층 안에서 부모 UINavigationController에 접근하기 위한 숨은 VC.
+    /// push/pop 복귀 시(viewWillAppear) 최신 상태를 다시 적용한다(pushed 화면이 덮어썼을 수 있음).
+    final class Helper: UIViewController {
+        var visible = false
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            applyIfPossible()
+        }
+
+        func applyIfPossible() {
+            guard let bar = navigationController?.navigationBar else { return }
+            let appearance = UINavigationBarAppearance()
+
+            if visible {
+                appearance.configureWithDefaultBackground()
+            } else {
+                appearance.configureWithTransparentBackground()
+            }
+            bar.standardAppearance = appearance
+            bar.scrollEdgeAppearance = appearance
+            bar.compactAppearance = appearance
+        }
+    }
+}

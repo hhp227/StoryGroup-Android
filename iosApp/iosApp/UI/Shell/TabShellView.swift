@@ -22,6 +22,9 @@ struct TabShellView: View {
 
     let onLogout: () -> Void
 
+    /// 홈 헤더가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
+    @State private var homeBarScrimVisible = false
+
     var body: some View {
         VStack(spacing: 0) {
             // 내비바는 루트 NavigationStack의 것 하나 — 제목·툴바는 아래 modifier에서 current별 구성
@@ -78,5 +81,8 @@ struct TabShellView: View {
                 }
             }
         }
+        .onPreferenceChange(NavigationBarScrimVisibleKey.self) { homeBarScrimVisible = $0 }
+        // 홈은 헤더 사진 위 투명→스크롤 시 표시, 나머지 탭은 항상 표시(Compose SgTopBar 미러)
+        .navigationBarScrim(visible: current == .home ? homeBarScrimVisible : true)
     }
 }

@@ -30,6 +30,9 @@ private struct GroupDetailContent: View {
     /// 첫 레이아웃 시점 커버의 global minY — 스크롤 오프셋은 이 기준의 상대값(HomeView와 동일한 인셋 보정)
     @State private var headerRestMinY: CGFloat?
 
+    /// 커버가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
+    @State private var barScrimVisible = false
+
     /// 내비바 아래 노출 커버 높이 — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
     private let headerHeight: CGFloat = 114
 
@@ -57,6 +60,8 @@ private struct GroupDetailContent: View {
         }
         .navigationTitle(viewModel.uiState.group.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
+        .navigationBarScrim(visible: barScrimVisible)
         // 상세 진입 시 신선화 — 목록에서 받은 그룹으로 먼저 그리고 최신화한다
         .onAppear { viewModel.onAction(.refresh) }
     }
@@ -86,6 +91,8 @@ private struct GroupDetailContent: View {
             .onAppear {
                 if headerRestMinY == nil { headerRestMinY = raw }
             }
+            // 피드 아이템이 내비바 영역에 닿는 시점(커버 노출분을 지나침)부터 바 배경을 켠다
+            .preference(key: NavigationBarScrimVisibleKey.self, value: minY <= -headerHeight)
         }
         .frame(height: total)
     }
