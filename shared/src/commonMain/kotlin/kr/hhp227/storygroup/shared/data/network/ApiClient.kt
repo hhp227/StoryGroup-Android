@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.data.network
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.authProviders
 import io.ktor.client.plugins.auth.providers.BearerAuthProvider
@@ -34,6 +35,13 @@ fun createApiClient(
 ): HttpClient = HttpClient {
     expectSuccess = true
 
+    // Cloud Run 콜드 스타트(수십 초) 동안 기본 소켓 타임아웃으로 끊기지 않게 넉넉히 —
+    // 실측: 유휴 후 첫 요청이 SocketTimeoutException으로 실패해 시작 직후 피드가 에러로 떴다
+    install(HttpTimeout) {
+        requestTimeoutMillis = 30_000
+        connectTimeoutMillis = 30_000
+        socketTimeoutMillis = 30_000
+    }
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true

@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,12 +41,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgTopBar
-import kr.hhp227.storygroup.ui.screens.group.GroupsViewModel
-import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
+import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 레거시 쉘: 구 앱 드로어(프로필 헤더 + 라운지·그룹·친구·채팅 + 알림·설정·로그아웃 보강) */
@@ -52,22 +54,25 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 internal fun DrawerShell(
     currentDestination: MainDestination,
     onDestinationSelected: (MainDestination) -> Unit,
-    profile: Profile?,
-    homeViewModel: HomeViewModel,
-    groupsViewModel: GroupsViewModel,
     onOpenGroupDetail: (Group) -> Unit,
+    onCreatePost: () -> Unit,
+    homeRefreshRequested: Boolean,
+    onHomeRefreshHandled: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    // 드로어 헤더는 프로필 화면과 같은 세션 공유 VM을 조회한다(선언·로드는 ProfileViewModel init)
+    val profileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
+    val profileUiState by profileViewModel.uiState.collectAsState()
 
     ModalDrawer(
         drawerState = drawerState,
         drawerBackgroundColor = sg.linen,
         drawerContent = {
-            DrawerHeader(profile)
+            DrawerHeader(profileUiState.profile)
             MainDestination.entries.forEach { destination ->
                 DrawerItem(
                     label = destination.label,
@@ -129,10 +134,10 @@ internal fun DrawerShell(
         ) { padding ->
             DestinationContent(
                 destination = currentDestination,
-                profile = profile,
-                homeViewModel = homeViewModel,
-                groupsViewModel = groupsViewModel,
                 onOpenGroupDetail = onOpenGroupDetail,
+                onCreatePost = onCreatePost,
+                homeRefreshRequested = homeRefreshRequested,
+                onHomeRefreshHandled = onHomeRefreshHandled,
                 onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                 onOpenSettings = onOpenSettings,
                 onLogout = onLogout,

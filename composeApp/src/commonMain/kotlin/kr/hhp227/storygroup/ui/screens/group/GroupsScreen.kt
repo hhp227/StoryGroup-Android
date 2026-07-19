@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -26,8 +25,7 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -35,10 +33,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.cash.paging.LoadStateError
+import app.cash.paging.LoadStateLoading
+import app.cash.paging.compose.collectAsLazyPagingItems
+import app.cash.paging.compose.itemKey
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
+import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.theme.SgColors
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -49,14 +55,34 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
  */
 @Composable
 fun GroupsScreen(
+    onOpenGroup: (Group) -> Unit,
+    onOpenNotifications: () -> Unit,
+    modifier: Modifier = Modifier,
+    navigationIcon: (@Composable () -> Unit)? = null,
+    viewModel: GroupsViewModel = sessionViewModel { GroupsViewModel(it.getMyGroupsPagingDataUseCase) }
+) {
+    GroupsContent(
+        viewModel = viewModel,
+        onOpenGroup = onOpenGroup,
+        onOpenNotifications = onOpenNotifications,
+        navigationIcon = navigationIcon,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun GroupsContent(
     viewModel: GroupsViewModel,
     onOpenGroup: (Group) -> Unit,
     onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val onAction = viewModel::onAction
+    // 상태에서 pagingData만 뽑아낸 스트림을 수집 — Paging-CRUD 샘플·iOS($state.map)와 동일 관용구
+    val pagingDataFlow = remember(viewModel) {
+        viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
+    }
+    val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
     // 그룹 탭은 상세(콜랩싱 헤더)와의 전환 때문에 셸이 아닌 화면이 상단바를 소유한다(홈과 동일)
@@ -78,8 +104,12 @@ fun GroupsScreen(
             item(key = "actions") {
                 GroupActionsRow()
             }
+            // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
+            val refreshState = lazyPagingItems.loadState.refresh
+            val appendState = lazyPagingItems.loadState.append
+
             when {
-                uiState.groups.isEmpty() && uiState.isLoading -> item(key = "groups-loading") {
+                lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "groups-loading") {
                     Box(
                         Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
                         contentAlignment = Alignment.Center
@@ -87,27 +117,44 @@ fun GroupsScreen(
                         CircularProgressIndicator(color = sg.accent)
                     }
                 }
-                uiState.groups.isEmpty() && uiState.error != null -> item(key = "groups-error") {
+                lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "groups-error") {
                     Column(
                         modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
+                        Text(
+                            refreshState.error.message ?: "그룹 목록을 불러오지 못했습니다.",
+                            style = SgTheme.typography.bodyMedium,
+                            color = sg.rust
+                        )
                         Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { onAction(GroupsViewModel.Action.Refresh) }) {
+                        TextButton(onClick = lazyPagingItems::retry) {
                             Text("다시 시도", color = sg.accent)
                         }
                     }
                 }
-                uiState.groups.isEmpty() -> item(key = "groups-empty") {
+                lazyPagingItems.itemCount == 0 -> item(key = "groups-empty") {
                     SgEmptyState(
                         title = "아직 그룹이 없습니다",
                         subtitle = "새 그룹을 만들거나 그룹 찾기에서 참여해보세요.",
                         modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
                     )
                 }
-                else -> items(uiState.groups, key = Group::id) { group ->
-                    GroupCard(group, onClick = { onOpenGroup(group) })
+                else -> {
+                    items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Group::id)) { index ->
+                        lazyPagingItems[index]?.let { group ->
+                            GroupCard(group, onClick = { onOpenGroup(group) })
+                        }
+                    }
+                    if (appendState is LoadStateLoading || appendState is LoadStateError) {
+                        item(key = "groups-footer") {
+                            SgPagingFooter(
+                                isLoadingMore = appendState is LoadStateLoading,
+                                error = (appendState as? LoadStateError)?.error?.message,
+                                onRetry = lazyPagingItems::retry
+                            )
+                        }
+                    }
                 }
             }
         }

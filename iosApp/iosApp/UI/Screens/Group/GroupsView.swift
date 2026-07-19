@@ -1,16 +1,45 @@
 import SwiftUI
+import Paging
 import Shared
 // SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
 import class Shared.Group
 
-/// 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups·Compose GroupsScreen 미러(라운지 제외).
-/// 상세는 루트 NavigationStack 풀스크린 push(onOpenGroup) — Compose NavHost(GroupDetailRoute) 미러
+/// 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups·Compose GroupsScreen 미러(라운지 제외, 페이징).
+/// 상세는 루트 NavigationStack 풀스크린 push(onOpenGroup) — Compose NavHost(GroupDetailRoute) 미러.
+/// 계층은 Compose GroupsScreen과 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct GroupsView: View {
+    @StateObject private var viewModel: GroupsViewModel
+
+    let onOpenGroup: (Group) -> Void
+
+    var body: some View {
+        GroupsContent(viewModel: viewModel, onOpenGroup: onOpenGroup)
+    }
+
+    init(container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
+        _viewModel = StateObject(wrappedValue: GroupsViewModel(container: container))
+        self.onOpenGroup = onOpenGroup
+    }
+}
+
+private struct GroupsContent: View {
     @ObservedObject var viewModel: GroupsViewModel
 
     let onOpenGroup: (Group) -> Void
 
+    /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
+    @StateObject private var lazyPagingItems: LazyPagingItems<Group>
+
     @Environment(\.sgColors) private var colors
+
+    init(viewModel: GroupsViewModel, onOpenGroup: @escaping (Group) -> Void) {
+        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
+        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+
+        self.viewModel = viewModel
+        self.onOpenGroup = onOpenGroup
+        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
+    }
 
     var body: some View {
         ScrollView {
@@ -26,27 +55,39 @@ struct GroupsView: View {
         .background(colors.paper)
     }
 
+    /// 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose GroupsContent 미러).
+    /// (라이브러리 LoadState.Error의 원인 에러는 internal이라 문구는 고정 메시지 사용)
     @ViewBuilder private var content: some View {
-        if viewModel.uiState.groups.isEmpty && viewModel.uiState.isLoading {
+        let refreshState = lazyPagingItems.loadState.refresh
+        let appendState = lazyPagingItems.loadState.append
+
+        if lazyPagingItems.itemCount == 0, refreshState is LoadState.Loading {
             ProgressView().padding(.vertical, 48)
-        } else if viewModel.uiState.groups.isEmpty, let error = viewModel.uiState.error {
+        } else if lazyPagingItems.itemCount == 0, refreshState is LoadState.Error {
             VStack(spacing: 8) {
-                Text(error).font(.subheadline).foregroundColor(colors.rust)
-                Button("다시 시도") { viewModel.onAction(.refresh) }
+                Text("그룹 목록을 불러오지 못했습니다.").font(.subheadline).foregroundColor(colors.rust)
+                Button("다시 시도") { lazyPagingItems.retry() }
                     .font(.subheadline)
                     .foregroundColor(colors.accent)
             }
             .padding(.vertical, 48)
-        } else if viewModel.uiState.groups.isEmpty {
+        } else if lazyPagingItems.itemCount == 0 {
             SGEmptyState(title: "아직 그룹이 없습니다", subtitle: "새 그룹을 만들거나 그룹 찾기에서 참여해보세요.")
                 .padding(.vertical, 48)
         } else {
-            ForEach(viewModel.uiState.groups, id: \.id) { group in
-                Button(action: { onOpenGroup(group) }) {
-                    GroupCard(group: group)
+            ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { group in
+                if let group {
+                    Button(action: { onOpenGroup(group) }) {
+                        GroupCard(group: group)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            SGPagingFooter(
+                error: appendState is LoadState.Error ? "그룹 목록을 더 불러오지 못했습니다." : nil,
+                isLoadingMore: appendState is LoadState.Loading,
+                onRetry: { lazyPagingItems.retry() }
+            )
         }
     }
 

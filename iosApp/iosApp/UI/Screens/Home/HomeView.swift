@@ -3,15 +3,39 @@ import Paging
 import Shared
 
 /// 홈(라운지) 피드 — 웹 메인 피드·Compose HomeScreen 미러(레거시 CollapsingToolbar 헤더 이식).
+/// ViewModel은 화면이 소유한다(Compose HomeScreen의 default parameter 선언 미러) — keep-alive
+/// ZStack 안이라 탭 전환에도 살아있고, 로그아웃 시 MainShellView와 함께 소멸한다.
+/// VM lazy 생성(StateObject)과 페이징 구독 분리는 GroupDetailView와 동일한 2계층 구조.
+struct HomeView: View {
+    @StateObject private var homeViewModel: HomeViewModel
+
+    /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
+    private let container: AppContainer
+
+    var body: some View {
+        HomeContent(viewModel: homeViewModel, container: container)
+    }
+
+    init(container: AppContainer) {
+        _homeViewModel = StateObject(wrappedValue: HomeViewModel(container: container))
+        self.container = container
+    }
+}
+
 /// 내비바(제목·툴바)는 셸이 루트 NavigationStack 위에 구성 — 최상단에선 투명(scrollEdgeAppearance)해
 /// 헤더 사진이 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
-struct HomeView: View {
+private struct HomeContent: View {
     @ObservedObject var viewModel: HomeViewModel
+
+    let container: AppContainer
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
 
     @Environment(\.sgColors) private var colors
+
+    /// 라운지 글쓰기 시트 — Compose CreatePostRoute(groupId=null) 미러(그룹 상세와 동일하게 화면 소유)
+    @State private var showCreatePost = false
 
     /// 첫 레이아웃 시점 헤더의 global minY — 스크롤 오프셋은 이 기준의 상대값으로 계산한다.
     /// NavigationView 안에선 rest 오프셋이 0이 아닐 수 있어(내비바 인셋), 절대값을 쓰면
@@ -35,6 +59,16 @@ struct HomeView: View {
             .background(colors.paper)
             // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+        }
+        // 레거시 fragment_lounge.xml의 fab(bottom|end) 미러
+        .overlay(alignment: .bottomTrailing) {
+            SGFab(action: { showCreatePost = true }).padding(16)
+        }
+        .sheet(isPresented: $showCreatePost) {
+            // 성공 시 라운지 피드를 첫 페이지부터 다시 읽는다 — Compose HomeScreen refreshRequested 미러
+            CreatePostView(container: container, groupId: nil) {
+                viewModel.onAction(.refresh)
+            }
         }
     }
 
@@ -106,12 +140,13 @@ struct HomeView: View {
         }
     }
 
-    init(viewModel: HomeViewModel) {
+    init(viewModel: HomeViewModel, container: AppContainer) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
+        self.container = container
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

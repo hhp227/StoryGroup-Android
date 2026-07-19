@@ -42,32 +42,24 @@ struct MainShellView: View {
 
     let onLogout: () -> Void
 
-    /// 그룹 상세 VM(그룹별 동적 생성) 팩토리에 필요 — Compose groupDetailViewModelFactory 미러
+    /// 화면들이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
     private let container: AppContainer
 
+    /// 프로필 화면과 드로어 헤더가 공유하는 세션 상태 — 공유 소유자(셸)가 선언한다.
+    /// 화면 전용 VM(홈/그룹)은 각 화면(HomeView/GroupsView)이 소유한다(Compose default parameter 미러).
     @StateObject private var profileViewModel: ProfileViewModel
-
-    @StateObject private var homeViewModel: HomeViewModel
-
-    @StateObject private var groupsViewModel: GroupsViewModel
 
     @State private var current: SGDestination = .home
 
     @State private var showSettings = false
 
-    /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
-    @State private var selectedGroup: Group? = nil
+    /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
+    @State private var selectedGroupId: Int64? = nil
 
     var body: some View {
         navigationRoot
             .sheet(isPresented: $showSettings) {
                 SGSettingsView(theme: theme)
-            }
-            .onAppear {
-                // 로그인 세션 진입 시마다 내 정보/홈 피드/그룹 목록 갱신(재로그인 포함) — Compose App.kt 미러
-                profileViewModel.onAction(.load)
-                homeViewModel.onAction(.refresh)
-                groupsViewModel.onAction(.refresh)
             }
     }
 
@@ -100,47 +92,39 @@ struct MainShellView: View {
             TabShellView(
                 current: $current,
                 showSettings: $showSettings,
+                container: container,
                 profile: profileViewModel.uiState.profile,
-                homeViewModel: homeViewModel,
-                groupsViewModel: groupsViewModel,
-                onOpenGroup: { selectedGroup = $0 },
+                onOpenGroup: { selectedGroupId = $0.id },
                 onLogout: onLogout
             )
         } else {
             DrawerShellView(
                 current: $current,
                 showSettings: $showSettings,
+                container: container,
                 profile: profileViewModel.uiState.profile,
-                homeViewModel: homeViewModel,
-                groupsViewModel: groupsViewModel,
-                onOpenGroup: { selectedGroup = $0 },
+                onOpenGroup: { selectedGroupId = $0.id },
                 onLogout: onLogout
             )
         }
     }
 
     @ViewBuilder private var groupDetailDestination: some View {
-        if let group = selectedGroup {
-            GroupDetailView(group: group, factory: makeGroupDetailViewModel)
+        if let groupId = selectedGroupId {
+            GroupDetailView(groupId: groupId, container: container)
         }
     }
 
-    /// pop(백 버튼/스와이프) 시 selectedGroup을 nil로 되돌리는 브리지
+    /// pop(백 버튼/스와이프) 시 selectedGroupId를 nil로 되돌리는 브리지
     private var showGroupDetail: Binding<Bool> {
         Binding(
-            get: { selectedGroup != nil },
-            set: { if !$0 { selectedGroup = nil } }
+            get: { selectedGroupId != nil },
+            set: { if !$0 { selectedGroupId = nil } }
         )
-    }
-
-    private func makeGroupDetailViewModel(_ group: Group) -> GroupDetailViewModel {
-        GroupDetailViewModel(container: container, group: group)
     }
 
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(container: container))
-        _homeViewModel = StateObject(wrappedValue: HomeViewModel(container: container))
-        _groupsViewModel = StateObject(wrappedValue: GroupsViewModel(container: container))
         self.container = container
         self.theme = theme
         self.onLogout = onLogout
@@ -153,13 +137,12 @@ struct MainShellView: View {
 struct DestinationView: View {
     let destination: SGDestination
 
+    /// 화면이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
+    let container: AppContainer
+
     let profile: Profile?
 
-    let homeViewModel: HomeViewModel
-
-    let groupsViewModel: GroupsViewModel
-
-    /// 그룹 상세 풀스크린 push — Compose onOpenGroupDetail 미러(MainShellView selectedGroup)
+    /// 그룹 상세 풀스크린 push — Compose onOpenGroupDetail 미러(MainShellView selectedGroupId)
     let onOpenGroup: (Group) -> Void
 
     let onOpenSettings: () -> Void
@@ -169,9 +152,9 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView(viewModel: homeViewModel)
+            HomeView(container: container)
         case .groups:
-            GroupsView(viewModel: groupsViewModel, onOpenGroup: onOpenGroup)
+            GroupsView(container: container, onOpenGroup: onOpenGroup)
         case .friends:
             FriendsView()
         case .chat:

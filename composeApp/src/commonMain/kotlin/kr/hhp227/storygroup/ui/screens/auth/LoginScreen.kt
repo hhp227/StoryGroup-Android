@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,19 +27,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 로그인 — 웹 /login 미러. 상태는 UiState로 내려받고 액션은 Action으로 올린다(MVI) */
+@Composable
+private fun loginViewModel(): LoginViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel {
+        LoginViewModel(container.isLoggedInUseCase, container.loginUseCase, container.logoutUseCase)
+    }
+}
+
+/** 로그인 — 웹 /login 미러. VM은 세션 게이트라 App 루트와 같은 인스턴스를 default parameter로 선언한다 */
 @Composable
 fun LoginScreen(
-    uiState: LoginViewModel.UiState,
     justRegistered: Boolean,
-    onAction: (LoginViewModel.Action) -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    viewModel: LoginViewModel = loginViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val onAction = viewModel::onAction
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -91,9 +104,9 @@ fun LoginScreen(
             keyboardType = KeyboardType.Password,
             enabled = !uiState.isLoading
         )
-        if (uiState.error != null) {
+        uiState.error?.let { error ->
             Spacer(Modifier.height(12.dp))
-            Text(uiState.error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
+            Text(error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
         }
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
@@ -112,7 +125,11 @@ fun LoginScreen(
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = SgTheme.colors.accent,
-                modifier = Modifier.clickable(enabled = !uiState.isLoading, onClick = onNavigateToRegister)
+                modifier = Modifier.clickable(enabled = !uiState.isLoading) {
+                    // 화면을 떠나며 자기 에러를 정리한다(이전엔 AuthFlow 몫)
+                    onAction(LoginViewModel.Action.ClearError)
+                    onNavigateToRegister()
+                }
             )
         }
     }

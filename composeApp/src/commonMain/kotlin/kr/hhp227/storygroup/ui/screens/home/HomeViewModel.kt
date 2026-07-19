@@ -20,7 +20,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
  * 홈(라운지) 피드 — 페이징(라운지 해석 포함)은 shared 데이터 계층 소유, VM은 캐시(cachedIn)와
- * 세션 재진입 갱신만 담당하고 UiState에 최신 PagingData를 담는다(Paging-CRUD 샘플 패턴).
+ * 갱신 트리거만 담당하고 UiState에 최신 PagingData를 담는다(Paging-CRUD 샘플 패턴).
+ * 세션 스코프에 선언되어 "생성 = 세션 진입 1회"이므로 init에서 바로 시작한다(재로그인 시 재생성).
  * iosApp HomeViewModel.swift와 1:1 미러
  */
 class HomeViewModel(
@@ -31,7 +32,7 @@ class HomeViewModel(
 
     override val event: Flow<Nothing> = emptyFlow()
 
-    // 재로그인 시 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행
+    // 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행
     private val refreshTrigger = MutableStateFlow(0)
 
     private fun setPagingData(pagingData: PagingData<Post>) {
@@ -40,7 +41,7 @@ class HomeViewModel(
 
     override fun onAction(action: Action) {
         when (action) {
-            // 로그인 세션 진입 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
+            // 글쓰기 성공 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
             Action.Refresh -> refreshTrigger.update { it + 1 }
         }
     }

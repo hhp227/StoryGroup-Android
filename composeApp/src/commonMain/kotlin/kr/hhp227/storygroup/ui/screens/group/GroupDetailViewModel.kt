@@ -23,16 +23,17 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
  * 그룹 상세 — 웹 /groups/[id] 미러. 커버+멤버는 UiState 필드, 피드는 UiState에 담기는 최신
- * PagingData(Paging-CRUD 샘플 패턴). 목록에서 받은 그룹으로 즉시 그리고 Refresh에서 신선화한다.
+ * PagingData(Paging-CRUD 샘플 패턴). groupId만 받아 스스로 로드한다 — 목록이 페이징으로
+ * 바뀌어 스냅샷 lookup이 불가하고, 딥링크 진입에도 대비된다(로드 전 group은 null).
  * iosApp GroupDetailViewModel.swift와 1:1 미러
  */
 class GroupDetailViewModel(
-    initialGroup: Group,
+    val groupId: Long,
     private val getGroupUseCase: GetGroupUseCase,
     private val getGroupMembersUseCase: GetGroupMembersUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, Nothing> {
-    private val _uiState = MutableStateFlow(UiState(group = initialGroup))
+    private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     override val event: Flow<Nothing> = emptyFlow()
@@ -47,14 +48,12 @@ class GroupDetailViewModel(
         }
     }
 
-    /** 상세 진입 시 발화 — 그룹 신선화+멤버(피드는 Pager가 자체 로드/재시도) */
+    /** 상세 진입 시 발화 — 그룹+멤버 로드(피드는 Pager가 자체 로드/재시도) */
     private fun refresh() {
         if (_uiState.value.isLoading) return
 
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            val groupId = _uiState.value.group.id
-
             runCatching {
                 val group = getGroupUseCase(groupId)
                 val members = getGroupMembersUseCase(groupId)
@@ -71,14 +70,15 @@ class GroupDetailViewModel(
 
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        getGroupPostsPagingDataUseCase(initialGroup.id)
+        getGroupPostsPagingDataUseCase(groupId)
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
             .launchIn(viewModelScope)
     }
 
     data class UiState(
-        val group: Group,
+        // 로드 전 null — 화면은 그룹 정보 자리만 비워 두고 커버/피드를 먼저 그린다
+        val group: Group? = null,
         val pagingData: PagingData<Post> = PagingData.empty(),
         val members: List<GroupMember> = emptyList(),
         val isLoading: Boolean = false,

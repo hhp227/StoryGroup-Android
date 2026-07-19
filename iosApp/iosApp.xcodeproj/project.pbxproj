@@ -38,6 +38,8 @@
 		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
 		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
 		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
+		A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */; };
+		A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +75,8 @@
 		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
 		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
 		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
+		A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
+		A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -157,6 +161,7 @@
 				A1013007AABBCCDDEEFF0007 /* Group */,
 				A1013008AABBCCDDEEFF0008 /* Home */,
 				A1013009AABBCCDDEEFF0009 /* Notification */,
+				A1013012AABBCCDDEEFF0012 /* Post */,
 				A101300AAABBCCDDEEFF000A /* Profile */,
 				A101300BAABBCCDDEEFF000B /* Settings */,
 			);
@@ -216,6 +221,15 @@
 				A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */,
 			);
 			path = Notification;
+			sourceTree = "<group>";
+		};
+		A1013012AABBCCDDEEFF0012 /* Post */ = {
+			isa = PBXGroup;
+			children = (
+				A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */,
+				A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */,
+			);
+			path = Post;
 			sourceTree = "<group>";
 		};
 		A101300AAABBCCDDEEFF000A /* Profile */ = {
@@ -417,6 +431,8 @@
 				A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */,
 				A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */,
 				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
+				A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */,
+				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
 				A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */,
 				A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,
