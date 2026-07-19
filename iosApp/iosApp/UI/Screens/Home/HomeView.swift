@@ -13,8 +13,8 @@ struct HomeView: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 헤더의 스크롤 좌표계 minY — 0이 펼침, 음수로 갈수록 접힘
-    @State private var headerMinY: CGFloat = 0
+    /// 스크롤 콘텐츠 최상단의 오프셋 — 0=최상단, 음수=위로 스크롤, 양수=당겨 내림(오버스크롤)
+    @State private var scrollOffset: CGFloat = 0
 
     /// 레거시 collapsing_toolbar_layout_height(256)의 2/3 — 사용자 조정(2026-07-19)
     private let headerHeight: CGFloat = 170
@@ -24,7 +24,7 @@ struct HomeView: View {
 
     /// 0(펼침)→1(접힘) — Compose rememberCollapseFraction 미러
     private var collapseFraction: CGFloat {
-        min(max(-headerMinY / (headerHeight - barHeight), 0), 1)
+        min(max(-scrollOffset / (headerHeight - barHeight), 0), 1)
     }
 
     var body: some View {
@@ -36,26 +36,39 @@ struct HomeView: View {
                         feedContent
                     }
                     .padding(.bottom, 16)
+                    // 오프셋 앵커는 헤더 내부가 아니라 콘텐츠 전체의 background에 둔다 —
+                    // 스크롤 중에도 preference 갱신이 안정적으로 전파되는 검증된 패턴
+                    .background(
+                        GeometryReader { anchor in
+                            Color.clear.preference(
+                                key: LoungeScrollOffsetKey.self,
+                                value: anchor.frame(in: .named("loungeScroll")).minY
+                            )
+                        }
+                    )
                 }
+                .coordinateSpace(name: "loungeScroll")
                 collapsingBar(topInset: outer.safeAreaInsets.top)
             }
-            .coordinateSpace(name: "loungeScroll")
-            .onPreferenceChange(LoungeHeaderOffsetKey.self) { headerMinY = $0 }
+            .onPreferenceChange(LoungeScrollOffsetKey.self) { scrollOffset = $0 }
             .background(colors.paper)
             .ignoresSafeArea(edges: .top)
         }
     }
 
-    /// 레거시 layout_collapseMode="parallax" 미러 — 목록이 위로 갈 때 이미지는 절반 속도로 따라간다
+    /// 레거시 layout_collapseMode="parallax" 미러 — 목록이 위로 갈 때 이미지는 절반 속도로 따라간다.
+    /// 최상단에서 더 당기면 여백 대신 이미지가 늘어나며 채운다(stretchy zoom — iOS 오버스크롤 관례,
+    /// Android는 시스템 오버스크롤 이펙트가 있어 Compose엔 미적용)
     private func parallaxHeader(topInset: CGFloat) -> some View {
         let total = headerHeight + topInset
         return GeometryReader { geo in
             let minY = geo.frame(in: .named("loungeScroll")).minY
+            let stretch = max(0, minY)
             ZStack(alignment: .top) {
                 Image("header")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: geo.size.width, height: total)
+                    .frame(width: geo.size.width, height: total + stretch)
                     .offset(y: minY < 0 ? -minY * 0.5 : 0)
                 // 펼침 상태에서 흰 제목/아이콘 대비 확보 — Compose ParallaxHeaderImage 그라데이션 미러
                 LinearGradient(
@@ -64,9 +77,11 @@ struct HomeView: View {
                     endPoint: .center
                 )
             }
-            .frame(width: geo.size.width, height: total, alignment: .top)
+            .frame(width: geo.size.width, height: total + stretch, alignment: .top)
+            // 당겨 내린 만큼 컨테이너를 끌어올려 이미지 상단을 화면 상단에 고정 — 위 여백이 생기지 않는다
+            .offset(y: -stretch)
+            // 패럴럭스로 아래로 밀린 부분이 피드 위로 비어져 나오지 않게
             .clipped()
-            .preference(key: LoungeHeaderOffsetKey.self, value: minY)
         }
         .frame(height: total)
     }
@@ -166,8 +181,8 @@ struct HomeView: View {
     }
 }
 
-/// 헤더 minY를 콜랩싱 바에 전달하는 PreferenceKey
-private struct LoungeHeaderOffsetKey: PreferenceKey {
+/// 스크롤 콘텐츠 최상단 오프셋을 콜랩싱 바에 전달하는 PreferenceKey
+private struct LoungeScrollOffsetKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
