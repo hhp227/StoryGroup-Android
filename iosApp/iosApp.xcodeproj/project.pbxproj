@@ -7,7 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B33300CBB26009BCB1F /* Paging */; };
 		A1010002AABBCCDDEEFF0002 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011002AABBCCDDEEFF0002 /* iOSApp.swift */; };
+		A1010004AABBCCDDEEFF0004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011004AABBCCDDEEFF0004 /* Assets.xcassets */; };
+		A1010005AABBCCDDEEFF0005 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */; };
 		A1010006AABBCCDDEEFF0006 /* SGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011007AABBCCDDEEFF0007 /* SGTheme.swift */; };
 		A1010008AABBCCDDEEFF0008 /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011009AABBCCDDEEFF0009 /* AppContainer.swift */; };
 		A1010009AABBCCDDEEFF0009 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101100AAABBCCDDEEFF000A /* LoginViewModel.swift */; };
@@ -20,12 +23,6 @@
 		A1010010AABBCCDDEEFF0010 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011011AABBCCDDEEFF0011 /* RegisterView.swift */; };
 		A1010011AABBCCDDEEFF0011 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011012AABBCCDDEEFF0012 /* HomeView.swift */; };
 		A1010012AABBCCDDEEFF0012 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011013AABBCCDDEEFF0013 /* GroupsView.swift */; };
-		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
-		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
-		A1010021AABBCCDDEEFF0021 /* Paging in Frameworks */ = {isa = PBXBuildFile; productRef = A1015001AABBCCDDEEFF5001 /* Paging */; };
-		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
-		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
-		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
 		A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011014AABBCCDDEEFF0014 /* FriendsView.swift */; };
 		A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011015AABBCCDDEEFF0015 /* ChatView.swift */; };
 		A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */; };
@@ -36,13 +33,19 @@
 		A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */; };
 		A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101CAABBCCDDEEFF001C /* TimeFormats.swift */; };
 		A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101DAABBCCDDEEFF001D /* MviViewModel.swift */; };
-		A1010004AABBCCDDEEFF0004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011004AABBCCDDEEFF0004 /* Assets.xcassets */; };
-		A1010005AABBCCDDEEFF0005 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */; };
+		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
+		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
+		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
+		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
+		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1011000AABBCCDDEEFF0000 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		A1011002AABBCCDDEEFF0002 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		A1011004AABBCCDDEEFF0004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1011006AABBCCDDEEFF0006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1011007AABBCCDDEEFF0007 /* SGTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SGTheme.swift; sourceTree = "<group>"; };
 		A1011009AABBCCDDEEFF0009 /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		A101100AAABBCCDDEEFF000A /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
@@ -55,11 +58,6 @@
 		A1011011AABBCCDDEEFF0011 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		A1011012AABBCCDDEEFF0012 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A1011013AABBCCDDEEFF0013 /* GroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
-		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
-		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
-		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
-		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
-		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
 		A1011014AABBCCDDEEFF0014 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		A1011015AABBCCDDEEFF0015 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -70,9 +68,11 @@
 		A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		A101101CAABBCCDDEEFF001C /* TimeFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormats.swift; sourceTree = "<group>"; };
 		A101101DAABBCCDDEEFF001D /* MviViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MviViewModel.swift; sourceTree = "<group>"; };
-		A1011004AABBCCDDEEFF0004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		A1011006AABBCCDDEEFF0006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
+		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
+		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
+		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
+		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -81,7 +81,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1010021AABBCCDDEEFF0021 /* Paging in Frameworks */,
+				0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +100,22 @@
 				A1012000AABBCCDDEEFF0000 /* Preview Content */,
 			);
 			path = iosApp;
+			sourceTree = "<group>";
+		};
+		7332ACCB08708982CBFABD2D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1012000AABBCCDDEEFF0000 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 		A1013000AABBCCDDEEFF0000 /* DI */ = {
@@ -122,15 +138,6 @@
 				A101300EAABBCCDDEEFF000E /* Util */,
 			);
 			path = UI;
-			sourceTree = "<group>";
-		};
-		A1013011AABBCCDDEEFF0011 /* Paging */ = {
-			isa = PBXGroup;
-			children = (
-				A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */,
-				A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */,
-			);
-			path = Paging;
 			sourceTree = "<group>";
 		};
 		A1013002AABBCCDDEEFF0002 /* Components */ = {
@@ -262,20 +269,13 @@
 			path = Mvi;
 			sourceTree = "<group>";
 		};
-		7332ACCB08708982CBFABD2D /* Products */ = {
+		A1013011AABBCCDDEEFF0011 /* Paging */ = {
 			isa = PBXGroup;
 			children = (
-				FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */,
+				A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */,
+				A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */,
 			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		A1012000AABBCCDDEEFF0000 /* Preview Content */ = {
-			isa = PBXGroup;
-			children = (
-				A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */,
-			);
-			path = "Preview Content";
+			path = Paging;
 			sourceTree = "<group>";
 		};
 		C98E98B4AE0F51EAF578C098 /* Configuration */ = {
@@ -313,7 +313,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
-				A1015001AABBCCDDEEFF5001 /* Paging */,
+				0A8D2B33300CBB26009BCB1F /* Paging */,
 			);
 			productName = iosApp;
 			productReference = FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */;
@@ -344,7 +344,7 @@
 			);
 			mainGroup = FBFDA0ED57CE363227DB6AC1;
 			packageReferences = (
-				A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */,
+				0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */,
 			);
 			productRefGroup = 7332ACCB08708982CBFABD2D /* Products */;
 			projectDirPath = "";
@@ -647,12 +647,11 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-	};
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */ = {
+		0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/hhp227/Jetpack-Paging-for-SwiftUI.git";
+			repositoryURL = "https://github.com/hhp227/Jetpack-Paging-for-SwiftUI";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 0.3.0;
@@ -661,11 +660,12 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A1015001AABBCCDDEEFF5001 /* Paging */ = {
+		0A8D2B33300CBB26009BCB1F /* Paging */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */;
+			package = 0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */;
 			productName = Paging;
 		};
 /* End XCSwiftPackageProductDependency section */
+	};
 	rootObject = 8A6481950DA9E60233403499 /* Project object */;
 }
