@@ -1,11 +1,27 @@
 import SwiftUI
+import Paging
 import Shared
 
 /// 그룹 상세 — 웹 /groups/[id]·Compose GroupDetailScreen 미러: 콜랩싱 커버(그라데이션 폴백+
-/// 이름/설명/역할 칩)+멤버 스트립+피드. 상단바는 탭 NavigationView의 기본 내비바(백 버튼 자동,
-/// 최상단 투명→스크롤 시 시스템이 배경·타이틀 전환).
+/// 이름/설명/역할 칩)+멤버 스트립+피드(Paging). 상단바는 루트 NavigationStack의 기본 내비바.
+/// VM은 여기서 lazy 생성(StateObject)하고, 페이징 구독은 내부 뷰가 VM 확정 후 생성한다.
 struct GroupDetailView: View {
     @StateObject private var viewModel: GroupDetailViewModel
+
+    init(group: Group, factory: @escaping (Group) -> GroupDetailViewModel) {
+        _viewModel = StateObject(wrappedValue: factory(group))
+    }
+
+    var body: some View {
+        GroupDetailContent(viewModel: viewModel)
+    }
+}
+
+private struct GroupDetailContent: View {
+    @ObservedObject var viewModel: GroupDetailViewModel
+
+    /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
+    @StateObject private var lazyPagingItems: LazyPagingItems<Post>
 
     @Environment(\.sgColors) private var colors
 
@@ -15,8 +31,13 @@ struct GroupDetailView: View {
     /// 내비바 아래 노출 커버 높이 — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
     private let headerHeight: CGFloat = 114
 
-    init(group: Group, factory: (Group) -> GroupDetailViewModel) {
-        _viewModel = StateObject(wrappedValue: factory(group))
+    init(viewModel: GroupDetailViewModel) {
+        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
+        // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
+        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+
+        self.viewModel = viewModel
+        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 
     var body: some View {
@@ -86,42 +107,51 @@ struct GroupDetailView: View {
         }
     }
 
+    /// 그룹/멤버는 UiState, 피드는 Paging LoadState — 다음 페이지 트리거는 라이브러리가 담당.
+    /// (라이브러리 LoadState.Error의 원인 에러는 internal이라 문구는 고정 메시지 사용)
     @ViewBuilder private var content: some View {
-        if viewModel.uiState.posts.isEmpty && viewModel.uiState.members.isEmpty && viewModel.uiState.isLoading {
-            ProgressView().padding(.vertical, 48)
-        } else if viewModel.uiState.posts.isEmpty && viewModel.uiState.members.isEmpty,
-                  let error = viewModel.uiState.error {
+        let refreshState = lazyPagingItems.loadState.refresh
+        let appendState = lazyPagingItems.loadState.append
+
+        if !viewModel.uiState.members.isEmpty {
+            memberStrip.padding(.horizontal, 16)
+        }
+        if let error = viewModel.uiState.error {
             VStack(spacing: 8) {
                 Text(error).font(.subheadline).foregroundColor(colors.rust)
                 Button("다시 시도") { viewModel.onAction(.refresh) }
                     .font(.subheadline)
                     .foregroundColor(colors.accent)
             }
+            .padding(.vertical, 16)
+        }
+        if lazyPagingItems.itemCount == 0, refreshState is LoadState.Loading {
+            ProgressView().padding(.vertical, 48)
+        } else if lazyPagingItems.itemCount == 0, refreshState is LoadState.Error {
+            VStack(spacing: 8) {
+                Text("피드를 불러오지 못했습니다.").font(.subheadline).foregroundColor(colors.rust)
+                Button("다시 시도") { lazyPagingItems.retry() }
+                    .font(.subheadline)
+                    .foregroundColor(colors.accent)
+            }
             .padding(.vertical, 48)
+        } else if lazyPagingItems.itemCount == 0 {
+            SGEmptyState(title: "아직 이야기가 없습니다", subtitle: "첫 이야기를 남겨보세요.")
+                .padding(.vertical, 48)
         } else {
-            if !viewModel.uiState.members.isEmpty {
-                memberStrip.padding(.horizontal, 16)
-            }
-            if viewModel.uiState.posts.isEmpty && !viewModel.uiState.isLoading {
-                SGEmptyState(title: "아직 이야기가 없습니다", subtitle: "첫 이야기를 남겨보세요.")
-                    .padding(.vertical, 48)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.uiState.posts, id: \.id) { post in
+            LazyVStack(spacing: 12) {
+                ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { post in
+                    if let post {
                         SGPostCard(post: post)
-                            .onAppear {
-                                // 웹 sentinel 미러 — 마지막 카드가 보이면 다음 페이지를 읽는다
-                                if post.id == viewModel.uiState.posts.last?.id { viewModel.onAction(.loadMore) }
-                            }
                     }
-                    SGPagingFooter(
-                        error: viewModel.uiState.error,
-                        isLoadingMore: viewModel.uiState.isLoadingMore,
-                        onRetry: { viewModel.onAction(.loadMore) }
-                    )
                 }
-                .padding(.horizontal, 16)
+                SGPagingFooter(
+                    error: appendState is LoadState.Error ? "피드를 더 불러오지 못했습니다." : nil,
+                    isLoadingMore: appendState is LoadState.Loading,
+                    onRetry: { lazyPagingItems.retry() }
+                )
             }
+            .padding(.horizontal, 16)
         }
     }
 

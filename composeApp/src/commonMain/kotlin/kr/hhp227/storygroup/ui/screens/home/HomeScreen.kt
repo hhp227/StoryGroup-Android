@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -20,12 +19,19 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import app.cash.paging.LoadStateError
+import app.cash.paging.LoadStateLoading
+import app.cash.paging.compose.collectAsLazyPagingItems
+import app.cash.paging.compose.itemKey
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
@@ -48,7 +54,11 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // 상태에서 pagingData만 뽑아낸 스트림을 수집 — Paging-CRUD 샘플·iOS($state.map)와 동일 관용구
+    val pagingDataFlow = remember(viewModel) {
+        viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
+    }
+    val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
     SgCollapsingHeaderScaffold(
@@ -81,8 +91,12 @@ fun HomeScreen(
         },
         modifier = modifier
     ) {
+        // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
+        val refreshState = lazyPagingItems.loadState.refresh
+        val appendState = lazyPagingItems.loadState.append
+
         when {
-            uiState.posts.isEmpty() && uiState.isLoading -> item(key = "feed-loading") {
+            lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "feed-loading") {
                 Box(
                     Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
                     contentAlignment = Alignment.Center
@@ -90,19 +104,23 @@ fun HomeScreen(
                     CircularProgressIndicator(color = sg.accent)
                 }
             }
-            uiState.posts.isEmpty() && uiState.error != null -> item(key = "feed-error") {
+            lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "feed-error") {
                 Column(
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    Text(
+                        refreshState.error.message ?: "피드를 불러오지 못했습니다.",
+                        style = SgTheme.typography.bodyMedium,
+                        color = sg.rust
+                    )
                     Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.onAction(HomeViewModel.Action.Refresh) }) {
+                    TextButton(onClick = lazyPagingItems::retry) {
                         Text("다시 시도", color = sg.accent)
                     }
                 }
             }
-            uiState.posts.isEmpty() -> item(key = "feed-empty") {
+            lazyPagingItems.itemCount == 0 -> item(key = "feed-empty") {
                 SgEmptyState(
                     title = "아직 이야기가 없습니다",
                     subtitle = "첫 이야기를 남겨보세요.",
@@ -110,16 +128,17 @@ fun HomeScreen(
                 )
             }
             else -> {
-                items(uiState.posts, key = Post::id) { post ->
-                    SgPostCard(post, Modifier.padding(horizontal = 16.dp))
+                items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
+                    lazyPagingItems[index]?.let { post ->
+                        SgPostCard(post, Modifier.padding(horizontal = 16.dp))
+                    }
                 }
-                if (uiState.hasMore || uiState.isLoadingMore || uiState.error != null) {
+                if (appendState is LoadStateLoading || appendState is LoadStateError) {
                     item(key = "feed-footer") {
                         SgPagingFooter(
-                            isLoadingMore = uiState.isLoadingMore,
-                            error = uiState.error,
-                            postCount = uiState.posts.size,
-                            onLoadMore = { viewModel.onAction(HomeViewModel.Action.LoadMore) }
+                            isLoadingMore = appendState is LoadStateLoading,
+                            error = (appendState as? LoadStateError)?.error?.message,
+                            onRetry = lazyPagingItems::retry
                         )
                     }
                 }

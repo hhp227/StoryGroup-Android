@@ -1,94 +1,51 @@
+import Combine
 import Foundation
 import Shared
 
-/// 홈(라운지) 피드 — composeApp HomeViewModel.kt와 1:1 미러.
-/// 웹 메인 피드와 동일하게 내 그룹에서 라운지를 찾아 그 그룹의 게시글을 페이지 단위로 읽는다.
+/// 홈(라운지) 피드 — composeApp HomeViewModel.kt와 1:1 미러(Paging-CRUD 샘플 패턴).
+/// 페이징(라운지 해석 포함)은 shared 데이터 계층 소유, VM은 캐시(cachedIn)와
+/// 세션 재진입 갱신만 담당하고 UiState에 최신 PagingData를 담는다.
 final class HomeViewModel: MviViewModel {
     typealias Event = Never
 
     @Published private(set) var uiState = UiState()
 
-    private let getMyGroupsUseCase: GetMyGroupsUseCase
-    private let getGroupPostsUseCase: GetGroupPostsUseCase
+    // 재로그인 시 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행
+    private let refreshTrigger = CurrentValueSubject<Int, Never>(0)
 
-    private var loungeId: Int64? = nil
-    private var nextPage: Int32 = 0
+    private var cancellables = Set<AnyCancellable>()
 
-    private static let pageSize: Int32 = 20
+    private func setPagingData(_ pagingData: PagingData<Post>) {
+        uiState.pagingData = pagingData
+    }
 
     func onAction(_ action: Action) {
         switch action {
-        case .refresh: refresh()
-        case .loadMore: loadMore()
-        }
-    }
-
-    /// 로그인 세션 진입 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다(이전 목록은 로딩 중에도 유지)
-    private func refresh() {
-        if uiState.isLoading { return }
-
-        uiState.isLoading = true
-        uiState.error = nil
-        Task { @MainActor in
-            do {
-                let groups = try await getMyGroupsUseCase.invoke()
-                guard let lounge = groups.first(where: { $0.isLounge }) else {
-                    uiState.isLoading = false
-                    uiState.error = "라운지를 찾을 수 없습니다."
-                    return
-                }
-                loungeId = lounge.id
-                let posts = try await getGroupPostsUseCase.invoke(groupId: lounge.id, page: 0, size: Self.pageSize)
-                nextPage = 1
-                uiState.isLoading = false
-                uiState.posts = posts
-                uiState.hasMore = posts.count == Int(Self.pageSize)
-            } catch {
-                uiState.isLoading = false
-                uiState.error = error.kotlinMessage(fallback: "피드를 불러오지 못했습니다.")
-            }
-        }
-    }
-
-    /// 목록 끝 도달 시 발화 — 다음 페이지를 이어 붙인다
-    private func loadMore() {
-        guard let groupId = loungeId else { return }
-        if uiState.isLoading || uiState.isLoadingMore || !uiState.hasMore { return }
-
-        uiState.isLoadingMore = true
-        uiState.error = nil
-        Task { @MainActor in
-            do {
-                let rows = try await getGroupPostsUseCase.invoke(groupId: groupId, page: nextPage, size: Self.pageSize)
-                nextPage += 1
-                // 새 글이 끼어들어 페이지 경계가 밀려도 중복 카드가 생기지 않게 id로 거른다(웹 미러)
-                let seen = Set(uiState.posts.map { $0.id })
-                uiState.isLoadingMore = false
-                uiState.posts += rows.filter { !seen.contains($0.id) }
-                uiState.hasMore = rows.count == Int(Self.pageSize)
-            } catch {
-                uiState.isLoadingMore = false
-                uiState.error = error.kotlinMessage(fallback: "피드를 더 불러오지 못했습니다.")
-            }
+        // 로그인 세션 진입 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
+        case .refresh:
+            refreshTrigger.send(refreshTrigger.value + 1)
         }
     }
 
     init(container: AppContainer) {
-        getMyGroupsUseCase = container.getMyGroupsUseCase
-        getGroupPostsUseCase = container.getGroupPostsUseCase
+        let getLoungePostsPagingDataUseCase = container.getLoungePostsPagingDataUseCase
+
+        // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
+        // (Kotlin: refreshTrigger.flatMapLatest { useCase() }.cachedIn(viewModelScope))
+        refreshTrigger
+            .map { _ in getLoungePostsPagingDataUseCase().cachedIn() }
+            .switchToLatest()
+            .sink { [weak self] in self?.setPagingData($0) }
+            .store(in: &cancellables)
     }
 
+    /// 게시글 목록은 Paging 스트림의 최신 스냅샷 — 로딩/에러/추가 로드는 화면이 LoadState로 그린다
     struct UiState {
-        var isLoading = false
-        var isLoadingMore = false
-        var posts: [Post] = []
-        // 첫 로딩 전에는 false — 푸터(다음 페이지 트리거)가 미리 돌지 않게
-        var hasMore = false
-        var error: String? = nil
+        // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
+        var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
     }
 
     enum Action {
         case refresh
-        case loadMore
     }
 }

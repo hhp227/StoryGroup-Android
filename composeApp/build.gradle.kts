@@ -38,6 +38,8 @@ kotlin {
             implementation(libs.jetbrains.lifecycle.viewmodel.compose)
             // 풀스크린 목적지(그룹 상세 등)의 백스택 — 탭 전환은 여전히 셸 enum이 담당
             implementation(libs.jetbrains.navigation.compose)
+            // 게시글 피드 페이징 UI — paging-common은 shared가 api로 노출(데이터 계층 소속)
+            implementation(libs.cash.paging.compose)
             implementation(projects.shared)
         }
         commonTest.dependencies {

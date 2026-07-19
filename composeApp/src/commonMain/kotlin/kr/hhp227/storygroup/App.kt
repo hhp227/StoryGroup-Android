@@ -60,7 +60,7 @@ fun App(container: AppContainer) {
             val profileViewModel = viewModel { ProfileViewModel(container.getMyProfileUseCase) }
             val profileUiState by profileViewModel.uiState.collectAsState()
             val homeViewModel = viewModel {
-                HomeViewModel(container.getMyGroupsUseCase, container.getGroupPostsUseCase)
+                HomeViewModel(container.getLoungePostsPagingDataUseCase)
             }
             val groupsViewModel = viewModel {
                 GroupsViewModel(container.getMyGroupsUseCase)
@@ -97,7 +97,7 @@ fun App(container: AppContainer) {
                                 initialGroup = group,
                                 getGroupUseCase = container.getGroupUseCase,
                                 getGroupMembersUseCase = container.getGroupMembersUseCase,
-                                getGroupPostsUseCase = container.getGroupPostsUseCase
+                                getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
                             )
                         }
 

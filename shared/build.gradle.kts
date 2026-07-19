@@ -40,6 +40,9 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
+            // 페이징은 데이터 계층 소속 — Repository가 Flow<PagingData>를 노출하므로 api
+            // (androidx.paging은 jvm 타깃 미지원이라 Cash 멀티플랫폼 포크 사용)
+            api(libs.cash.paging.common)
             // HttpClient가 AuthRepository/createApiClient의 공개 시그니처에 노출되므로 api
             api(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)

@@ -20,6 +20,9 @@
 		A1010010AABBCCDDEEFF0010 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011011AABBCCDDEEFF0011 /* RegisterView.swift */; };
 		A1010011AABBCCDDEEFF0011 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011012AABBCCDDEEFF0012 /* HomeView.swift */; };
 		A1010012AABBCCDDEEFF0012 /* GroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011013AABBCCDDEEFF0013 /* GroupsView.swift */; };
+		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
+		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
+		A1010021AABBCCDDEEFF0021 /* Paging in Frameworks */ = {isa = PBXBuildFile; productRef = A1015001AABBCCDDEEFF5001 /* Paging */; };
 		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
 		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
 		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
@@ -52,6 +55,8 @@
 		A1011011AABBCCDDEEFF0011 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		A1011012AABBCCDDEEFF0012 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		A1011013AABBCCDDEEFF0013 /* GroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsView.swift; sourceTree = "<group>"; };
+		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
+		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
 		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
 		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
@@ -76,6 +81,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1010021AABBCCDDEEFF0021 /* Paging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,12 +115,22 @@
 			children = (
 				A1013002AABBCCDDEEFF0002 /* Components */,
 				A1013010AABBCCDDEEFF0010 /* Mvi */,
+				A1013011AABBCCDDEEFF0011 /* Paging */,
 				A1013003AABBCCDDEEFF0003 /* Screens */,
 				A101300CAABBCCDDEEFF000C /* Shell */,
 				A101300DAABBCCDDEEFF000D /* Theme */,
 				A101300EAABBCCDDEEFF000E /* Util */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		A1013011AABBCCDDEEFF0011 /* Paging */ = {
+			isa = PBXGroup;
+			children = (
+				A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */,
+				A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */,
+			);
+			path = Paging;
 			sourceTree = "<group>";
 		};
 		A1013002AABBCCDDEEFF0002 /* Components */ = {
@@ -297,6 +313,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				A1015001AABBCCDDEEFF5001 /* Paging */,
 			);
 			productName = iosApp;
 			productReference = FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */;
@@ -326,6 +343,9 @@
 				Base,
 			);
 			mainGroup = FBFDA0ED57CE363227DB6AC1;
+			packageReferences = (
+				A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */,
+			);
 			productRefGroup = 7332ACCB08708982CBFABD2D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -392,6 +412,8 @@
 				A1010010AABBCCDDEEFF0010 /* RegisterView.swift in Sources */,
 				A1010011AABBCCDDEEFF0011 /* HomeView.swift in Sources */,
 				A1010012AABBCCDDEEFF0012 /* GroupsView.swift in Sources */,
+				A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */,
+				A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */,
 				A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */,
 				A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */,
 				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
@@ -626,5 +648,24 @@
 		};
 /* End XCConfigurationList section */
 	};
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/hhp227/Jetpack-Paging-for-SwiftUI.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1015001AABBCCDDEEFF5001 /* Paging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1015000AABBCCDDEEFF5000 /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */;
+			productName = Paging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	rootObject = 8A6481950DA9E60233403499 /* Project object */;
 }

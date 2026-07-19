@@ -12,7 +12,6 @@ import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,13 +71,12 @@ fun SgPostCard(post: Post, modifier: Modifier = Modifier) {
     }
 }
 
-/** 웹 sentinel 미러 — 푸터가 화면에 들어오면 다음 페이지를 읽고, 실패 시엔 수동 재시도만 노출 */
+/** 추가 페이지 로딩/실패 표시 — 다음 페이지 트리거는 Paging3(prefetchDistance)가 담당, 실패 시 수동 재시도만 노출 */
 @Composable
 fun SgPagingFooter(
     isLoadingMore: Boolean,
     error: String?,
-    postCount: Int,
-    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -90,13 +88,11 @@ fun SgPagingFooter(
         when {
             error != null -> {
                 Text(error, style = SgTheme.typography.bodySmall, color = sg.rust)
-                TextButton(onClick = onLoadMore) {
+                TextButton(onClick = onRetry) {
                     Text("다시 시도", color = sg.accent)
                 }
             }
             isLoadingMore -> CircularProgressIndicator(color = sg.accent, modifier = Modifier.padding(8.dp))
-            // 페이지가 붙어 postCount가 바뀔 때마다 다시 평가 — 푸터가 계속 보이면 이어서 읽는다
-            else -> LaunchedEffect(postCount) { onLoadMore() }
         }
     }
 }

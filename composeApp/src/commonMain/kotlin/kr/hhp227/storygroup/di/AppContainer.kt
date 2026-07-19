@@ -13,8 +13,9 @@ import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
@@ -35,7 +36,7 @@ class AppContainer(
     private val authRepository: AuthRepository = AuthRepositoryImpl(apiClient, tokenStorage)
     private val userRepository: UserRepository = UserRepositoryImpl(apiClient)
     private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
-    private val postRepository: PostRepository = PostRepositoryImpl(apiClient)
+    private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -45,5 +46,6 @@ class AppContainer(
     val getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository)
     val getGroupUseCase = GetGroupUseCase(groupRepository)
     val getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository)
-    val getGroupPostsUseCase = GetGroupPostsUseCase(postRepository)
+    val getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository)
+    val getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository)
 }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -31,6 +32,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.cash.paging.LoadStateError
+import app.cash.paging.LoadStateLoading
+import app.cash.paging.compose.collectAsLazyPagingItems
+import app.cash.paging.compose.itemKey
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgAvatar
@@ -53,6 +60,11 @@ fun GroupDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // 상태에서 pagingData만 뽑아낸 스트림을 수집 — Paging-CRUD 샘플·iOS($state.map)와 동일 관용구
+    val pagingDataFlow = remember(viewModel) {
+        viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
+    }
+    val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
     // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
@@ -116,56 +128,74 @@ fun GroupDetailScreen(
         },
         modifier = modifier
     ) {
+        // 그룹/멤버는 UiState, 피드는 Paging3 LoadState — 다음 페이지 트리거는 prefetchDistance가 담당
+        val refreshState = lazyPagingItems.loadState.refresh
+        val appendState = lazyPagingItems.loadState.append
+
+        if (uiState.members.isNotEmpty()) {
+            item(key = "members") {
+                MemberStrip(uiState.members, Modifier.padding(horizontal = 16.dp))
+            }
+        }
+        if (uiState.error != null) {
+            item(key = "detail-error") {
+                Column(
+                    modifier = Modifier.fillParentMaxWidth().padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { viewModel.onAction(GroupDetailViewModel.Action.Refresh) }) {
+                        Text("다시 시도", color = sg.accent)
+                    }
+                }
+            }
+        }
         when {
-            uiState.posts.isEmpty() && uiState.members.isEmpty() && uiState.isLoading ->
-                item(key = "detail-loading") {
-                    Box(
-                        Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = sg.accent)
+            lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "feed-loading") {
+                Box(
+                    Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = sg.accent)
+                }
+            }
+            lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "feed-error") {
+                Column(
+                    modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        refreshState.error.message ?: "피드를 불러오지 못했습니다.",
+                        style = SgTheme.typography.bodyMedium,
+                        color = sg.rust
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = lazyPagingItems::retry) {
+                        Text("다시 시도", color = sg.accent)
                     }
                 }
-            uiState.posts.isEmpty() && uiState.members.isEmpty() && uiState.error != null ->
-                item(key = "detail-error") {
-                    Column(
-                        modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
-                        Spacer(Modifier.height(8.dp))
-                        TextButton(onClick = { viewModel.onAction(GroupDetailViewModel.Action.Refresh) }) {
-                            Text("다시 시도", color = sg.accent)
-                        }
-                    }
-                }
+            }
+            lazyPagingItems.itemCount == 0 -> item(key = "feed-empty") {
+                SgEmptyState(
+                    title = "아직 이야기가 없습니다",
+                    subtitle = "첫 이야기를 남겨보세요.",
+                    modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
+                )
+            }
             else -> {
-                if (uiState.members.isNotEmpty()) {
-                    item(key = "members") {
-                        MemberStrip(uiState.members, Modifier.padding(horizontal = 16.dp))
-                    }
-                }
-                if (uiState.posts.isEmpty() && !uiState.isLoading) {
-                    item(key = "detail-empty") {
-                        SgEmptyState(
-                            title = "아직 이야기가 없습니다",
-                            subtitle = "첫 이야기를 남겨보세요.",
-                            modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
-                        )
-                    }
-                } else {
-                    items(uiState.posts, key = Post::id) { post ->
+                items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
+                    lazyPagingItems[index]?.let { post ->
                         SgPostCard(post, Modifier.padding(horizontal = 16.dp))
                     }
-                    if (uiState.hasMore || uiState.isLoadingMore || uiState.error != null) {
-                        item(key = "detail-footer") {
-                            SgPagingFooter(
-                                isLoadingMore = uiState.isLoadingMore,
-                                error = uiState.error,
-                                postCount = uiState.posts.size,
-                                onLoadMore = { viewModel.onAction(GroupDetailViewModel.Action.LoadMore) }
-                            )
-                        }
+                }
+                if (appendState is LoadStateLoading || appendState is LoadStateError) {
+                    item(key = "feed-footer") {
+                        SgPagingFooter(
+                            isLoadingMore = appendState is LoadStateLoading,
+                            error = (appendState as? LoadStateError)?.error?.message,
+                            onRetry = lazyPagingItems::retry
+                        )
                     }
                 }
             }
