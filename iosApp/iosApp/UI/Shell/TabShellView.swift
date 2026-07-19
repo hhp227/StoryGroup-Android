@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 /// 기본 쉘: 웹 미러 헤더(linen+보더) + 하단 5탭 — Compose TabShell 미러
 struct TabShellView: View {

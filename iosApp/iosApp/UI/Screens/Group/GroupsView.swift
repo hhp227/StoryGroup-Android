@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 /// 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups·Compose GroupsScreen 미러(라운지 제외).
 /// 상세는 루트 NavigationStack 풀스크린 push(onOpenGroup) — Compose NavHost(GroupDetailRoute) 미러

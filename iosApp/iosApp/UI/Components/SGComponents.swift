@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// Shared에도 Group(도메인 모델)이 있어 동명 충돌 — 이 파일의 Group은 SwiftUI 뷰로 고정
+import struct SwiftUI.Group
 
 // 공용 컴포넌트 — Compose ui/components 미러
 

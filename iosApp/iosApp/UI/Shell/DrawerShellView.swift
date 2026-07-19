@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 /// 레거시 쉘: 구 앱 드로어(프로필 헤더 + 목적지 + 설정·로그아웃 보강) — Compose DrawerShell 미러
 struct DrawerShellView: View {

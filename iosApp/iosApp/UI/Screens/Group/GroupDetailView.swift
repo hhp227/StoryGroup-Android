@@ -1,6 +1,8 @@
 import SwiftUI
 import Paging
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 /// 그룹 상세 — 웹 /groups/[id]·Compose GroupDetailScreen 미러: 콜랩싱 커버(그라데이션 폴백+
 /// 이름/설명/역할 칩)+멤버 스트립+피드(Paging). 상단바는 루트 NavigationStack의 기본 내비바.

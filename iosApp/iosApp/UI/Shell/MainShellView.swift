@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 // 내비게이션 쉘 — Compose ui/shell/MainShell.kt 미러.
 // 설정>내비게이션 스타일에 따라 하단 탭/레거시 드로어를 교체하고, 화면은 두 쉘이 공유한다.
