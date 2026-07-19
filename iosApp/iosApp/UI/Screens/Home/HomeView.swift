@@ -1,16 +1,15 @@
 import SwiftUI
+import Paging
 import Shared
 
 /// 홈(라운지) 피드 — 웹 메인 피드·Compose HomeScreen 미러(레거시 CollapsingToolbar 헤더 이식).
-/// 상단바는 기본 NavigationBar(사용자 지시): 최상단에선 투명(scrollEdgeAppearance)해 헤더 사진이
-/// 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
+/// 내비바(제목·툴바)는 셸이 루트 NavigationStack 위에 구성 — 최상단에선 투명(scrollEdgeAppearance)해
+/// 헤더 사진이 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
 struct HomeView: View {
     @ObservedObject var viewModel: HomeViewModel
 
-    var onNotifications: () -> Void = {}
-
-    /// 드로어 쉘의 햄버거 메뉴(탭 쉘은 nil) — Compose homeNavigationIcon 미러
-    var onMenu: (() -> Void)? = nil
+    /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
+    @StateObject private var lazyPagingItems: LazyPagingItems<Post>
 
     @Environment(\.sgColors) private var colors
 
@@ -25,35 +24,18 @@ struct HomeView: View {
     private let headerHeight: CGFloat = 114
 
     var body: some View {
-        NavigationView {
-            GeometryReader { outer in
-                ScrollView {
-                    VStack(spacing: 12) {
-                        parallaxHeader(topInset: outer.safeAreaInsets.top)
-                        feedContent
-                    }
-                    .padding(.bottom, 16)
+        GeometryReader { outer in
+            ScrollView {
+                VStack(spacing: 12) {
+                    parallaxHeader(topInset: outer.safeAreaInsets.top)
+                    feedContent
                 }
-                .background(colors.paper)
-                // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
-                .ignoresSafeArea(edges: .top)
+                .padding(.bottom, 16)
             }
-            .navigationTitle("우리들의 이야기")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if let onMenu {
-                        Button(action: onMenu) { Image(systemName: "line.3.horizontal") }
-                    }
-                }
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
-                    Button(action: onNotifications) { Image(systemName: "bell.fill") }
-                }
-            }
+            .background(colors.paper)
+            // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
+            .ignoresSafeArea(edges: .top)
         }
-        // 탭 콘텐츠 영역 안의 단일 컬럼 — iPad에서 사이드바로 갈라지지 않게
-        .navigationViewStyle(.stack)
     }
 
     /// 레거시 layout_collapseMode="parallax" 미러 — 목록이 위로 갈 때 이미지는 절반 속도로 따라간다.
@@ -78,101 +60,58 @@ struct HomeView: View {
                 .onAppear {
                     if headerRestMinY == nil { headerRestMinY = raw }
                 }
+                // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다.
+                // rest 보정값(minY)이 아니라 화면 기하(raw: 헤더 하단 raw+total ≤ 바 하단 topInset,
+                // 정리하면 raw ≤ -headerHeight)로 판정 — 셸(탭/드로어)별 첫 레이아웃 오프셋 차이로
+                // 전환 시점이 어긋나던 문제 방지
+                .preference(key: NavigationBarScrimVisibleKey.self, value: raw <= -headerHeight)
         }
         .frame(height: total)
     }
 
-    /// 피드 본문 — 상태(로딩/에러/빈)도 헤더 아래 목록 영역에 그린다(Compose HomeScreen 미러)
+    /// 피드 본문 — 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose HomeScreen 미러).
+    /// 다음 페이지 트리거는 라이브러리(prefetchDistance)가 담당.
+    /// (라이브러리 LoadState.Error의 원인 에러는 internal이라 문구는 고정 메시지 사용)
     @ViewBuilder private var feedContent: some View {
-        if viewModel.uiState.posts.isEmpty && viewModel.uiState.isLoading {
+        let refreshState = lazyPagingItems.loadState.refresh
+        let appendState = lazyPagingItems.loadState.append
+
+        if lazyPagingItems.itemCount == 0, refreshState is LoadState.Loading {
             ProgressView().padding(.vertical, 48)
-        } else if viewModel.uiState.posts.isEmpty, let error = viewModel.uiState.error {
+        } else if lazyPagingItems.itemCount == 0, refreshState is LoadState.Error {
             VStack(spacing: 8) {
-                Text(error).font(.subheadline).foregroundColor(colors.rust)
-                Button("다시 시도") { viewModel.onAction(.refresh) }
+                Text("피드를 불러오지 못했습니다.").font(.subheadline).foregroundColor(colors.rust)
+                Button("다시 시도") { lazyPagingItems.retry() }
                     .font(.subheadline)
                     .foregroundColor(colors.accent)
             }
             .padding(.vertical, 48)
-        } else if viewModel.uiState.posts.isEmpty {
+        } else if lazyPagingItems.itemCount == 0 {
             SGEmptyState(title: "아직 이야기가 없습니다", subtitle: "첫 이야기를 남겨보세요.")
                 .padding(.vertical, 48)
         } else {
             LazyVStack(spacing: 12) {
-                ForEach(viewModel.uiState.posts, id: \.id) { post in
-                    FeedPostCard(post: post)
-                        .onAppear {
-                            // 웹 sentinel 미러 — 마지막 카드가 보이면 다음 페이지를 읽는다
-                            if post.id == viewModel.uiState.posts.last?.id { viewModel.onAction(.loadMore) }
-                        }
+                ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { post in
+                    if let post {
+                        SGPostCard(post: post)
+                    }
                 }
-                feedFooter
+                SGPagingFooter(
+                    error: appendState is LoadState.Error ? "피드를 더 불러오지 못했습니다." : nil,
+                    isLoadingMore: appendState is LoadState.Loading,
+                    onRetry: { lazyPagingItems.retry() }
+                )
             }
             .padding(.horizontal, 16)
         }
     }
 
-    /// 추가 로딩/실패 표시 — 실패 시엔 수동 재시도만 노출(자동 재시도 루프 방지)
-    @ViewBuilder private var feedFooter: some View {
-        if let error = viewModel.uiState.error {
-            VStack(spacing: 4) {
-                Text(error).font(.caption).foregroundColor(colors.rust)
-                Button("다시 시도") { viewModel.onAction(.loadMore) }
-                    .font(.caption)
-                    .foregroundColor(colors.accent)
-            }
-            .padding(.vertical, 8)
-        } else if viewModel.uiState.isLoadingMore {
-            ProgressView().padding(8)
-        }
-    }
-}
+    init(viewModel: HomeViewModel) {
+        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
+        // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
+        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
-private struct FeedPostCard: View {
-    let post: Post
-
-    @Environment(\.sgColors) private var colors
-
-    var body: some View {
-        SGCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
-                    }
-                    Spacer()
-                    if post.isNotice {
-                        Text("공지")
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(colors.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(colors.accentSoft)
-                            .cornerRadius(colors.radiusButton ?? 12)
-                    }
-                }
-                if !post.text.isEmpty {
-                    Text(post.text)
-                        .font(.subheadline)
-                        .foregroundColor(colors.ink)
-                        .lineLimit(6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                // TODO: 첨부 이미지는 이미지 로딩 도입(다음 단계 ④) 후 실제 렌더링으로 교체
-                if !attachmentSummary.isEmpty {
-                    Text(attachmentSummary).font(.caption).foregroundColor(colors.inkSoft)
-                }
-            }
-            .padding(16)
-        }
-    }
-
-    private var attachmentSummary: String {
-        var parts: [String] = []
-        if !post.imageUrls.isEmpty { parts.append("사진 \(post.imageUrls.count)장") }
-        if !post.videoUrls.isEmpty { parts.append("동영상 \(post.videoUrls.count)개") }
-        return parts.joined(separator: " · ")
+        self.viewModel = viewModel
+        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

@@ -10,7 +10,10 @@ final class AppContainer {
     let registerUseCase: RegisterUseCase
     let getMyProfileUseCase: GetMyProfileUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
-    let getGroupPostsUseCase: GetGroupPostsUseCase
+    let getGroupUseCase: GetGroupUseCase
+    let getGroupMembersUseCase: GetGroupMembersUseCase
+    let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
+    let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -21,7 +24,7 @@ final class AppContainer {
         let authRepository = AuthRepositoryImpl(client: client, tokenStorage: tokenStorage)
         let userRepository = UserRepositoryImpl(client: client)
         let groupRepository = GroupRepositoryImpl(client: client)
-        let postRepository = PostRepositoryImpl(client: client)
+        let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -29,6 +32,9 @@ final class AppContainer {
         registerUseCase = RegisterUseCase(authRepository: authRepository)
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
-        getGroupPostsUseCase = GetGroupPostsUseCase(postRepository: postRepository)
+        getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
+        getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
+        getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
+        getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
     }
 }

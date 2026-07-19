@@ -28,8 +28,10 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.group.GroupsViewModel
 import kr.hhp227.storygroup.ui.screens.home.HomeViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
@@ -46,6 +48,8 @@ internal fun TabShell(
     onDestinationSelected: (MainDestination) -> Unit,
     profile: Profile?,
     homeViewModel: HomeViewModel,
+    groupsViewModel: GroupsViewModel,
+    onOpenGroupDetail: (Group) -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -77,8 +81,8 @@ internal fun TabShell(
             Scaffold(
                 backgroundColor = sg.paper,
                 topBar = {
-                    // 홈은 화면이 콜랩싱 상단바(검색·알림 포함)를 직접 그린다 — 레거시 라운지 CollapsingToolbar 미러
-                    if (currentDestination != MainDestination.HOME) {
+                    // 홈·그룹은 화면이 상단바를 직접 그린다(홈=콜랩싱 헤더, 그룹=목록↔상세 전환)
+                    if (currentDestination != MainDestination.HOME && currentDestination != MainDestination.GROUPS) {
                         SgTopBar(
                             title = currentDestination.label,
                             actions = {
@@ -122,6 +126,8 @@ internal fun TabShell(
                     destination = currentDestination,
                     profile = profile,
                     homeViewModel = homeViewModel,
+                    groupsViewModel = groupsViewModel,
+                    onOpenGroupDetail = onOpenGroupDetail,
                     onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                     onOpenSettings = onOpenSettings,
                     onLogout = onLogout,

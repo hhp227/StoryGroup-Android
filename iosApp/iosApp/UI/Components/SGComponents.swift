@@ -1,4 +1,7 @@
 import SwiftUI
+import Shared
+// Shared에도 Group(도메인 모델)이 있어 동명 충돌 — 이 파일의 Group은 SwiftUI 뷰로 고정
+import struct SwiftUI.Group
 
 // 공용 컴포넌트 — Compose ui/components 미러
 
@@ -195,5 +198,135 @@ struct SGSectionTitle: View {
             .font(.caption.bold())
             .foregroundColor(colors.inkSoft)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
+/// 첨부는 요약 표기(이미지 로딩은 ④ 몫)
+struct SGPostCard: View {
+    let post: Post
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        SGCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    SGAvatar(name: post.authorName)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
+                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                    }
+                    Spacer()
+                    if post.isNotice {
+                        Text("공지")
+                            .font(.caption2.weight(.medium))
+                            .foregroundColor(colors.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(colors.accentSoft)
+                            .cornerRadius(colors.radiusButton ?? 12)
+                    }
+                }
+                if !post.text.isEmpty {
+                    Text(post.text)
+                        .font(.subheadline)
+                        .foregroundColor(colors.ink)
+                        .lineLimit(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if !attachmentSummary.isEmpty {
+                    Text(attachmentSummary).font(.caption).foregroundColor(colors.inkSoft)
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    private var attachmentSummary: String {
+        var parts: [String] = []
+        if !post.imageUrls.isEmpty { parts.append("사진 \(post.imageUrls.count)장") }
+        if !post.videoUrls.isEmpty { parts.append("동영상 \(post.videoUrls.count)개") }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// 추가 로딩/실패 표시 — Compose SgPagingFooter 미러(실패 시엔 수동 재시도만 노출)
+struct SGPagingFooter: View {
+    let error: String?
+    let isLoadingMore: Bool
+    let onRetry: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        if let error {
+            VStack(spacing: 4) {
+                Text(error).font(.caption).foregroundColor(colors.rust)
+                Button("다시 시도", action: onRetry)
+                    .font(.caption)
+                    .foregroundColor(colors.accent)
+            }
+            .padding(.vertical, 8)
+        } else if isLoadingMore {
+            ProgressView().padding(8)
+        }
+    }
+}
+
+// MARK: - 내비바 스크림 수동 제어
+
+/// 시스템 내비바 배경 표시 여부를 화면 스크롤 상태로 올려보내는 프리퍼런스.
+/// keep-alive ZStack에 스크롤뷰가 여러 개라 UIKit의 자동 전환(scrollEdge→standard)이
+/// 어느 스크롤뷰를 추적할지 특정하지 못함 — 화면이 직접 임계값을 판정해 알린다.
+struct NavigationBarScrimVisibleKey: PreferenceKey {
+    static var defaultValue = false
+
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
+extension View {
+    /// 내비바 배경을 명시 제어 — false면 투명(헤더 사진이 비침), true면 기본 머티리얼.
+    /// iOS 15/16+ 공통으로 UIKit appearance를 직접 스왑한다.
+    func navigationBarScrim(visible: Bool) -> some View {
+        background(NavigationBarScrimSetter(visible: visible))
+    }
+}
+
+private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
+    let visible: Bool
+
+    func makeUIViewController(context: Context) -> Helper { Helper() }
+
+    func updateUIViewController(_ helper: Helper, context: Context) {
+        helper.visible = visible
+        helper.applyIfPossible()
+    }
+
+    /// SwiftUI 계층 안에서 부모 UINavigationController에 접근하기 위한 숨은 VC.
+    /// push/pop 복귀 시(viewWillAppear) 최신 상태를 다시 적용한다(pushed 화면이 덮어썼을 수 있음).
+    final class Helper: UIViewController {
+        var visible = false
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            applyIfPossible()
+        }
+
+        func applyIfPossible() {
+            guard let bar = navigationController?.navigationBar else { return }
+            let appearance = UINavigationBarAppearance()
+
+            if visible {
+                appearance.configureWithDefaultBackground()
+            } else {
+                appearance.configureWithTransparentBackground()
+            }
+            bar.standardAppearance = appearance
+            bar.scrollEdgeAppearance = appearance
+            bar.compactAppearance = appearance
+        }
     }
 }

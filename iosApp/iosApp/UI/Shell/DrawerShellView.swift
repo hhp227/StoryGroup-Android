@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 /// 레거시 쉘: 구 앱 드로어(프로필 헤더 + 목적지 + 설정·로그아웃 보강) — Compose DrawerShell 미러
 struct DrawerShellView: View {
@@ -13,14 +15,22 @@ struct DrawerShellView: View {
 
     let homeViewModel: HomeViewModel
 
+    let groupsViewModel: GroupsViewModel
+
+    /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenGroup: (Group) -> Void
+
     let onLogout: () -> Void
 
     @State private var drawerOpen = false
 
+    /// 홈 헤더가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
+    @State private var homeBarScrimVisible = false
+
     var body: some View {
         ZStack(alignment: .leading) {
             VStack(spacing: 0) {
-                // 상단바는 각 목적지의 기본 NavigationBar가 담당(햄버거는 menuAction으로 전달)
+                // 내비바는 루트 NavigationStack의 것 하나 — 제목·툴바(햄버거 포함)는 아래 modifier에서 구성
                 // 탭 쉘과 동일 — 목적지 전환 시 뷰를 유지해 스크롤 위치를 보존한다
                 ZStack {
                     ForEach(SGDestination.allCases) { destination in
@@ -28,10 +38,10 @@ struct DrawerShellView: View {
                             destination: destination,
                             profile: profile,
                             homeViewModel: homeViewModel,
-                            onOpenNotifications: { current = .notifications },
+                            groupsViewModel: groupsViewModel,
+                            onOpenGroup: onOpenGroup,
                             onOpenSettings: { showSettings = true },
-                            onLogout: onLogout,
-                            menuAction: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }
+                            onLogout: onLogout
                         )
                         .opacity(destination == current ? 1 : 0)
                         .allowsHitTesting(destination == current)
@@ -47,6 +57,30 @@ struct DrawerShellView: View {
                     .transition(.move(edge: .leading))
             }
         }
+        .navigationTitle(current == .home ? "우리들의 이야기" : current.label)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } }) {
+                    Image(systemName: "line.3.horizontal")
+                }
+            }
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if current == .home {
+                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
+                }
+                // 탭 쉘과 동일하게 내비바 우측에서도 알림 진입(알림 화면에서는 숨김)
+                if current != .notifications {
+                    Button(action: { current = .notifications }) { Image(systemName: "bell.fill") }
+                }
+                if current == .profile {
+                    Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }
+                }
+            }
+        }
+        .onPreferenceChange(NavigationBarScrimVisibleKey.self) { homeBarScrimVisible = $0 }
+        // 홈은 헤더 사진 위 투명→스크롤 시 표시, 나머지 탭은 항상 표시(Compose SgTopBar 미러)
+        .navigationBarScrim(visible: current == .home ? homeBarScrimVisible : true)
     }
 
     // 구 앱 nav_header_main 미러: 프로필 헤더 + 목적지 + 설정·로그아웃

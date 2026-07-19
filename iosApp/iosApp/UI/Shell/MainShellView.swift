@@ -1,5 +1,7 @@
 import SwiftUI
 import Shared
+// SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
+import class Shared.Group
 
 // 내비게이션 쉘 — Compose ui/shell/MainShell.kt 미러.
 // 설정>내비게이션 스타일에 따라 하단 탭/레거시 드로어를 교체하고, 화면은 두 쉘이 공유한다.
@@ -40,47 +42,106 @@ struct MainShellView: View {
 
     let onLogout: () -> Void
 
+    /// 그룹 상세 VM(그룹별 동적 생성) 팩토리에 필요 — Compose groupDetailViewModelFactory 미러
+    private let container: AppContainer
+
     @StateObject private var profileViewModel: ProfileViewModel
 
     @StateObject private var homeViewModel: HomeViewModel
+
+    @StateObject private var groupsViewModel: GroupsViewModel
 
     @State private var current: SGDestination = .home
 
     @State private var showSettings = false
 
+    /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
+    @State private var selectedGroup: Group? = nil
+
     var body: some View {
-        Group {
-            if theme.navStyle == .tabs {
-                TabShellView(
-                    current: $current,
-                    showSettings: $showSettings,
-                    profile: profileViewModel.uiState.profile,
-                    homeViewModel: homeViewModel,
-                    onLogout: onLogout
-                )
-            } else {
-                DrawerShellView(
-                    current: $current,
-                    showSettings: $showSettings,
-                    profile: profileViewModel.uiState.profile,
-                    homeViewModel: homeViewModel,
-                    onLogout: onLogout
-                )
+        navigationRoot
+            .sheet(isPresented: $showSettings) {
+                SGSettingsView(theme: theme)
             }
+            .onAppear {
+                // 로그인 세션 진입 시마다 내 정보/홈 피드/그룹 목록 갱신(재로그인 포함) — Compose App.kt 미러
+                profileViewModel.onAction(.load)
+                homeViewModel.onAction(.refresh)
+                groupsViewModel.onAction(.refresh)
+            }
+    }
+
+    /// 루트 내비게이션 컨테이너 — 셸(탭바 포함) 전체가 루트 콘텐츠라 상세 push 시 하단 탭까지 덮는다.
+    /// NavigationStack은 iOS 16+라 iOS 15(iPhone 7)는 NavigationView로 동일 로직 폴백.
+    @ViewBuilder private var navigationRoot: some View {
+        if #available(iOS 16.0, *) {
+            NavigationStack {
+                shellContent
+                    .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
+            }
+        } else {
+            NavigationView {
+                shellContent
+                    .background(
+                        NavigationLink(isActive: showGroupDetail) {
+                            groupDetailDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
+            }
+            .navigationViewStyle(.stack)
         }
-        .sheet(isPresented: $showSettings) {
-            SGSettingsView(theme: theme)
+    }
+
+    @ViewBuilder private var shellContent: some View {
+        if theme.navStyle == .tabs {
+            TabShellView(
+                current: $current,
+                showSettings: $showSettings,
+                profile: profileViewModel.uiState.profile,
+                homeViewModel: homeViewModel,
+                groupsViewModel: groupsViewModel,
+                onOpenGroup: { selectedGroup = $0 },
+                onLogout: onLogout
+            )
+        } else {
+            DrawerShellView(
+                current: $current,
+                showSettings: $showSettings,
+                profile: profileViewModel.uiState.profile,
+                homeViewModel: homeViewModel,
+                groupsViewModel: groupsViewModel,
+                onOpenGroup: { selectedGroup = $0 },
+                onLogout: onLogout
+            )
         }
-        .onAppear {
-            // 로그인 세션 진입 시마다 내 정보/홈 피드 갱신(재로그인 포함) — Compose App.kt 미러
-            profileViewModel.onAction(.load)
-            homeViewModel.onAction(.refresh)
+    }
+
+    @ViewBuilder private var groupDetailDestination: some View {
+        if let group = selectedGroup {
+            GroupDetailView(group: group, factory: makeGroupDetailViewModel)
         }
+    }
+
+    /// pop(백 버튼/스와이프) 시 selectedGroup을 nil로 되돌리는 브리지
+    private var showGroupDetail: Binding<Bool> {
+        Binding(
+            get: { selectedGroup != nil },
+            set: { if !$0 { selectedGroup = nil } }
+        )
+    }
+
+    private func makeGroupDetailViewModel(_ group: Group) -> GroupDetailViewModel {
+        GroupDetailViewModel(container: container, group: group)
     }
 
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(container: container))
         _homeViewModel = StateObject(wrappedValue: HomeViewModel(container: container))
+        _groupsViewModel = StateObject(wrappedValue: GroupsViewModel(container: container))
+        self.container = container
         self.theme = theme
         self.onLogout = onLogout
     }
@@ -88,7 +149,7 @@ struct MainShellView: View {
 
 /// 두 쉘이 공유하는 목적지 → 화면 매핑 — Compose DestinationContent 미러.
 /// 상단바는 전 탭 기본 NavigationBar로 통일(사용자 지시) — 홈은 콜랩싱 헤더 때문에
-/// HomeView가 자체 NavigationView를 갖고, 나머지는 여기서 공통으로 감싼다.
+/// 내비바(제목·툴바)는 셸이 루트 NavigationStack 위에서 목적지별로 구성한다.
 struct DestinationView: View {
     let destination: SGDestination
 
@@ -96,51 +157,21 @@ struct DestinationView: View {
 
     let homeViewModel: HomeViewModel
 
-    let onOpenNotifications: () -> Void
+    let groupsViewModel: GroupsViewModel
+
+    /// 그룹 상세 풀스크린 push — Compose onOpenGroupDetail 미러(MainShellView selectedGroup)
+    let onOpenGroup: (Group) -> Void
 
     let onOpenSettings: () -> Void
 
     let onLogout: () -> Void
 
-    /// 드로어 쉘의 햄버거 액션(탭 쉘은 nil) — 모든 탭의 내비바 leading에 노출
-    var menuAction: (() -> Void)? = nil
-
     var body: some View {
-        if destination == .home {
-            HomeView(viewModel: homeViewModel, onNotifications: onOpenNotifications, onMenu: menuAction)
-        } else {
-            NavigationView {
-                screen
-                    .navigationTitle(destination.label)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            if let menuAction {
-                                Button(action: menuAction) { Image(systemName: "line.3.horizontal") }
-                            }
-                        }
-                        ToolbarItemGroup(placement: .navigationBarTrailing) {
-                            // 알림은 탭에서 빠지고 내비바 종 아이콘으로 진입(알림 화면에서는 숨김)
-                            if destination != .notifications {
-                                Button(action: onOpenNotifications) { Image(systemName: "bell.fill") }
-                            }
-                            if destination == .profile {
-                                Button(action: onOpenSettings) { Image(systemName: "gearshape.fill") }
-                            }
-                        }
-                    }
-            }
-            // 탭 콘텐츠 영역 안의 단일 컬럼 — iPad에서 사이드바로 갈라지지 않게
-            .navigationViewStyle(.stack)
-        }
-    }
-
-    @ViewBuilder private var screen: some View {
         switch destination {
         case .home:
-            EmptyView() // body에서 HomeView로 분기 — 여기 올 일 없음
+            HomeView(viewModel: homeViewModel)
         case .groups:
-            GroupsView()
+            GroupsView(viewModel: groupsViewModel, onOpenGroup: onOpenGroup)
         case .friends:
             FriendsView()
         case .chat:

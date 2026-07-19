@@ -4,8 +4,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kr.hhp227.storygroup.shared.data.network.dto.GroupResponse
+import kr.hhp227.storygroup.shared.data.network.dto.MemberResponse
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
+import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 
@@ -13,6 +15,14 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
 
     override suspend fun getMyGroups(): Result<List<Group>> =
         runCatching { client.get("/api/groups").body<List<GroupResponse>>().map { it.toDomain() } }
+
+    override suspend fun getGroup(groupId: Long): Result<Group> =
+        runCatching { client.get("/api/groups/$groupId").body<GroupResponse>().toDomain() }
+
+    override suspend fun getMembers(groupId: Long): Result<List<GroupMember>> =
+        runCatching {
+            client.get("/api/groups/$groupId/members").body<List<MemberResponse>>().map { it.toDomain() }
+        }
 }
 
 private fun GroupResponse.toDomain() = Group(
@@ -25,4 +35,12 @@ private fun GroupResponse.toDomain() = Group(
     myRole = GroupRole.entries.firstOrNull { it.name == myRole } ?: GroupRole.MEMBER,
     createdAt = createdAt,
     isLounge = isLounge
+)
+
+private fun MemberResponse.toDomain() = GroupMember(
+    userId = userId,
+    name = name,
+    profileImg = profileImg,
+    role = GroupRole.entries.firstOrNull { it.name == role } ?: GroupRole.MEMBER,
+    joinedAt = joinedAt
 )

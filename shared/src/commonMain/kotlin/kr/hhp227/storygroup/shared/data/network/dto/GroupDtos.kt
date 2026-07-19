@@ -15,3 +15,13 @@ data class GroupResponse(
     val createdAt: String,
     val isLounge: Boolean = false
 )
+
+// StoryGroup-WebApp /api/groups/{id}/members 계약과 1:1 (group/dto/GroupDtos.kt MemberResponse)
+@Serializable
+data class MemberResponse(
+    val userId: Long,
+    val name: String,
+    val profileImg: String? = null,
+    val role: String,
+    val joinedAt: String
+)
