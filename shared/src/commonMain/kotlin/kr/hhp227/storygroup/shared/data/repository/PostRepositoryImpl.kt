@@ -51,16 +51,16 @@ class PostRepositoryImpl(
             }
         }.flow
 
-    override suspend fun createPost(groupId: Long, text: String): Result<Post> =
+    override suspend fun createPost(groupId: Long, text: String, images: List<String>): Result<Post> =
         runCatching {
             client.post("/api/groups/$groupId/posts") {
                 contentType(ContentType.Application.Json)
-                setBody(CreatePostRequest(text = text))
+                setBody(CreatePostRequest(text = text, images = images.ifEmpty { null }))
             }.body<PostResponse>().toDomain()
         }
 
-    override suspend fun createLoungePost(text: String): Result<Post> =
-        runCatching { createPost(resolveLoungeId(), text).getOrThrow() }
+    override suspend fun createLoungePost(text: String, images: List<String>): Result<Post> =
+        runCatching { createPost(resolveLoungeId(), text, images).getOrThrow() }
 
     private suspend fun resolveLoungeId(): Long =
         groupRepository.getMyGroups().getOrThrow().firstOrNull(Group::isLounge)?.id

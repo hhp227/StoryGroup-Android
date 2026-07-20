@@ -19,6 +19,9 @@ struct DrawerShellView: View {
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
+    /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenAccountSettings: () -> Void
+
     let onLogout: () -> Void
 
     @State private var drawerOpen = false
@@ -39,6 +42,7 @@ struct DrawerShellView: View {
                             profile: profile,
                             onOpenGroup: onOpenGroup,
                             onOpenSettings: { showSettings = true },
+                            onOpenAccountSettings: onOpenAccountSettings,
                             onLogout: onLogout
                         )
                         .opacity(destination == current ? 1 : 0)

@@ -32,6 +32,7 @@
 		A1010019AABBCCDDEEFF0019 /* RegisterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101AAABBCCDDEEFF001A /* RegisterViewModel.swift */; };
 		A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */; };
 		A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101CAABBCCDDEEFF001C /* TimeFormats.swift */; };
+		A1010027AABBCCDDEEFF0027 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011027AABBCCDDEEFF0027 /* ImagePicker.swift */; };
 		A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101DAABBCCDDEEFF001D /* MviViewModel.swift */; };
 		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
 		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
@@ -40,6 +41,8 @@
 		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
 		A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */; };
 		A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */; };
+		A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */; };
+		A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +72,7 @@
 		A101101AAABBCCDDEEFF001A /* RegisterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterViewModel.swift; sourceTree = "<group>"; };
 		A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		A101101CAABBCCDDEEFF001C /* TimeFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormats.swift; sourceTree = "<group>"; };
+		A1011027AABBCCDDEEFF0027 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		A101101DAABBCCDDEEFF001D /* MviViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MviViewModel.swift; sourceTree = "<group>"; };
 		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
 		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
@@ -77,6 +81,8 @@
 		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
 		A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
+		A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
+		A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -244,6 +250,8 @@
 		A101300BAABBCCDDEEFF000B /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */,
+				A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */,
 				A1011018AABBCCDDEEFF0018 /* SGSettingsView.swift */,
 			);
 			path = Settings;
@@ -270,6 +278,7 @@
 		A101300EAABBCCDDEEFF000E /* Util */ = {
 			isa = PBXGroup;
 			children = (
+				A1011027AABBCCDDEEFF0027 /* ImagePicker.swift */,
 				A101101CAABBCCDDEEFF001C /* TimeFormats.swift */,
 			);
 			path = Util;
@@ -416,6 +425,7 @@
 				A1010019AABBCCDDEEFF0019 /* RegisterViewModel.swift in Sources */,
 				A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */,
 				A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */,
+				A1010027AABBCCDDEEFF0027 /* ImagePicker.swift in Sources */,
 				A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */,
 				A1010006AABBCCDDEEFF0006 /* SGTheme.swift in Sources */,
 				A101000BAABBCCDDEEFF000B /* SGComponents.swift in Sources */,
@@ -433,6 +443,8 @@
 				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
 				A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */,
 				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
+				A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */,
+				A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */,
 				A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */,
 				A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,

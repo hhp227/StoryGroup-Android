@@ -4,6 +4,7 @@ import Shared
 
 /// 게시글 작성 — composeApp CreatePostViewModel.kt와 1:1 미러.
 /// groupId가 nil이면 라운지(홈 피드)에 게시한다(웹 메인 피드 폼 미러).
+/// 이미지는 선택 즉시 업로드해 URL을 UiState에 쌓아두고, 등록 시 함께 전송한다(웹 ImageUploadField 미러).
 /// 성공은 Event.created 일회성 발화 — 호출부가 피드 갱신+닫기를 처리한다.
 final class CreatePostViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
@@ -16,18 +17,45 @@ final class CreatePostViewModel: MviViewModel {
 
     private let createLoungePostUseCase: CreateLoungePostUseCase
 
+    private let uploadImageUseCase: UploadImageUseCase
+
     func onAction(_ action: Action) {
         switch action {
         case .submit(let text): submit(text: text)
         case .clearError: uiState.error = nil
+        case .addImage(let data, let fileName, let contentType): addImage(data: data, fileName: fileName, contentType: contentType)
+        case .removeImage(let url): uiState.images.removeAll { $0 == url }
+        }
+    }
+
+    private func addImage(data: Data, fileName: String, contentType: String) {
+        if uiState.images.count >= Self.maxImages { return }
+
+        uiState.isUploadingImage = true
+        uiState.error = nil
+        Task { @MainActor in
+            do {
+                let url = try await uploadImageUseCase.invoke(
+                    bytes: data.toKotlinByteArray(),
+                    fileName: fileName,
+                    contentType: contentType
+                )
+                uiState.isUploadingImage = false
+                uiState.images.append(url)
+            } catch {
+                uiState.isUploadingImage = false
+                uiState.error = error.kotlinMessage(fallback: "이미지 업로드에 실패했습니다.")
+            }
         }
     }
 
     private func submit(text: String) {
         if uiState.isLoading { return }
-        // 첨부 없는 MVP라 본문 필수 — 백엔드의 "본문/첨부 중 하나는 필수" 규칙과 일치
-        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            uiState.error = "내용을 입력해주세요."
+
+        let images = uiState.images
+        // 본문/첨부 중 하나는 필수 — 백엔드 규칙과 일치(웹 폼의 required={images.length===0} 미러)
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, images.isEmpty {
+            uiState.error = "내용을 입력하거나 사진을 추가해주세요."
             return
         }
         uiState.isLoading = true
@@ -35,9 +63,9 @@ final class CreatePostViewModel: MviViewModel {
         Task { @MainActor in
             do {
                 if let groupId = groupId {
-                    _ = try await createPostUseCase.invoke(groupId: groupId, text: text)
+                    _ = try await createPostUseCase.invoke(groupId: groupId, text: text, images: images)
                 } else {
-                    _ = try await createLoungePostUseCase.invoke(text: text)
+                    _ = try await createLoungePostUseCase.invoke(text: text, images: images)
                 }
                 uiState.isLoading = false
                 event.send(.created)
@@ -52,19 +80,27 @@ final class CreatePostViewModel: MviViewModel {
         self.groupId = groupId
         createPostUseCase = container.createPostUseCase
         createLoungePostUseCase = container.createLoungePostUseCase
+        uploadImageUseCase = container.uploadImageUseCase
     }
 
     struct UiState {
         var isLoading = false
         var error: String? = nil
+        var images: [String] = []
+        var isUploadingImage = false
     }
 
     enum Action {
         case submit(text: String)
         case clearError
+        case addImage(data: Data, fileName: String, contentType: String)
+        case removeImage(url: String)
     }
 
     enum Event {
         case created
     }
+
+    // 서버는 개수 제한이 없지만 앱은 카드 레이아웃 감안해 클라 상한을 둔다(Compose MAX_IMAGES 미러)
+    private static let maxImages = 4
 }

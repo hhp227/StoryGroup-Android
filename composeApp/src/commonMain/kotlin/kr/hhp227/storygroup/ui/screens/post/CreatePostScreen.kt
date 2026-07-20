@@ -1,13 +1,19 @@
 package kr.hhp227.storygroup.ui.screens.post
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
@@ -17,6 +23,8 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,12 +34,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
 @Composable
 private fun createPostViewModel(groupId: Long?): CreatePostViewModel {
@@ -41,13 +53,14 @@ private fun createPostViewModel(groupId: Long?): CreatePostViewModel {
         CreatePostViewModel(
             groupId = groupId,
             createPostUseCase = container.createPostUseCase,
-            createLoungePostUseCase = container.createLoungePostUseCase
+            createLoungePostUseCase = container.createLoungePostUseCase,
+            uploadImageUseCase = container.uploadImageUseCase
         )
     }
 }
 
 /**
- * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러, 첨부는 후속).
+ * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진 첨부 행.
  * groupId null이면 라운지(홈 피드)에 게시. NavHost 풀스크린 목적지라 상단바는 화면이 소유하고,
  * 성공 이벤트는 화면이 수집해 onCreated로 알린다(ConCafe CafeScreen 패턴).
  * iosApp CreatePostView.swift와 1:1 미러
@@ -64,6 +77,10 @@ fun CreatePostScreen(
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
     var text by rememberSaveable { mutableStateOf("") }
+
+    val pickImage = rememberImagePickerLauncher { picked ->
+        onAction(CreatePostViewModel.Action.AddImage(picked.bytes, picked.fileName, picked.contentType))
+    }
 
     // 일회성 이벤트 수집 — 성공 시 호출부(App.kt)가 피드 갱신+복귀를 처리한다
     LaunchedEffect(viewModel) {
@@ -85,7 +102,7 @@ fun CreatePostScreen(
             actions = {
                 TextButton(
                     onClick = { onAction(CreatePostViewModel.Action.Submit(text)) },
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading && !uiState.isUploadingImage
                 ) {
                     Text(
                         "등록",
@@ -127,6 +144,73 @@ fun CreatePostScreen(
             )
             if (uiState.isLoading) {
                 CircularProgressIndicator(color = sg.accent, modifier = Modifier.align(Alignment.Center))
+            }
+        }
+        ImageAttachmentRow(
+            images = uiState.images,
+            isUploading = uiState.isUploadingImage,
+            canAddMore = uiState.images.size < CreatePostViewModel.MAX_IMAGES,
+            onAddClick = pickImage,
+            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveImage(url)) }
+        )
+    }
+}
+
+/** 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장) */
+@Composable
+private fun ImageAttachmentRow(
+    images: List<String>,
+    isUploading: Boolean,
+    canAddMore: Boolean,
+    onAddClick: () -> Unit,
+    onRemove: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    LazyRow(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(images) { url ->
+            Box(Modifier.size(72.dp)) {
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(SgTheme.shapes.field)
+                )
+                IconButton(
+                    onClick = { onRemove(url) },
+                    modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "제거",
+                        tint = sg.onAccent,
+                        modifier = Modifier.background(sg.ink, CircleShape)
+                    )
+                }
+            }
+        }
+        item {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(sg.linen, SgTheme.shapes.field),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isUploading) {
+                    CircularProgressIndicator(color = sg.accent, modifier = Modifier.size(24.dp))
+                } else {
+                    IconButton(onClick = onAddClick, enabled = canAddMore) {
+                        Icon(
+                            Icons.Default.AddAPhoto,
+                            contentDescription = "사진 추가",
+                            tint = if (canAddMore) sg.inkSoft else sg.inkFaint
+                        )
+                    }
+                }
             }
         }
     }

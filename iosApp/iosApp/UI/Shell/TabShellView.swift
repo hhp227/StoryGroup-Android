@@ -19,6 +19,9 @@ struct TabShellView: View {
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
+    /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenAccountSettings: () -> Void
+
     let onLogout: () -> Void
 
     /// 홈 헤더가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
@@ -37,6 +40,7 @@ struct TabShellView: View {
                         profile: profile,
                         onOpenGroup: onOpenGroup,
                         onOpenSettings: { showSettings = true },
+                        onOpenAccountSettings: onOpenAccountSettings,
                         onLogout: onLogout
                     )
                     .opacity(destination == current ? 1 : 0)

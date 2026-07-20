@@ -121,14 +121,27 @@ private struct GroupCard: View {
     var body: some View {
         SGCard {
             HStack(spacing: 12) {
-                // 웹 GroupCover 미러 — 커버 이미지 로딩(④) 전까지 그룹별 그라데이션+이니셜 폴백
-                ZStack {
-                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
-                        .fill(groupCoverGradient(groupId: group.id, colors: colors))
-                        .frame(width: 48, height: 48)
-                    Text(String(group.name.prefix(1)))
-                        .font(.headline.bold())
-                        .foregroundColor(.white)
+                // 웹 GroupCover 미러 — group.image 있으면 실사진, 없으면 그룹별 그라데이션+이니셜 폴백
+                // (SwiftUI.Group 래퍼는 쓰지 않는다 — 이 파일은 도메인 Group을 스코프 임포트해서 이름이 겹친다)
+                if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            groupCoverGradient(groupId: group.id, colors: colors)
+                        }
+                    }
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous))
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
+                            .fill(groupCoverGradient(groupId: group.id, colors: colors))
+                            .frame(width: 48, height: 48)
+                        Text(String(group.name.prefix(1)))
+                            .font(.headline.bold())
+                            .foregroundColor(.white)
+                    }
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {

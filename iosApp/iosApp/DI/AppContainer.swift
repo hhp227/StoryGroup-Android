@@ -9,6 +9,8 @@ final class AppContainer {
     let logoutUseCase: LogoutUseCase
     let registerUseCase: RegisterUseCase
     let getMyProfileUseCase: GetMyProfileUseCase
+    let updateMyProfileUseCase: UpdateMyProfileUseCase
+    let changePasswordUseCase: ChangePasswordUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
     let getMyGroupsPagingDataUseCase: GetMyGroupsPagingDataUseCase
     let getGroupUseCase: GetGroupUseCase
@@ -17,6 +19,7 @@ final class AppContainer {
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
     let createPostUseCase: CreatePostUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
+    let uploadImageUseCase: UploadImageUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -28,12 +31,15 @@ final class AppContainer {
         let userRepository = UserRepositoryImpl(client: client)
         let groupRepository = GroupRepositoryImpl(client: client)
         let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
+        let mediaRepository = MediaRepositoryImpl(client: client)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
         logoutUseCase = LogoutUseCase(authRepository: authRepository)
         registerUseCase = RegisterUseCase(authRepository: authRepository)
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
+        updateMyProfileUseCase = UpdateMyProfileUseCase(userRepository: userRepository)
+        changePasswordUseCase = ChangePasswordUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
         getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository: groupRepository)
         getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
@@ -42,5 +48,6 @@ final class AppContainer {
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
         createPostUseCase = CreatePostUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
+        uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
     }
 }

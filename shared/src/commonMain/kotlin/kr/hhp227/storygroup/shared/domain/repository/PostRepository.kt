@@ -17,9 +17,12 @@ interface PostRepository {
      */
     fun getLoungePostsPagingData(): Flow<PagingData<Post>>
 
-    /** 게시글 작성 — POST /api/groups/{id}/posts, 생성된 게시글을 돌려준다 */
-    suspend fun createPost(groupId: Long, text: String): Result<Post>
+    /**
+     * 게시글 작성 — POST /api/groups/{id}/posts, 생성된 게시글을 돌려준다.
+     * images는 [UploadImageUseCase]로 먼저 업로드해 받은 URL 목록 — 첨부 순서 그대로 서버에 전달된다.
+     */
+    suspend fun createPost(groupId: Long, text: String, images: List<String> = emptyList()): Result<Post>
 
     /** 라운지에 게시 — 홈 피드 작성 진입점(웹 메인 피드 폼 미러), 라운지 해석 포함 */
-    suspend fun createLoungePost(text: String): Result<Post>
+    suspend fun createLoungePost(text: String, images: List<String> = emptyList()): Result<Post>
 }

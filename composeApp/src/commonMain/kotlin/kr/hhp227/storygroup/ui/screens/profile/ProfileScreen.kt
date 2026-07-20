@@ -35,6 +35,7 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 /** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴. VM은 드로어 헤더와 공유하는 세션 스코프 */
 @Composable
 fun ProfileScreen(
+    onOpenAccountSettings: () -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -54,7 +55,7 @@ fun ProfileScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SgAvatar(profile?.name ?: "?", size = 64.dp)
+                SgAvatar(profile?.name ?: "?", size = 64.dp, imageUrl = profile?.profileImg)
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text(
@@ -79,7 +80,7 @@ fun ProfileScreen(
             ProfileMenuRow(
                 icon = Icons.Default.ManageAccounts,
                 label = "계정 설정",
-                onClick = { /* TODO: 프로필 편집/비밀번호 변경 */ }
+                onClick = onOpenAccountSettings
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(

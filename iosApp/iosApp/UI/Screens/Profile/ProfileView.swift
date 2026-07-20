@@ -7,6 +7,8 @@ struct ProfileView: View {
 
     let profile: Profile?
 
+    let onOpenAccountSettings: () -> Void
+
     let onOpenSettings: () -> Void
 
     let onLogout: () -> Void
@@ -16,7 +18,7 @@ struct ProfileView: View {
             VStack(spacing: 12) {
                 SGCard {
                     HStack(spacing: 16) {
-                        SGAvatar(name: profile?.name ?? "?", size: 64)
+                        SGAvatar(name: profile?.name ?? "?", size: 64, imageUrl: profile?.profileImg)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(profile?.name ?? "불러오는 중...").font(.title3.bold()).foregroundColor(colors.ink)
                             Text(profile?.email ?? "").font(.subheadline).foregroundColor(colors.inkSoft)
@@ -30,7 +32,7 @@ struct ProfileView: View {
                 }
                 SGCard {
                     VStack(spacing: 0) {
-                        menuRow("person.text.rectangle", "계정 설정") { /* TODO: 프로필 편집/비밀번호 변경 */ }
+                        menuRow("person.text.rectangle", "계정 설정", action: onOpenAccountSettings)
                         Divider().background(colors.stoneBorder).padding(.horizontal, 16)
                         menuRow("gearshape.fill", "앱 설정", action: onOpenSettings)
                         Divider().background(colors.stoneBorder).padding(.horizontal, 16)

@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +40,7 @@ import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemKey
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.LocalAppContainer
@@ -148,13 +150,20 @@ private fun GroupDetailContent(
             }
         },
         header = { listState ->
-            // 커버 이미지 로딩(④) 전까지 웹 GroupCover 그라데이션 폴백 — 콘텐츠 전체가 패럴럭스로 접힌다
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .collapsingParallax(listState)
-                    .background(groupCoverBrush(viewModel.groupId, sg))
-            )
+            // group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백 — 콘텐츠 전체가 패럴럭스로 접힌다
+            val coverImage = uiState.group?.image
+            Box(Modifier.matchParentSize().collapsingParallax(listState)) {
+                if (coverImage != null) {
+                    AsyncImage(
+                        model = coverImage,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.matchParentSize()
+                    )
+                } else {
+                    Box(Modifier.matchParentSize().background(groupCoverBrush(viewModel.groupId, sg)))
+                }
+            }
             // 웹 커버 하단 스크림(0.05→0.62) 위 그룹명/설명/역할 칩 미러
             Box(
                 Modifier.matchParentSize().background(
@@ -285,7 +294,7 @@ private fun MemberStrip(members: List<GroupMember>, modifier: Modifier = Modifie
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(members, key = GroupMember::userId) { member ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    SgAvatar(member.name)
+                    SgAvatar(member.name, imageUrl = member.profileImg)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         member.name,

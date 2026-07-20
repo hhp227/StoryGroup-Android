@@ -85,7 +85,7 @@ private struct GroupDetailContent: View {
         .onAppear { viewModel.onAction(.refresh) }
     }
 
-    /// 커버 배너 — 이미지 로딩(④) 전까지 웹 GroupCover 그라데이션 폴백. 패럴럭스+stretchy는 HomeView 미러
+    /// 커버 배너 — group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백. 패럴럭스+stretchy는 HomeView 미러
     private func cover(topInset: CGFloat) -> some View {
         let total = headerHeight + topInset
         return GeometryReader { geo in
@@ -93,7 +93,17 @@ private struct GroupDetailContent: View {
             let minY = raw - (headerRestMinY ?? raw)
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
-                groupCoverGradient(groupId: viewModel.groupId, colors: colors)
+                if let imageUrlString = viewModel.uiState.group?.image, let url = URL(string: imageUrlString) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            groupCoverGradient(groupId: viewModel.groupId, colors: colors)
+                        }
+                    }
+                } else {
+                    groupCoverGradient(groupId: viewModel.groupId, colors: colors)
+                }
                 // 웹 커버 하단 스크림(0.05→0.62) — 흰 텍스트 대비 확보
                 LinearGradient(
                     gradient: Gradient(colors: [Color.black.opacity(0.05), Color.black.opacity(0.62)]),
@@ -196,7 +206,7 @@ private struct GroupDetailContent: View {
                 HStack(spacing: 12) {
                     ForEach(viewModel.uiState.members, id: \.userId) { member in
                         VStack(spacing: 4) {
-                            SGAvatar(name: member.name)
+                            SGAvatar(name: member.name, imageUrl: member.profileImg)
                             Text(member.name)
                                 .font(.caption2)
                                 .foregroundColor(colors.inkSoft)

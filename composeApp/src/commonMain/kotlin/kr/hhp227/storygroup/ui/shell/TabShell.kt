@@ -48,6 +48,7 @@ internal fun TabShell(
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenAccountSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
@@ -127,6 +128,7 @@ internal fun TabShell(
                     onHomeRefreshHandled = onHomeRefreshHandled,
                     onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                     onOpenSettings = onOpenSettings,
+                    onOpenAccountSettings = onOpenAccountSettings,
                     onLogout = onLogout,
                     // 레일 모드는 하단 바가 없어 내비바 인셋을 콘텐츠가 직접 소화(탭 모드는 하단 바가 소화)
                     modifier = Modifier
