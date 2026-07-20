@@ -5,10 +5,11 @@ import Shared
 /// 그룹 상세 — composeApp GroupDetailViewModel.kt와 1:1 미러(Paging-CRUD 샘플 패턴).
 /// 커버+멤버는 UiState 필드, 피드는 UiState에 담기는 최신 PagingData.
 /// groupId만 받아 스스로 로드한다 — 목록이 페이징으로 바뀌어 스냅샷 lookup이 불가(로드 전 group은 nil).
+/// 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
 final class GroupDetailViewModel: MviViewModel {
-    typealias Event = Never
-
     @Published private(set) var uiState = UiState()
+
+    let event = PassthroughSubject<Event, Never>()
 
     let groupId: Int64
 
@@ -25,6 +26,8 @@ final class GroupDetailViewModel: MviViewModel {
     func onAction(_ action: Action) {
         switch action {
         case .refresh: refresh()
+        // 글쓰기 성공 시 발화 — 화면이 refresh()로 피드를 첫 페이지부터 다시 읽는다
+        case .refreshFeed: event.send(.refreshFeed)
         }
     }
 
@@ -73,5 +76,10 @@ final class GroupDetailViewModel: MviViewModel {
 
     enum Action {
         case refresh
+        case refreshFeed
+    }
+
+    enum Event {
+        case refreshFeed
     }
 }

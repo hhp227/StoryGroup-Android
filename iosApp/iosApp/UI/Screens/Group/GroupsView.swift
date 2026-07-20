@@ -53,6 +53,13 @@ private struct GroupsContent: View {
             .padding(16)
         }
         .background(colors.paper)
+        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+        // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
+        .onReceive(viewModel.event) { event in
+            switch event {
+            case .refresh: lazyPagingItems.refresh()
+            }
+        }
     }
 
     /// 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose GroupsContent 미러).

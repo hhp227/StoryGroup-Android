@@ -113,11 +113,20 @@ private fun GroupDetailContent(
     LaunchedEffect(viewModel) {
         viewModel.onAction(GroupDetailViewModel.Action.Refresh)
     }
-    // 작성 화면에서 돌아온 결과 — 피드를 첫 페이지부터 다시 읽는다(Paging-CRUD 샘플 미러)
+    // 작성 화면에서 돌아온 결과 — 피드를 첫 페이지부터 다시 읽는다
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
-            lazyPagingItems.refresh()
+            viewModel.onAction(GroupDetailViewModel.Action.RefreshFeed)
             onRefreshHandled()
+        }
+    }
+    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+    // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                GroupDetailViewModel.Event.RefreshFeed -> lazyPagingItems.refresh()
+            }
         }
     }
     SgCollapsingHeaderScaffold(

@@ -8,9 +8,7 @@ import Shared
 final class CreatePostViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
-    private let eventSubject = PassthroughSubject<Event, Never>()
-
-    var event: AnyPublisher<Event, Never> { eventSubject.eraseToAnyPublisher() }
+    let event = PassthroughSubject<Event, Never>()
 
     private let groupId: Int64?
 
@@ -42,7 +40,7 @@ final class CreatePostViewModel: MviViewModel {
                     _ = try await createLoungePostUseCase.invoke(text: text)
                 }
                 uiState.isLoading = false
-                eventSubject.send(.created)
+                event.send(.created)
             } catch {
                 uiState.isLoading = false
                 uiState.error = error.kotlinMessage(fallback: "게시글 작성에 실패했습니다.")

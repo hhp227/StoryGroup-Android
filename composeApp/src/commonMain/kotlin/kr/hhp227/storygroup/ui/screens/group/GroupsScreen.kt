@@ -25,6 +25,7 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +86,15 @@ private fun GroupsContent(
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
+    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+    // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                GroupsViewModel.Event.Refresh -> lazyPagingItems.refresh()
+            }
+        }
+    }
     // 그룹 탭은 상세(콜랩싱 헤더)와의 전환 때문에 셸이 아닌 화면이 상단바를 소유한다(홈과 동일)
     Column(modifier) {
         SgTopBar(

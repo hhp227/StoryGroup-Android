@@ -4,16 +4,13 @@ import Shared
 
 /// 홈(라운지) 피드 — composeApp HomeViewModel.kt와 1:1 미러(Paging-CRUD 샘플 패턴).
 /// 페이징(라운지 해석 포함)은 shared 데이터 계층 소유, VM은 캐시(cachedIn)와
-/// 세션 재진입 갱신만 담당하고 UiState에 최신 PagingData를 담는다.
+/// 갱신 Event 발화만 담당하고 UiState에 최신 PagingData를 담는다.
+/// 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행 — 같은 스트림이 새 세대를 방출하므로
+/// 스트림 교체(트리거)가 없다.
 final class HomeViewModel: MviViewModel {
-    typealias Event = Never
-
     @Published private(set) var uiState = UiState()
 
-    // 스트림을 통째로 갈아끼우는 트리거 — 라운지 재해석은 새 PagingSource가 수행.
-    // HomeView(keep-alive ZStack) 소유라 "생성 = 세션 진입 1회" — 초기값으로 즉시 시작해도
-    // 외부에서 직후 refresh를 쏘지 않으므로 안전하다(refresh는 글쓰기 성공 갱신용)
-    private let refreshTrigger = CurrentValueSubject<Int, Never>(0)
+    let event = PassthroughSubject<Event, Never>()
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -23,20 +20,17 @@ final class HomeViewModel: MviViewModel {
 
     func onAction(_ action: Action) {
         switch action {
-        // 글쓰기 성공 시 발화 — 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
+        // 글쓰기 성공 시 발화 — 화면이 refresh()로 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
         case .refresh:
-            refreshTrigger.send(refreshTrigger.value + 1)
+            event.send(.refresh)
         }
     }
 
     init(container: AppContainer) {
-        let getLoungePostsPagingDataUseCase = container.getLoungePostsPagingDataUseCase
-
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        // (Kotlin: refreshTrigger.flatMapLatest { useCase() }.cachedIn(viewModelScope))
-        refreshTrigger
-            .map { _ in getLoungePostsPagingDataUseCase().cachedIn() }
-            .switchToLatest()
+        // (Kotlin: getLoungePostsPagingDataUseCase().cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
+        container.getLoungePostsPagingDataUseCase()
+            .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
     }
@@ -48,6 +42,10 @@ final class HomeViewModel: MviViewModel {
     }
 
     enum Action {
+        case refresh
+    }
+
+    enum Event {
         case refresh
     }
 }

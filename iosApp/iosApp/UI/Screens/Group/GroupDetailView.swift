@@ -69,7 +69,14 @@ private struct GroupDetailContent: View {
         .sheet(isPresented: $showCreatePost) {
             // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
             CreatePostView(container: container, groupId: viewModel.groupId) {
-                lazyPagingItems.refresh()
+                viewModel.onAction(.refreshFeed)
+            }
+        }
+        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+        // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
+        .onReceive(viewModel.event) { event in
+            switch event {
+            case .refreshFeed: lazyPagingItems.refresh()
             }
         }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
