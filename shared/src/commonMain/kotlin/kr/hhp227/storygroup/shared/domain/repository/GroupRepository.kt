@@ -2,8 +2,12 @@ package kr.hhp227.storygroup.shared.domain.repository
 
 import app.cash.paging.PagingData
 import kotlinx.coroutines.flow.Flow
+import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
+import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
+import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
 
 interface GroupRepository {
     /**
@@ -20,4 +24,19 @@ interface GroupRepository {
 
     /** 그룹 멤버 목록 — GET /api/groups/{id}/members */
     suspend fun getMembers(groupId: Long): Result<List<GroupMember>>
+
+    /** 그룹 생성 — POST /api/groups */
+    suspend fun createGroup(name: String, description: String?, image: String?, joinType: GroupJoinType): Result<Group>
+
+    /**
+     * 그룹 탐색 Paging 스트림(라운지 제외) — GET /api/groups/discover.
+     * cachedIn은 각 플랫폼 프레젠테이션 경계에서 적용한다.
+     */
+    fun getDiscoverGroupsPagingData(query: String, sort: DiscoverSort): Flow<PagingData<DiscoverGroup>>
+
+    /** 그룹 가입/신청 — POST /api/groups/{id}/join */
+    suspend fun joinGroup(groupId: Long): Result<JoinGroupResult>
+
+    /** 가입 신청 취소 — DELETE /api/groups/{id}/join */
+    suspend fun cancelJoinRequest(groupId: Long): Result<Unit>
 }

@@ -12,18 +12,24 @@ struct GroupsView: View {
 
     let onOpenGroup: (Group) -> Void
 
+    /// 화면이 자기 시트를 만들 때 쓴다 — 그룹 만들기/찾기 시트가 이 인스턴스를 그대로 전달받아 갱신한다
+    private let container: AppContainer
+
     var body: some View {
-        GroupsContent(viewModel: viewModel, onOpenGroup: onOpenGroup)
+        GroupsContent(viewModel: viewModel, container: container, onOpenGroup: onOpenGroup)
     }
 
     init(container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
         _viewModel = StateObject(wrappedValue: GroupsViewModel(container: container))
+        self.container = container
         self.onOpenGroup = onOpenGroup
     }
 }
 
 private struct GroupsContent: View {
     @ObservedObject var viewModel: GroupsViewModel
+
+    let container: AppContainer
 
     let onOpenGroup: (Group) -> Void
 
@@ -32,21 +38,17 @@ private struct GroupsContent: View {
 
     @Environment(\.sgColors) private var colors
 
-    init(viewModel: GroupsViewModel, onOpenGroup: @escaping (Group) -> Void) {
-        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
-        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+    /// 그룹 만들기/찾기 — CreatePostView와 동일하게 GroupsView가 소유한 시트(단일 진입점)
+    @State private var showCreateGroup = false
 
-        self.viewModel = viewModel
-        self.onOpenGroup = onOpenGroup
-        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
-    }
+    @State private var showDiscoverGroups = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack(spacing: 8) {
-                    groupActionButton("그룹 만들기") { /* TODO: 그룹 만들기 */ }
-                    groupActionButton("그룹 찾기") { /* TODO: 그룹 찾기 */ }
+                    groupActionButton("그룹 만들기") { showCreateGroup = true }
+                    groupActionButton("그룹 찾기") { showDiscoverGroups = true }
                 }
                 content
             }
@@ -59,6 +61,12 @@ private struct GroupsContent: View {
             switch event {
             case .refresh: lazyPagingItems.refresh()
             }
+        }
+        .sheet(isPresented: $showCreateGroup) {
+            CreateGroupView(container: container, groupsViewModel: viewModel)
+        }
+        .sheet(isPresented: $showDiscoverGroups) {
+            DiscoverGroupsView(container: container, groupsViewModel: viewModel)
         }
     }
 
@@ -82,12 +90,16 @@ private struct GroupsContent: View {
             SGEmptyState(title: "아직 그룹이 없습니다", subtitle: "새 그룹을 만들거나 그룹 찾기에서 참여해보세요.")
                 .padding(.vertical, 48)
         } else {
-            ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { group in
-                if let group {
-                    Button(action: { onOpenGroup(group) }) {
-                        GroupCard(group: group)
+            // 웹 /groups 내 그룹 탭(auto-fill minmax(160px,1fr) CSS 그리드) 미러 — 그룹 찾기(목록)와 달리
+            // 내 그룹은 그리드로 보여준다(Compose LazyVerticalGrid 미러)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 152), spacing: 12)], spacing: 16) {
+                ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { group in
+                    if let group {
+                        Button(action: { onOpenGroup(group) }) {
+                            GroupCard(group: group)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             SGPagingFooter(
@@ -111,18 +123,29 @@ private struct GroupsContent: View {
                 )
         }
     }
+
+    init(viewModel: GroupsViewModel, container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
+        // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
+        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+
+        self.viewModel = viewModel
+        self.container = container
+        self.onOpenGroup = onOpenGroup
+        _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
+    }
 }
 
+/// 웹 GroupCard 미러 — 정사각 커버(역할 칩 오버레이) + 이름/소개, 카드 배경 없이 그리드 타일로
 private struct GroupCard: View {
     let group: Group
 
     @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
+            // (SwiftUI.Group 래퍼는 쓰지 않는다 — 이 파일은 도메인 Group을 스코프 임포트해서 이름이 겹친다)
+            ZStack(alignment: .topTrailing) {
                 // 웹 GroupCover 미러 — group.image 있으면 실사진, 없으면 그룹별 그라데이션+이니셜 폴백
-                // (SwiftUI.Group 래퍼는 쓰지 않는다 — 이 파일은 도메인 Group을 스코프 임포트해서 이름이 겹친다)
                 if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
                     AsyncImage(url: url) { phase in
                         if case .success(let image) = phase {
@@ -131,38 +154,33 @@ private struct GroupCard: View {
                             groupCoverGradient(groupId: group.id, colors: colors)
                         }
                     }
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous))
                 } else {
                     ZStack {
-                        RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
-                            .fill(groupCoverGradient(groupId: group.id, colors: colors))
-                            .frame(width: 48, height: 48)
+                        groupCoverGradient(groupId: group.id, colors: colors)
                         Text(String(group.name.prefix(1)))
-                            .font(.headline.bold())
+                            .font(.largeTitle.bold())
                             .foregroundColor(.white)
                     }
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(group.name)
-                            .font(.headline)
-                            .foregroundColor(colors.ink)
-                            .lineLimit(1)
-                        if group.myRole != .member {
-                            RoleChip(role: group.myRole)
-                        }
-                    }
-                    if let description = group.description_, !description.isEmpty {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(colors.inkSoft)
-                            .lineLimit(1)
-                    }
+                if group.myRole != .member {
+                    RoleChip(role: group.myRole).padding(8)
                 }
-                Spacer()
             }
-            .padding(16)
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: colors.radiusCard, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(group.name)
+                    .font(.subheadline.bold())
+                    .foregroundColor(colors.ink)
+                    .lineLimit(1)
+                if let description = group.description_, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(colors.inkSoft)
+                        .lineLimit(2)
+                }
+            }
         }
     }
 }

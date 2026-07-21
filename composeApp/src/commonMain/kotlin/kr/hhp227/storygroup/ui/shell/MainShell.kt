@@ -52,8 +52,10 @@ fun MainShell(
     // 홈(라운지) 글쓰기 성공 신호 — HomeScreen이 소비하고 onHomeRefreshHandled로 소거한다
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
-    // 계정 설정은 NavHost 풀스크린 목적지(앱 설정 오버레이와 달리 App이 배선)
+    // 계정 설정/그룹 만들기/그룹 찾기는 NavHost 풀스크린 목적지(앱 설정 오버레이와 달리 App이 배선)
     onOpenAccountSettings: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
@@ -71,6 +73,8 @@ fun MainShell(
                 onHomeRefreshHandled = onHomeRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
+                onOpenCreateGroup = onOpenCreateGroup,
+                onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onLogout = onLogout
             )
             NavStyle.DRAWER -> DrawerShell(
@@ -82,6 +86,8 @@ fun MainShell(
                 onHomeRefreshHandled = onHomeRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
+                onOpenCreateGroup = onOpenCreateGroup,
+                onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onLogout = onLogout
             )
         }
@@ -110,6 +116,8 @@ internal fun DestinationContent(
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     // 드로어 쉘이 화면 소유 상단바(홈·그룹)에 얹는 메뉴 아이콘(탭 쉘은 없음)
@@ -129,6 +137,8 @@ internal fun DestinationContent(
                             onOpenNotifications = onOpenNotifications,
                             onOpenSettings = onOpenSettings,
                             onOpenAccountSettings = onOpenAccountSettings,
+                            onOpenCreateGroup = onOpenCreateGroup,
+                            onOpenDiscoverGroups = onOpenDiscoverGroups,
                             onLogout = onLogout,
                             menuNavigationIcon = menuNavigationIcon
                         )
@@ -157,6 +167,8 @@ private fun DestinationScreen(
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit,
     menuNavigationIcon: (@Composable () -> Unit)?
 ) {
@@ -173,6 +185,8 @@ private fun DestinationScreen(
         MainDestination.GROUPS -> GroupsScreen(
             onOpenGroup = onOpenGroupDetail,
             onOpenNotifications = onOpenNotifications,
+            onOpenCreateGroup = onOpenCreateGroup,
+            onOpenDiscoverGroups = onOpenDiscoverGroups,
             navigationIcon = menuNavigationIcon
         )
         MainDestination.FRIENDS -> FriendsScreen()

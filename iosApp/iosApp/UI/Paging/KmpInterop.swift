@@ -41,6 +41,13 @@ extension GetMyGroupsPagingDataUseCase {
     }
 }
 
+// Kotlin: getDiscoverGroupsPagingDataUseCase(query, sort) → Flow<PagingData<DiscoverGroup>>
+extension GetDiscoverGroupsPagingDataUseCase {
+    func callAsFunction(query: String, sort: DiscoverSort) -> DiscoverGroupPagingPublisher {
+        DiscoverGroupPagingPublisher(adapter: pagingFlow(query: query, sort: sort))
+    }
+}
+
 // Kotlin의 Flow<PagingData<Group>> 대응 퍼블리셔 — PostPagingPublisher의 Group 타입 대응
 struct GroupPagingPublisher: Publisher {
     typealias Output = PagingData<Group>
@@ -51,6 +58,26 @@ struct GroupPagingPublisher: Publisher {
 
     func cachedIn() -> GroupPagingPublisher {
         GroupPagingPublisher(adapter: adapter.cachedIn())
+    }
+
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
+        KotlinFlowPublisher<Output> { onEach in
+            self.adapter.subscribe(onEach: onEach)
+        }
+        .receive(subscriber: subscriber)
+    }
+}
+
+// Kotlin의 Flow<PagingData<DiscoverGroup>> 대응 퍼블리셔 — GroupPagingPublisher의 DiscoverGroup 타입 대응
+struct DiscoverGroupPagingPublisher: Publisher {
+    typealias Output = PagingData<DiscoverGroup>
+
+    typealias Failure = Never
+
+    fileprivate let adapter: DiscoverGroupPagingFlowAdapter
+
+    func cachedIn() -> DiscoverGroupPagingPublisher {
+        DiscoverGroupPagingPublisher(adapter: adapter.cachedIn())
     }
 
     func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
@@ -103,6 +130,16 @@ extension Publisher where Failure == Never {
         let adapter = KmpPagingBridgeAdapter(bridge)
 
         adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<Group>) }
+        return LazyPagingItems(bridge: adapter)
+    }
+
+    // DiscoverGroup 타입 대응 — 반환 타입 오버로드(호출부의 LazyPagingItems<DiscoverGroup> 프로퍼티 타입으로 선택된다)
+    func collectAsLazyPagingItems() -> LazyPagingItems<DiscoverGroup> {
+        let subject = PagingDataSubject<DiscoverGroup>()
+        let bridge = unsafeDowncast(subject.bridge, to: SwiftUiPagingBridge<DiscoverGroup>.self)
+        let adapter = KmpPagingBridgeAdapter(bridge)
+
+        adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<DiscoverGroup>) }
         return LazyPagingItems(bridge: adapter)
     }
 }

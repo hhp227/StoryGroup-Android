@@ -14,9 +14,12 @@ import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
+import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
@@ -25,6 +28,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
@@ -63,4 +67,8 @@ class AppContainer(
     val createPostUseCase = CreatePostUseCase(postRepository)
     val createLoungePostUseCase = CreateLoungePostUseCase(postRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
+    val createGroupUseCase = CreateGroupUseCase(groupRepository)
+    val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
+    val joinGroupUseCase = JoinGroupUseCase(groupRepository)
+    val cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository)
 }

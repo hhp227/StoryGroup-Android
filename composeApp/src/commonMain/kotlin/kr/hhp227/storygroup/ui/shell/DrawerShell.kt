@@ -60,6 +60,8 @@ internal fun DrawerShell(
     onHomeRefreshHandled: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
@@ -142,6 +144,8 @@ internal fun DrawerShell(
                 onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                 onOpenSettings = onOpenSettings,
                 onOpenAccountSettings = onOpenAccountSettings,
+                onOpenCreateGroup = onOpenCreateGroup,
+                onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onLogout = onLogout,
                 menuNavigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {

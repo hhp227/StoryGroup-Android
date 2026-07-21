@@ -20,6 +20,10 @@ final class AppContainer {
     let createPostUseCase: CreatePostUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
+    let createGroupUseCase: CreateGroupUseCase
+    let getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase
+    let joinGroupUseCase: JoinGroupUseCase
+    let cancelJoinRequestUseCase: CancelJoinRequestUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -49,5 +53,9 @@ final class AppContainer {
         createPostUseCase = CreatePostUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
+        createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)
+        getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository: groupRepository)
+        joinGroupUseCase = JoinGroupUseCase(groupRepository: groupRepository)
+        cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository: groupRepository)
     }
 }
