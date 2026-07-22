@@ -14,6 +14,7 @@ import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
+import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
@@ -23,6 +24,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUse
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
@@ -32,6 +34,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 
@@ -71,4 +74,7 @@ class AppContainer(
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
     val joinGroupUseCase = JoinGroupUseCase(groupRepository)
     val cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository)
+    val getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository)
+    val approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository)
+    val rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository)
 }

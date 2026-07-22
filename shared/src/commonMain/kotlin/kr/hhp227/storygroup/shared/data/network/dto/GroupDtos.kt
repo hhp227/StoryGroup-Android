@@ -54,3 +54,12 @@ data class JoinGroupResponse(
     val status: String,
     val group: GroupResponse? = null
 )
+
+// GET /api/groups/{id}/join-requests 응답 — group/dto/GroupDtos.kt JoinRequestResponse와 1:1
+@Serializable
+data class JoinRequestResponse(
+    val userId: Long,
+    val name: String,
+    val profileImg: String? = null,
+    val requestedAt: String
+)

@@ -154,6 +154,10 @@ private struct GroupDetailContent: View {
         let refreshState = lazyPagingItems.loadState.refresh
         let appendState = lazyPagingItems.loadState.append
 
+        // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
+        if !viewModel.uiState.joinRequests.isEmpty {
+            joinRequestInbox.padding(.horizontal, 16)
+        }
         if !viewModel.uiState.members.isEmpty {
             memberStrip.padding(.horizontal, 16)
         }
@@ -193,6 +197,80 @@ private struct GroupDetailContent: View {
                 )
             }
             .padding(.horizontal, 16)
+        }
+    }
+
+    /// 모더레이터용 가입 신청 인박스 — 웹 GroupMemberList의 "가입 신청 N건" 섹션(Compose JoinRequestInbox 미러)
+    private var joinRequestInbox: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("가입 신청 \(viewModel.uiState.joinRequests.count)건")
+                .font(.subheadline.bold())
+                .foregroundColor(colors.ink)
+            if let actionError = viewModel.uiState.actionError {
+                Text(actionError)
+                    .font(.caption)
+                    .foregroundColor(colors.rust)
+            }
+            ForEach(viewModel.uiState.joinRequests, id: \.userId) { request in
+                joinRequestCard(request)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func joinRequestCard(_ request: GroupJoinRequest) -> some View {
+        // VM이 한 건씩만 처리하므로 처리 중엔 모든 행의 버튼을 잠근다
+        let enabled = viewModel.uiState.processingRequestUserId == nil
+        let isProcessing = viewModel.uiState.processingRequestUserId == request.userId
+        return SGCard {
+            HStack(spacing: 8) {
+                SGAvatar(name: request.name, imageUrl: request.profileImg)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(request.name)
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.ink)
+                        .lineLimit(1)
+                    Text("\(TimeFormats.relative(request.requestedAt)) 신청")
+                        .font(.caption2)
+                        .foregroundColor(colors.inkFaint)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    viewModel.onAction(.approveJoinRequest(userId: request.userId))
+                } label: {
+                    HStack(spacing: 6) {
+                        if isProcessing {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: colors.inkFaint))
+                                .scaleEffect(0.7)
+                        }
+                        Text("승인").font(.subheadline.bold())
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                            .fill(enabled ? colors.accent : colors.accentSoft)
+                    )
+                    .foregroundColor(enabled ? colors.onAccent : colors.inkFaint)
+                }
+                .disabled(!enabled)
+                Button {
+                    viewModel.onAction(.rejectJoinRequest(userId: request.userId))
+                } label: {
+                    Text("거절")
+                        .font(.subheadline)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                                .stroke(colors.stoneBorder, lineWidth: 1)
+                        )
+                        .foregroundColor(enabled ? colors.ink : colors.inkFaint)
+                }
+                .disabled(!enabled)
+            }
+            .padding(12)
         }
     }
 

@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
@@ -44,15 +47,18 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgAvatar
+import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.collapsingParallax
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
 @Composable
 private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
@@ -63,6 +69,9 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             groupId = groupId,
             getGroupUseCase = container.getGroupUseCase,
             getGroupMembersUseCase = container.getGroupMembersUseCase,
+            getJoinRequestsUseCase = container.getJoinRequestsUseCase,
+            approveJoinRequestUseCase = container.approveJoinRequestUseCase,
+            rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
         )
     }
@@ -212,6 +221,19 @@ private fun GroupDetailContent(
         val refreshState = lazyPagingItems.loadState.refresh
         val appendState = lazyPagingItems.loadState.append
 
+        // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
+        if (uiState.joinRequests.isNotEmpty()) {
+            item(key = "join-requests") {
+                JoinRequestInbox(
+                    requests = uiState.joinRequests,
+                    processingUserId = uiState.processingRequestUserId,
+                    actionError = uiState.actionError,
+                    onApprove = { viewModel.onAction(GroupDetailViewModel.Action.ApproveJoinRequest(it)) },
+                    onReject = { viewModel.onAction(GroupDetailViewModel.Action.RejectJoinRequest(it)) },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
         if (uiState.members.isNotEmpty()) {
             item(key = "members") {
                 MemberStrip(uiState.members, Modifier.padding(horizontal = 16.dp))
@@ -278,6 +300,97 @@ private fun GroupDetailContent(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** 모더레이터용 가입 신청 인박스 — 웹 GroupMemberList의 "가입 신청 N건" 섹션 미러 */
+@Composable
+private fun JoinRequestInbox(
+    requests: List<GroupJoinRequest>,
+    processingUserId: Long?,
+    actionError: String?,
+    onApprove: (Long) -> Unit,
+    onReject: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("가입 신청 ${requests.size}건", style = SgTheme.typography.titleSmall, color = sg.ink)
+        if (actionError != null) {
+            Text(actionError, style = SgTheme.typography.bodySmall, color = sg.rust)
+        }
+        requests.forEach { request ->
+            JoinRequestCard(
+                request = request,
+                // VM이 한 건씩만 처리하므로 처리 중엔 모든 행의 버튼을 잠근다
+                enabled = processingUserId == null,
+                isProcessing = processingUserId == request.userId,
+                onApprove = { onApprove(request.userId) },
+                onReject = { onReject(request.userId) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun JoinRequestCard(
+    request: GroupJoinRequest,
+    enabled: Boolean,
+    isProcessing: Boolean,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    SgCard(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SgAvatar(request.name, imageUrl = request.profileImg)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    request.name,
+                    style = SgTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = sg.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${formatRelativeTime(request.requestedAt)} 신청",
+                    style = SgTheme.typography.labelSmall,
+                    color = sg.inkFaint
+                )
+            }
+            Button(
+                onClick = onApprove,
+                enabled = enabled,
+                shape = SgTheme.shapes.button,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = sg.accent,
+                    contentColor = sg.onAccent,
+                    disabledBackgroundColor = sg.accentSoft,
+                    disabledContentColor = sg.inkFaint
+                )
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.width(14.dp).height(14.dp),
+                        strokeWidth = 2.dp,
+                        color = sg.inkFaint
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text("승인", fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(onClick = onReject, enabled = enabled, shape = SgTheme.shapes.button) {
+                Text("거절", color = if (enabled) sg.ink else sg.inkFaint)
             }
         }
     }

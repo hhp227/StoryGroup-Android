@@ -18,12 +18,14 @@ import kr.hhp227.storygroup.shared.data.network.dto.CreateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DiscoverGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinGroupResponse
+import kr.hhp227.storygroup.shared.data.network.dto.JoinRequestResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MemberResponse
 import kr.hhp227.storygroup.shared.data.paging.PagePagingConfig
 import kr.hhp227.storygroup.shared.data.paging.PagePagingSource
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupMembershipStatus
@@ -96,6 +98,23 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
             client.delete("/api/groups/$groupId/join")
             Unit
         }
+
+    override suspend fun getJoinRequests(groupId: Long): Result<List<GroupJoinRequest>> =
+        runCatching {
+            client.get("/api/groups/$groupId/join-requests").body<List<JoinRequestResponse>>().map { it.toDomain() }
+        }
+
+    override suspend fun approveJoinRequest(groupId: Long, userId: Long): Result<Unit> =
+        runCatching {
+            client.post("/api/groups/$groupId/join-requests/$userId/approve")
+            Unit
+        }
+
+    override suspend fun rejectJoinRequest(groupId: Long, userId: Long): Result<Unit> =
+        runCatching {
+            client.delete("/api/groups/$groupId/join-requests/$userId")
+            Unit
+        }
 }
 
 // 백엔드 sort 파라미터는 소문자 wire 이름(recent|popular) — DiscoverSort.name과 표기가 달라 별도 매핑
@@ -123,6 +142,13 @@ private fun MemberResponse.toDomain() = GroupMember(
     profileImg = profileImg,
     role = GroupRole.entries.firstOrNull { it.name == role } ?: GroupRole.MEMBER,
     joinedAt = joinedAt
+)
+
+private fun JoinRequestResponse.toDomain() = GroupJoinRequest(
+    userId = userId,
+    name = name,
+    profileImg = profileImg,
+    requestedAt = requestedAt
 )
 
 private fun DiscoverGroupResponse.toDomain() = DiscoverGroup(

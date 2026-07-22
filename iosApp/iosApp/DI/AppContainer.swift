@@ -24,6 +24,9 @@ final class AppContainer {
     let getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase
     let joinGroupUseCase: JoinGroupUseCase
     let cancelJoinRequestUseCase: CancelJoinRequestUseCase
+    let getJoinRequestsUseCase: GetJoinRequestsUseCase
+    let approveJoinRequestUseCase: ApproveJoinRequestUseCase
+    let rejectJoinRequestUseCase: RejectJoinRequestUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -57,5 +60,8 @@ final class AppContainer {
         getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository: groupRepository)
         joinGroupUseCase = JoinGroupUseCase(groupRepository: groupRepository)
         cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository: groupRepository)
+        getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository: groupRepository)
+        approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository: groupRepository)
+        rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository: groupRepository)
     }
 }
