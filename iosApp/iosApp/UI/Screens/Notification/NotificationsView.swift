@@ -162,7 +162,7 @@ private struct NotificationsContent: View {
 /// 웹 TYPE_LABEL 미러 — Compose typeLabel과 동일(모르는 타입은 shared가 목록에서 걸러 default 불도달)
 private func typeLabel(_ type: NotificationType) -> String {
     switch type {
-    case .newPost: return "새 게시글"
+    case .theNewPost: return "새 게시글"
     case .comment: return "댓글"
     case .like: return "좋아요"
     case .mention: return "멘션"
