@@ -63,3 +63,25 @@ data class JoinRequestResponse(
     val profileImg: String? = null,
     val requestedAt: String
 )
+
+// POST /api/groups/{id}/invites 요청 본문 — group/dto/GroupDtos.kt CreateInviteRequest와 1:1(null=무제한/무기한)
+@Serializable
+data class CreateInviteRequest(
+    val maxUses: Int? = null,
+    val expiresInDays: Int? = null
+)
+
+// POST /api/groups/{id}/invites 응답 — group/dto/GroupDtos.kt InviteResponse와 1:1
+@Serializable
+data class InviteResponse(
+    val code: String,
+    val maxUses: Int? = null,
+    val expiresAt: String? = null
+)
+
+// 4xx 공통 에러 본문 — common/exception/GlobalExceptionHandler.kt ErrorResponse와 1:1
+@Serializable
+data class ErrorResponse(
+    val code: String? = null,
+    val message: String? = null
+)

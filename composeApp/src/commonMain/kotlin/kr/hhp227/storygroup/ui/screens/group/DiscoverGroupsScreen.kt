@@ -73,6 +73,7 @@ private fun discoverGroupsViewModel(): DiscoverGroupsViewModel {
         DiscoverGroupsViewModel(
             getDiscoverGroupsPagingDataUseCase = container.getDiscoverGroupsPagingDataUseCase,
             joinGroupUseCase = container.joinGroupUseCase,
+            joinGroupByCodeUseCase = container.joinGroupByCodeUseCase,
             cancelJoinRequestUseCase = container.cancelJoinRequestUseCase
         )
     }
@@ -111,6 +112,7 @@ private fun DiscoverGroupsContent(
     val sg = SgTheme.colors
     var queryText by rememberSaveable { mutableStateOf("") }
     var selectedGroup by remember { mutableStateOf<DiscoverGroup?>(null) }
+    var showJoinByCode by rememberSaveable { mutableStateOf(false) }
 
     val pagingDataFlow = remember(viewModel) {
         viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
@@ -121,6 +123,10 @@ private fun DiscoverGroupsContent(
         viewModel.event.collect { event ->
             when (event) {
                 DiscoverGroupsViewModel.Event.Joined -> onJoined()
+                DiscoverGroupsViewModel.Event.JoinedByCode -> {
+                    showJoinByCode = false
+                    onJoined()
+                }
             }
         }
     }
@@ -145,7 +151,7 @@ private fun DiscoverGroupsContent(
                     Icon(Icons.Default.Search, contentDescription = "검색", tint = sg.accent)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SortToggleButton(
                     label = "최신순",
                     selected = uiState.sort == DiscoverSort.RECENT,
@@ -156,6 +162,11 @@ private fun DiscoverGroupsContent(
                     selected = uiState.sort == DiscoverSort.POPULAR,
                     onClick = { onAction(DiscoverGroupsViewModel.Action.ChangeSort(DiscoverSort.POPULAR)) }
                 )
+                Spacer(Modifier.weight(1f))
+                // 웹 group-discover 헤더의 "초대 코드로 가입" 버튼 미러
+                TextButton(onClick = { showJoinByCode = true }) {
+                    Text("초대 코드로 가입", style = SgTheme.typography.labelLarge, color = sg.accent)
+                }
             }
             uiState.error?.let {
                 Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
@@ -231,6 +242,64 @@ private fun DiscoverGroupsContent(
             onJoin = { onAction(DiscoverGroupsViewModel.Action.Join(group.id)) },
             onCancelRequest = { onAction(DiscoverGroupsViewModel.Action.CancelRequest(group.id)) }
         )
+    }
+    if (showJoinByCode) {
+        JoinByCodeDialog(
+            isLoading = uiState.isJoiningByCode,
+            error = uiState.joinByCodeError,
+            onDismiss = {
+                showJoinByCode = false
+                onAction(DiscoverGroupsViewModel.Action.DismissJoinByCodeError)
+            },
+            onJoin = { onAction(DiscoverGroupsViewModel.Action.JoinByCode(it)) }
+        )
+    }
+}
+
+/** 웹 JoinByCodeDialog 미러 — 전달받은 8자리 코드를 입력하면 승인 없이 바로 가입된다 */
+@Composable
+private fun JoinByCodeDialog(
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onJoin: (String) -> Unit
+) {
+    val sg = SgTheme.colors
+    var code by rememberSaveable { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        SgCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "초대 코드로 가입",
+                        style = SgTheme.typography.titleMedium,
+                        color = sg.ink,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                    }
+                }
+                Text(
+                    "전달받은 8자리 초대 코드를 입력하면 바로 가입됩니다.",
+                    style = SgTheme.typography.bodySmall,
+                    color = sg.inkSoft
+                )
+                SgTextField(value = code, onValueChange = { code = it }, label = "초대 코드")
+                error?.let {
+                    Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
+                }
+                SgPrimaryButton(
+                    text = "가입",
+                    onClick = { onJoin(code) },
+                    enabled = code.isNotBlank(),
+                    isLoading = isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 

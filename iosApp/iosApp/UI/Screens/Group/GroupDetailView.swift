@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Paging
 import Shared
 // SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
@@ -46,6 +47,9 @@ private struct GroupDetailContent: View {
     /// 그룹 글쓰기 시트 — Compose CreatePostRoute(groupId) 미러
     @State private var showCreatePost = false
 
+    /// 모더레이터 초대코드 다이얼로그 — Compose GroupDetailScreen showInviteDialog 미러
+    @State private var showInviteDialog = false
+
     var body: some View {
         GeometryReader { outer in
             ScrollView {
@@ -62,6 +66,21 @@ private struct GroupDetailContent: View {
         // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러
         .overlay(alignment: .bottomTrailing) {
             SGFab(action: { showCreatePost = true }).padding(16)
+        }
+        .overlay {
+            if showInviteDialog {
+                InviteDialog(
+                    invite: viewModel.uiState.createdInvite,
+                    isLoading: viewModel.uiState.isCreatingInvite,
+                    error: viewModel.uiState.inviteError,
+                    onDismiss: {
+                        showInviteDialog = false
+                        // 닫을 때 결과를 비워 다음에 열면 다시 생성 폼부터 시작한다
+                        viewModel.onAction(.dismissInvite)
+                    },
+                    onCreate: { viewModel.onAction(.createInvite(maxUses: $0, expiresInDays: $1)) }
+                )
+            }
         }
         // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
         .navigationTitle(viewModel.uiState.group?.name ?? "")
@@ -157,6 +176,10 @@ private struct GroupDetailContent: View {
         // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
         if !viewModel.uiState.joinRequests.isEmpty {
             joinRequestInbox.padding(.horizontal, 16)
+        }
+        // 모더레이터 전용 초대코드 만들기 — 승인 우회 가입 경로라 인박스와 같은 조정 도구로 묶는다(Compose 미러)
+        if viewModel.uiState.canModerate {
+            inviteButton.padding(.horizontal, 16)
         }
         if !viewModel.uiState.members.isEmpty {
             memberStrip.padding(.horizontal, 16)
@@ -274,6 +297,22 @@ private struct GroupDetailContent: View {
         }
     }
 
+    /// Compose GroupDetailScreen의 "초대코드 만들기" OutlinedButton 미러
+    private var inviteButton: some View {
+        Button(action: { showInviteDialog = true }) {
+            Text("초대코드 만들기")
+                .font(.subheadline.bold())
+                .foregroundColor(colors.accent)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .overlay(
+                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                        .stroke(colors.stoneBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
     /// 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립(Compose MemberStrip 미러)
     private var memberStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -305,5 +344,107 @@ private struct GroupDetailContent: View {
         self.viewModel = viewModel
         self.container = container
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
+    }
+}
+
+/// 모더레이터용 초대코드 다이얼로그 — 생성 폼과 결과(코드+복사)를 한 다이얼로그에서 전환한다(Compose InviteDialog 미러).
+/// 웹엔 생성 UI가 없어 앱이 자체 디자인 — 계약은 백엔드 CreateInviteRequest(@Min 1, @Max 365) 미러.
+/// DiscoverGroupsView의 다이얼로그처럼 반투명 배경+중앙 카드로 직접 구현(iOS 15 공통)
+private struct InviteDialog: View {
+    let invite: GroupInvite?
+
+    let isLoading: Bool
+
+    let error: String?
+
+    let onDismiss: () -> Void
+
+    let onCreate: (Int?, Int?) -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    @State private var maxUsesText = ""
+
+    @State private var expiresInDaysText = ""
+
+    @State private var copied = false
+
+    /// 서버 검증(@Min 1, @Max 365)을 입력 단계에서 막는다 — 빈칸은 무제한/무기한
+    private var canCreate: Bool {
+        let maxUsesValid = maxUsesText.isEmpty || (Int(maxUsesText) ?? 0) >= 1
+        let daysValid = expiresInDaysText.isEmpty || (1...365).contains(Int(expiresInDaysText) ?? 0)
+        return maxUsesValid && daysValid
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            SGCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("초대코드 만들기")
+                            .font(.headline)
+                            .foregroundColor(colors.ink)
+                        Spacer()
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark").foregroundColor(colors.inkSoft)
+                        }
+                    }
+                    if let invite = invite {
+                        result(invite)
+                    } else {
+                        form
+                    }
+                }
+                .padding(16)
+            }
+            .padding(24)
+        }
+    }
+
+    @ViewBuilder private var form: some View {
+        Text("코드를 전달받은 사람은 승인 없이 바로 가입됩니다.")
+            .font(.caption)
+            .foregroundColor(colors.inkSoft)
+        SGTextField(label: "최대 사용 횟수 (비우면 무제한)", text: $maxUsesText, keyboard: .numberPad)
+            .onChange(of: maxUsesText) { maxUsesText = $0.filter(\.isNumber) }
+        SGTextField(label: "유효 기간(일, 비우면 무기한)", text: $expiresInDaysText, keyboard: .numberPad)
+            .onChange(of: expiresInDaysText) { expiresInDaysText = $0.filter(\.isNumber) }
+        if let error = error {
+            Text(error).font(.caption).foregroundColor(colors.rust)
+        }
+        SGPrimaryButton(
+            title: "만들기",
+            enabled: canCreate,
+            isLoading: isLoading,
+            action: { onCreate(Int(maxUsesText), Int(expiresInDaysText)) }
+        )
+    }
+
+    @ViewBuilder private func result(_ invite: GroupInvite) -> some View {
+        Text(invite.code)
+            .font(.title2.bold())
+            .kerning(4)
+            .foregroundColor(colors.ink)
+            .frame(maxWidth: .infinity)
+        Text(limitLabel(invite))
+            .font(.caption)
+            .foregroundColor(colors.inkSoft)
+            .frame(maxWidth: .infinity)
+        SGPrimaryButton(title: copied ? "복사됨" : "코드 복사") {
+            UIPasteboard.general.string = invite.code
+            copied = true
+        }
+    }
+
+    private func limitLabel(_ invite: GroupInvite) -> String {
+        var parts: [String] = []
+
+        if let maxUses = invite.maxUses { parts.append("최대 \(maxUses)회 사용") }
+        // 서버 ISO-8601 원문에서 날짜만 잘라 보여준다
+        if let expiresAt = invite.expiresAt { parts.append("\(expiresAt.prefix(10))까지 유효") }
+        return parts.isEmpty ? "사용 제한 없음" : parts.joined(separator: " · ")
     }
 }

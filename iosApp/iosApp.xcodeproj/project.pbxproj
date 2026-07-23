@@ -47,6 +47,7 @@
 		A1010029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */; };
 		A101002AAABBCCDDEEFF002A /* DiscoverGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */; };
 		A101002BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */; };
+		A101002CAABBCCDDEEFF002C /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102CAABBCCDDEEFF002C /* NotificationsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -91,6 +92,7 @@
 		A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupViewModel.swift; sourceTree = "<group>"; };
 		A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverGroupsView.swift; sourceTree = "<group>"; };
 		A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverGroupsViewModel.swift; sourceTree = "<group>"; };
+		A101102CAABBCCDDEEFF002C /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -237,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				A1011016AABBCCDDEEFF0016 /* NotificationsView.swift */,
+				A101102CAABBCCDDEEFF002C /* NotificationsViewModel.swift */,
 			);
 			path = Notification;
 			sourceTree = "<group>";
@@ -464,6 +467,7 @@
 				A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */,
 				A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,
+				A101002CAABBCCDDEEFF002C /* NotificationsViewModel.swift in Sources */,
 				A1010016AABBCCDDEEFF0016 /* ProfileView.swift in Sources */,
 				A1010017AABBCCDDEEFF0017 /* SGSettingsView.swift in Sources */,
 			);

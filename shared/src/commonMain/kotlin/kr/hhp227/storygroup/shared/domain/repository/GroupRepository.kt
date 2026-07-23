@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
@@ -49,4 +50,10 @@ interface GroupRepository {
 
     /** 가입 신청 거절(모더레이터 전용) — DELETE /api/groups/{id}/join-requests/{userId} */
     suspend fun rejectJoinRequest(groupId: Long, userId: Long): Result<Unit>
+
+    /** 초대코드 생성(모더레이터 전용) — POST /api/groups/{id}/invites, null 제한은 무제한/무기한 */
+    suspend fun createInvite(groupId: Long, maxUses: Int?, expiresInDays: Int?): Result<GroupInvite>
+
+    /** 초대코드로 가입 — POST /api/groups/join/{code}, 승인제 그룹이라도 즉시 MEMBER로 가입된다 */
+    suspend fun joinByCode(code: String): Result<Group>
 }

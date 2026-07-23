@@ -4,6 +4,7 @@ import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
@@ -12,11 +13,13 @@ import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
+import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
@@ -29,10 +32,15 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCas
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
@@ -53,6 +61,7 @@ class AppContainer(
     private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
     private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
     private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
+    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -73,8 +82,14 @@ class AppContainer(
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
     val joinGroupUseCase = JoinGroupUseCase(groupRepository)
+    val joinGroupByCodeUseCase = JoinGroupByCodeUseCase(groupRepository)
     val cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository)
     val getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository)
     val approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository)
     val rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository)
+    val createGroupInviteUseCase = CreateGroupInviteUseCase(groupRepository)
+    val getNotificationsPagingDataUseCase = GetNotificationsPagingDataUseCase(notificationRepository)
+    val getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository)
+    val markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository)
+    val markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository)
 }

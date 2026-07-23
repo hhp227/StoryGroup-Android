@@ -16,11 +16,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
@@ -43,6 +45,7 @@ class GroupDetailViewModel(
     private val getJoinRequestsUseCase: GetJoinRequestsUseCase,
     private val approveJoinRequestUseCase: ApproveJoinRequestUseCase,
     private val rejectJoinRequestUseCase: RejectJoinRequestUseCase,
+    private val createGroupInviteUseCase: CreateGroupInviteUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
@@ -62,6 +65,8 @@ class GroupDetailViewModel(
             Action.RefreshFeed -> _event.tryEmit(Event.RefreshFeed)
             is Action.ApproveJoinRequest -> approveJoinRequest(action.userId)
             is Action.RejectJoinRequest -> rejectJoinRequest(action.userId)
+            is Action.CreateInvite -> createInvite(action.maxUses, action.expiresInDays)
+            Action.DismissInvite -> _uiState.update { it.copy(createdInvite = null, inviteError = null) }
         }
     }
 
@@ -141,6 +146,24 @@ class GroupDetailViewModel(
         }
     }
 
+    /** 초대코드 생성(모더레이터 전용) — 성공 시 다이얼로그가 결과(코드) 뷰로 전환된다 */
+    private fun createInvite(maxUses: Int?, expiresInDays: Int?) {
+        if (_uiState.value.isCreatingInvite) return
+
+        _uiState.update { it.copy(isCreatingInvite = true, inviteError = null) }
+        viewModelScope.launch {
+            runCatching { createGroupInviteUseCase(groupId, maxUses, expiresInDays) }
+                .onSuccess { invite ->
+                    _uiState.update { it.copy(isCreatingInvite = false, createdInvite = invite) }
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(isCreatingInvite = false, inviteError = e.message ?: "초대코드 생성에 실패했습니다.")
+                    }
+                }
+        }
+    }
+
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         getGroupPostsPagingDataUseCase(groupId)
@@ -161,14 +184,23 @@ class GroupDetailViewModel(
         val isLoading: Boolean = false,
         val error: String? = null,
         // 승인/거절 실패 문구 — 로드 에러(error)와 달리 상세 화면을 대체하지 않는다
-        val actionError: String? = null
-    )
+        val actionError: String? = null,
+        // 초대코드 다이얼로그 전용 — 생성 성공 시 createdInvite가 채워져 결과 뷰로 전환된다
+        val createdInvite: GroupInvite? = null,
+        val isCreatingInvite: Boolean = false,
+        val inviteError: String? = null
+    ) {
+        // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정
+        val canModerate: Boolean get() = group?.canModerate == true
+    }
 
     sealed interface Action {
         data object Refresh : Action
         data object RefreshFeed : Action
         data class ApproveJoinRequest(val userId: Long) : Action
         data class RejectJoinRequest(val userId: Long) : Action
+        data class CreateInvite(val maxUses: Int?, val expiresInDays: Int?) : Action
+        data object DismissInvite : Action
     }
 
     sealed interface Event {

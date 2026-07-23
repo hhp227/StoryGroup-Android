@@ -24,6 +24,8 @@ final class GroupDetailViewModel: MviViewModel {
 
     private let rejectJoinRequestUseCase: RejectJoinRequestUseCase
 
+    private let createGroupInviteUseCase: CreateGroupInviteUseCase
+
     private var cancellables = Set<AnyCancellable>()
 
     private func setPagingData(_ pagingData: PagingData<Post>) {
@@ -37,6 +39,11 @@ final class GroupDetailViewModel: MviViewModel {
         case .refreshFeed: event.send(.refreshFeed)
         case .approveJoinRequest(let userId): approveJoinRequest(userId: userId)
         case .rejectJoinRequest(let userId): rejectJoinRequest(userId: userId)
+        case .createInvite(let maxUses, let expiresInDays):
+            createInvite(maxUses: maxUses, expiresInDays: expiresInDays)
+        case .dismissInvite:
+            uiState.createdInvite = nil
+            uiState.inviteError = nil
         }
     }
 
@@ -107,6 +114,28 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
+    /// 초대코드 생성(모더레이터 전용) — 성공 시 다이얼로그가 결과(코드) 뷰로 전환된다
+    private func createInvite(maxUses: Int?, expiresInDays: Int?) {
+        if uiState.isCreatingInvite { return }
+
+        uiState.isCreatingInvite = true
+        uiState.inviteError = nil
+        Task { @MainActor in
+            do {
+                let invite = try await createGroupInviteUseCase.invoke(
+                    groupId: groupId,
+                    maxUses: maxUses.map { KotlinInt(int: Int32($0)) },
+                    expiresInDays: expiresInDays.map { KotlinInt(int: Int32($0)) }
+                )
+                uiState.isCreatingInvite = false
+                uiState.createdInvite = invite
+            } catch {
+                uiState.isCreatingInvite = false
+                uiState.inviteError = error.kotlinMessage(fallback: "초대코드 생성에 실패했습니다.")
+            }
+        }
+    }
+
     init(container: AppContainer, groupId: Int64) {
         self.groupId = groupId
         getGroupUseCase = container.getGroupUseCase
@@ -114,6 +143,7 @@ final class GroupDetailViewModel: MviViewModel {
         getJoinRequestsUseCase = container.getJoinRequestsUseCase
         approveJoinRequestUseCase = container.approveJoinRequestUseCase
         rejectJoinRequestUseCase = container.rejectJoinRequestUseCase
+        createGroupInviteUseCase = container.createGroupInviteUseCase
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: useCase(groupId).cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
@@ -137,6 +167,16 @@ final class GroupDetailViewModel: MviViewModel {
         var error: String? = nil
         // 승인/거절 실패 문구 — 로드 에러(error)와 달리 상세 화면을 대체하지 않는다
         var actionError: String? = nil
+        // 초대코드 다이얼로그 전용 — 생성 성공 시 createdInvite가 채워져 결과 뷰로 전환된다
+        var createdInvite: GroupInvite? = nil
+        var isCreatingInvite = false
+        var inviteError: String? = nil
+
+        // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정(라운지 제외)
+        var canModerate: Bool {
+            guard let group = group else { return false }
+            return !group.isLounge && group.myRole != .member
+        }
     }
 
     enum Action {
@@ -144,6 +184,8 @@ final class GroupDetailViewModel: MviViewModel {
         case refreshFeed
         case approveJoinRequest(userId: Int64)
         case rejectJoinRequest(userId: Int64)
+        case createInvite(maxUses: Int?, expiresInDays: Int?)
+        case dismissInvite
     }
 
     enum Event {

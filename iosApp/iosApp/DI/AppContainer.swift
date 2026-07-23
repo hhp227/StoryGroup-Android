@@ -23,10 +23,16 @@ final class AppContainer {
     let createGroupUseCase: CreateGroupUseCase
     let getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase
     let joinGroupUseCase: JoinGroupUseCase
+    let joinGroupByCodeUseCase: JoinGroupByCodeUseCase
     let cancelJoinRequestUseCase: CancelJoinRequestUseCase
     let getJoinRequestsUseCase: GetJoinRequestsUseCase
     let approveJoinRequestUseCase: ApproveJoinRequestUseCase
     let rejectJoinRequestUseCase: RejectJoinRequestUseCase
+    let createGroupInviteUseCase: CreateGroupInviteUseCase
+    let getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase
+    let getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase
+    let markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
+    let markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -39,6 +45,7 @@ final class AppContainer {
         let groupRepository = GroupRepositoryImpl(client: client)
         let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
         let mediaRepository = MediaRepositoryImpl(client: client)
+        let notificationRepository = NotificationRepositoryImpl(client: client)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -59,9 +66,15 @@ final class AppContainer {
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)
         getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository: groupRepository)
         joinGroupUseCase = JoinGroupUseCase(groupRepository: groupRepository)
+        joinGroupByCodeUseCase = JoinGroupByCodeUseCase(groupRepository: groupRepository)
         cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository: groupRepository)
         getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository: groupRepository)
         approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository: groupRepository)
         rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository: groupRepository)
+        createGroupInviteUseCase = CreateGroupInviteUseCase(groupRepository: groupRepository)
+        getNotificationsPagingDataUseCase = GetNotificationsPagingDataUseCase(notificationRepository: notificationRepository)
+        getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository: notificationRepository)
+        markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository: notificationRepository)
+        markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository: notificationRepository)
     }
 }
