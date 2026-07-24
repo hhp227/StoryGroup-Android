@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 게시글 작성 시트 — Compose CreatePostScreen 미러(웹 작성 폼, 첨부는 후속).
+/// 게시글 작성 시트 — Compose CreatePostScreen 미러(웹 작성 폼 + 하단 사진 첨부 행).
 /// 성공 Event 수신 시 onCreated(피드 갱신) 후 닫힌다 — Paging-CRUD 샘플 CreateView 미러.
 struct CreatePostView: View {
     @StateObject private var viewModel: CreatePostViewModel
@@ -11,39 +11,44 @@ struct CreatePostView: View {
 
     @State private var text = ""
 
+    @State private var showImagePicker = false
+
     private let onCreated: () -> Void
 
     var body: some View {
         NavigationView {
-            ZStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let error = viewModel.uiState.error {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(colors.rust)
+            VStack(spacing: 0) {
+                ZStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let error = viewModel.uiState.error {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(colors.rust)
+                        }
+                        TextEditor(text: Binding(
+                            get: { text },
+                            set: {
+                                text = $0
+                                if viewModel.uiState.error != nil { viewModel.onAction(.clearError) }
+                            }
+                        ))
+                        .disabled(viewModel.uiState.isLoading)
+                        .overlay(alignment: .topLeading) {
+                            if text.isEmpty {
+                                Text("무슨 이야기가 있나요?")
+                                    .foregroundColor(colors.inkFaint)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 4)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                     }
-                    TextEditor(text: Binding(
-                        get: { text },
-                        set: {
-                            text = $0
-                            if viewModel.uiState.error != nil { viewModel.onAction(.clearError) }
-                        }
-                    ))
-                    .disabled(viewModel.uiState.isLoading)
-                    .overlay(alignment: .topLeading) {
-                        if text.isEmpty {
-                            Text("무슨 이야기가 있나요?")
-                                .foregroundColor(colors.inkFaint)
-                                .padding(.top, 8)
-                                .padding(.leading, 4)
-                                .allowsHitTesting(false)
-                        }
+                    .padding()
+                    if viewModel.uiState.isLoading {
+                        ProgressView()
                     }
                 }
-                .padding()
-                if viewModel.uiState.isLoading {
-                    ProgressView()
-                }
+                imageAttachmentRow
             }
             .background(colors.paper)
             .navigationTitle("글쓰기")
@@ -54,7 +59,12 @@ struct CreatePostView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("등록") { viewModel.onAction(.submit(text: text)) }
-                        .disabled(viewModel.uiState.isLoading)
+                        .disabled(viewModel.uiState.isLoading || viewModel.uiState.isUploadingImage)
+                }
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker { data, fileName, contentType in
+                    viewModel.onAction(.addImage(data: data, fileName: fileName, contentType: contentType))
                 }
             }
             .onReceive(viewModel.event) { event in
@@ -66,6 +76,51 @@ struct CreatePostView: View {
             }
         }
         .navigationViewStyle(.stack)
+    }
+
+    /// 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장)
+    private var imageAttachmentRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.uiState.images, id: \.self) { urlString in
+                    ZStack(alignment: .topTrailing) {
+                        if let url = URL(string: urlString) {
+                            AsyncImage(url: url) { phase in
+                                if case .success(let image) = phase {
+                                    image.resizable().scaledToFill()
+                                } else {
+                                    colors.linen
+                                }
+                            }
+                            .frame(width: 72, height: 72)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        Button(action: { viewModel.onAction(.removeImage(url: urlString)) }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.white)
+                                .background(Circle().fill(colors.ink))
+                        }
+                        .padding(4)
+                    }
+                }
+                let canAddMore = viewModel.uiState.images.count < 4
+                Button(action: { showImagePicker = true }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10).fill(colors.linen)
+                        if viewModel.uiState.isUploadingImage {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "camera.fill")
+                                .foregroundColor(canAddMore ? colors.inkSoft : colors.inkFaint)
+                        }
+                    }
+                    .frame(width: 72, height: 72)
+                }
+                .disabled(!canAddMore || viewModel.uiState.isUploadingImage)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
     }
 
     init(container: AppContainer, groupId: Int64?, onCreated: @escaping () -> Void) {

@@ -4,14 +4,13 @@ import Shared
 
 /// 그룹 탭 목록 — composeApp GroupsViewModel.kt와 1:1 미러(Paging-CRUD 샘플 패턴).
 /// 레거시 user_groups 페이징 미러(라운지 제외는 shared 데이터 계층).
-/// GroupsView(keep-alive ZStack) 소유라 "생성 = 세션 진입 1회" — 초기값으로 즉시 시작한다.
+/// VM은 캐시(cachedIn)와 갱신 Event 발화만 담당 — 갱신은 화면이 Event를 받아 프레젠터
+/// refresh()로 수행한다(홈 피드와 동일 패턴, 스트림 교체 없음).
+/// GroupsView(keep-alive ZStack) 소유라 "생성 = 세션 진입 1회" — init에서 바로 시작한다.
 final class GroupsViewModel: MviViewModel {
-    typealias Event = Never
-
     @Published private(set) var uiState = UiState()
 
-    // 스트림을 통째로 갈아끼우는 트리거 — 그룹 생성/가입 후 갱신용
-    private let refreshTrigger = CurrentValueSubject<Int, Never>(0)
+    let event = PassthroughSubject<Event, Never>()
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -21,19 +20,17 @@ final class GroupsViewModel: MviViewModel {
 
     func onAction(_ action: Action) {
         switch action {
+        // 그룹 생성/가입 후 갱신용 — 화면이 refresh()로 목록을 첫 페이지부터 다시 읽는다
         case .refresh:
-            refreshTrigger.send(refreshTrigger.value + 1)
+            event.send(.refresh)
         }
     }
 
     init(container: AppContainer) {
-        let getMyGroupsPagingDataUseCase = container.getMyGroupsPagingDataUseCase
-
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        // (Kotlin: refreshTrigger.flatMapLatest { useCase() }.cachedIn(viewModelScope))
-        refreshTrigger
-            .map { _ in getMyGroupsPagingDataUseCase().cachedIn() }
-            .switchToLatest()
+        // (Kotlin: getMyGroupsPagingDataUseCase().cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
+        container.getMyGroupsPagingDataUseCase()
+            .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
     }
@@ -45,6 +42,10 @@ final class GroupsViewModel: MviViewModel {
     }
 
     enum Action {
+        case refresh
+    }
+
+    enum Event {
         case refresh
     }
 }

@@ -56,6 +56,9 @@ struct MainShellView: View {
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
     @State private var selectedGroupId: Int64? = nil
 
+    /// 계정 설정 풀스크린 push — Compose NavHost(AccountSettingsRoute) 미러
+    @State private var showAccountSettings = false
+
     var body: some View {
         navigationRoot
             .sheet(isPresented: $showSettings) {
@@ -70,6 +73,7 @@ struct MainShellView: View {
             NavigationStack {
                 shellContent
                     .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
+                    .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
             }
         } else {
             NavigationView {
@@ -77,6 +81,14 @@ struct MainShellView: View {
                     .background(
                         NavigationLink(isActive: showGroupDetail) {
                             groupDetailDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
+                    .background(
+                        NavigationLink(isActive: $showAccountSettings) {
+                            accountSettingsDestination
                         } label: {
                             EmptyView()
                         }
@@ -95,6 +107,7 @@ struct MainShellView: View {
                 container: container,
                 profile: profileViewModel.uiState.profile,
                 onOpenGroup: { selectedGroupId = $0.id },
+                onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
         } else {
@@ -104,6 +117,7 @@ struct MainShellView: View {
                 container: container,
                 profile: profileViewModel.uiState.profile,
                 onOpenGroup: { selectedGroupId = $0.id },
+                onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
         }
@@ -113,6 +127,11 @@ struct MainShellView: View {
         if let groupId = selectedGroupId {
             GroupDetailView(groupId: groupId, container: container)
         }
+    }
+
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다
+    private var accountSettingsDestination: some View {
+        AccountSettingsView(container: container, profileViewModel: profileViewModel)
     }
 
     /// pop(백 버튼/스와이프) 시 selectedGroupId를 nil로 되돌리는 브리지
@@ -147,6 +166,9 @@ struct DestinationView: View {
 
     let onOpenSettings: () -> Void
 
+    /// 계정 설정 풀스크린 push — Compose onOpenAccountSettings 미러(MainShellView showAccountSettings)
+    let onOpenAccountSettings: () -> Void
+
     let onLogout: () -> Void
 
     var body: some View {
@@ -160,9 +182,14 @@ struct DestinationView: View {
         case .chat:
             ChatView()
         case .notifications:
-            NotificationsView()
+            NotificationsView(container: container)
         case .profile:
-            ProfileView(profile: profile, onOpenSettings: onOpenSettings, onLogout: onLogout)
+            ProfileView(
+                profile: profile,
+                onOpenAccountSettings: onOpenAccountSettings,
+                onOpenSettings: onOpenSettings,
+                onLogout: onLogout
+            )
         }
     }
 }

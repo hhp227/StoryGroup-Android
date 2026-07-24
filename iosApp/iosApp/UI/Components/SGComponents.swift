@@ -163,6 +163,9 @@ struct SGAvatar: View {
 
     var size: CGFloat = 40
 
+    /// 있으면 실제 이미지, 없으면 이니셜 원형 — 네이티브 AsyncImage(iOS 15+)
+    var imageUrl: String? = nil
+
     var background: Color? = nil
 
     var foreground: Color? = nil
@@ -171,11 +174,22 @@ struct SGAvatar: View {
         Circle()
             .fill(background ?? colors.accent)
             .frame(width: size, height: size)
-            .overlay(
-                Text(String(name.prefix(1)))
-                    .font(size >= 56 ? .title2.bold() : .subheadline.bold())
-                    .foregroundColor(foreground ?? colors.onAccent)
-            )
+            .overlay {
+                if let imageUrl, let url = URL(string: imageUrl) {
+                    // phase만 success로 좁혀 그림 — 로딩/실패 중엔 배경 원(이니셜 대신) 그대로 폴백처럼 보인다
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        }
+                    }
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+                } else {
+                    Text(String(name.prefix(1)))
+                        .font(size >= 56 ? .title2.bold() : .subheadline.bold())
+                        .foregroundColor(foreground ?? colors.onAccent)
+                }
+            }
     }
 }
 
@@ -227,7 +241,7 @@ struct SGSectionTitle: View {
 }
 
 /// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
-/// 첨부는 요약 표기(이미지 로딩은 ④ 몫)
+/// 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속 작업)
 struct SGPostCard: View {
     let post: Post
 
@@ -237,7 +251,7 @@ struct SGPostCard: View {
         SGCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName)
+                    SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
                         Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
@@ -260,19 +274,32 @@ struct SGPostCard: View {
                         .lineLimit(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !attachmentSummary.isEmpty {
-                    Text(attachmentSummary).font(.caption).foregroundColor(colors.inkSoft)
+                if !post.imageUrls.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(post.imageUrls, id: \.self) { urlString in
+                                if let url = URL(string: urlString) {
+                                    AsyncImage(url: url) { phase in
+                                        if case .success(let image) = phase {
+                                            image.resizable().scaledToFill()
+                                        } else {
+                                            colors.linen
+                                        }
+                                    }
+                                    .frame(width: 120, height: 120)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                        }
+                    }
+                }
+                // 동영상 재생은 후속 작업 — 개수만 요약 표기
+                if !post.videoUrls.isEmpty {
+                    Text("동영상 \(post.videoUrls.count)개").font(.caption).foregroundColor(colors.inkSoft)
                 }
             }
             .padding(16)
         }
-    }
-
-    private var attachmentSummary: String {
-        var parts: [String] = []
-        if !post.imageUrls.isEmpty { parts.append("사진 \(post.imageUrls.count)장") }
-        if !post.videoUrls.isEmpty { parts.append("동영상 \(post.videoUrls.count)개") }
-        return parts.joined(separator: " · ")
     }
 }
 

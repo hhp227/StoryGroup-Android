@@ -7,9 +7,7 @@ import Shared
 final class RegisterViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
-    private let eventSubject = PassthroughSubject<Event, Never>()
-
-    var event: AnyPublisher<Event, Never> { eventSubject.eraseToAnyPublisher() }
+    let event = PassthroughSubject<Event, Never>()
 
     private let registerUseCase: RegisterUseCase
 
@@ -29,7 +27,7 @@ final class RegisterViewModel: MviViewModel {
             do {
                 _ = try await registerUseCase.invoke(name: name, email: email, password: password)
                 uiState.isLoading = false
-                eventSubject.send(.registered)
+                event.send(.registered)
             } catch {
                 uiState.isLoading = false
                 uiState.error = error.kotlinMessage(fallback: "가입에 실패했습니다.")

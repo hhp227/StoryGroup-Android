@@ -2,19 +2,21 @@ package kr.hhp227.storygroup.ui.screens.group
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -25,11 +27,14 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,12 +42,12 @@ import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemKey
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
-import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgTopBar
@@ -57,6 +62,8 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 fun GroupsScreen(
     onOpenGroup: (Group) -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     viewModel: GroupsViewModel = sessionViewModel { GroupsViewModel(it.getMyGroupsPagingDataUseCase) }
@@ -65,6 +72,8 @@ fun GroupsScreen(
         viewModel = viewModel,
         onOpenGroup = onOpenGroup,
         onOpenNotifications = onOpenNotifications,
+        onOpenCreateGroup = onOpenCreateGroup,
+        onOpenDiscoverGroups = onOpenDiscoverGroups,
         navigationIcon = navigationIcon,
         modifier = modifier
     )
@@ -75,6 +84,8 @@ private fun GroupsContent(
     viewModel: GroupsViewModel,
     onOpenGroup: (Group) -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
@@ -85,6 +96,15 @@ private fun GroupsContent(
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
 
+    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+    // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                GroupsViewModel.Event.Refresh -> lazyPagingItems.refresh()
+            }
+        }
+    }
     // 그룹 탭은 상세(콜랩싱 헤더)와의 전환 때문에 셸이 아닌 화면이 상단바를 소유한다(홈과 동일)
     Column(modifier) {
         SgTopBar(
@@ -96,30 +116,40 @@ private fun GroupsContent(
                 }
             }
         )
-        LazyColumn(
+        // 웹 /groups 내 그룹 탭(auto-fill minmax(160px,1fr) CSS 그리드)·레거시 GroupFragment(GridLayoutManager
+        // 2열/4열) 미러 — 그룹 찾기(목록)와 달리 내 그룹은 그리드로 보여준다
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 152.dp),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item(key = "actions") {
-                GroupActionsRow()
+            item(key = "actions", span = { GridItemSpan(maxLineSpan) }) {
+                GroupActionsRow(onOpenCreateGroup = onOpenCreateGroup, onOpenDiscoverGroups = onOpenDiscoverGroups)
             }
             // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
             val refreshState = lazyPagingItems.loadState.refresh
             val appendState = lazyPagingItems.loadState.append
 
             when {
-                lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "groups-loading") {
+                lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(
+                    key = "groups-loading",
+                    span = { GridItemSpan(maxLineSpan) }
+                ) {
                     Box(
-                        Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 48.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = sg.accent)
                     }
                 }
-                lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "groups-error") {
+                lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(
+                    key = "groups-error",
+                    span = { GridItemSpan(maxLineSpan) }
+                ) {
                     Column(
-                        modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -133,11 +163,11 @@ private fun GroupsContent(
                         }
                     }
                 }
-                lazyPagingItems.itemCount == 0 -> item(key = "groups-empty") {
+                lazyPagingItems.itemCount == 0 -> item(key = "groups-empty", span = { GridItemSpan(maxLineSpan) }) {
                     SgEmptyState(
                         title = "아직 그룹이 없습니다",
                         subtitle = "새 그룹을 만들거나 그룹 찾기에서 참여해보세요.",
-                        modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
                     )
                 }
                 else -> {
@@ -147,7 +177,7 @@ private fun GroupsContent(
                         }
                     }
                     if (appendState is LoadStateLoading || appendState is LoadStateError) {
-                        item(key = "groups-footer") {
+                        item(key = "groups-footer", span = { GridItemSpan(maxLineSpan) }) {
                             SgPagingFooter(
                                 isLoadingMore = appendState is LoadStateLoading,
                                 error = (appendState as? LoadStateError)?.error?.message,
@@ -162,12 +192,12 @@ private fun GroupsContent(
 }
 
 @Composable
-private fun GroupActionsRow(modifier: Modifier = Modifier) {
+private fun GroupActionsRow(onOpenCreateGroup: () -> Unit, onOpenDiscoverGroups: () -> Unit, modifier: Modifier = Modifier) {
     val sg = SgTheme.colors
 
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(
-            onClick = { /* TODO: 그룹 만들기 */ },
+            onClick = onOpenCreateGroup,
             modifier = Modifier.weight(1f),
             shape = SgTheme.shapes.button,
             border = BorderStroke(1.dp, sg.stoneBorder),
@@ -176,7 +206,7 @@ private fun GroupActionsRow(modifier: Modifier = Modifier) {
             Text("그룹 만들기", fontWeight = FontWeight.Bold)
         }
         OutlinedButton(
-            onClick = { /* TODO: 그룹 찾기 */ },
+            onClick = onOpenDiscoverGroups,
             modifier = Modifier.weight(1f),
             shape = SgTheme.shapes.button,
             border = BorderStroke(1.dp, sg.stoneBorder),
@@ -187,54 +217,60 @@ private fun GroupActionsRow(modifier: Modifier = Modifier) {
     }
 }
 
+/** 웹 GroupCard 미러 — 정사각 커버(역할 칩 오버레이) + 이름/소개, 카드 배경 없이 그리드 타일로 */
 @Composable
 private fun GroupCard(group: Group, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val sg = SgTheme.colors
 
-    SgCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(SgTheme.shapes.card)
+                .let { if (group.image == null) it.background(groupCoverBrush(group.id, sg)) else it }
         ) {
-            // 웹 GroupCover 미러 — 커버 이미지 로딩(④) 전까지 그룹별 그라데이션+이니셜 폴백
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(groupCoverBrush(group.id, sg), SgTheme.shapes.button),
-                contentAlignment = Alignment.Center
-            ) {
+            // 웹 GroupCover 미러 — group.image 있으면 실사진, 없으면 그룹별 그라데이션+이니셜 폴백
+            if (group.image != null) {
+                AsyncImage(
+                    model = group.image,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
                 Text(
                     group.name.take(1),
-                    style = SgTheme.typography.titleMedium,
+                    style = SgTheme.typography.headlineSmall,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        group.name,
-                        style = SgTheme.typography.titleMedium,
-                        color = sg.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (group.myRole != GroupRole.MEMBER) {
-                        Spacer(Modifier.width(8.dp))
-                        RoleChip(group.myRole)
-                    }
-                }
-                if (!group.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        group.description.orEmpty(),
-                        style = SgTheme.typography.bodySmall,
-                        color = sg.inkSoft,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            if (group.myRole != GroupRole.MEMBER) {
+                RoleChip(group.myRole, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
+            }
+        }
+        Column {
+            Text(
+                group.name,
+                style = SgTheme.typography.titleSmall,
+                color = sg.ink,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!group.description.isNullOrBlank()) {
+                Text(
+                    group.description.orEmpty(),
+                    style = SgTheme.typography.bodySmall,
+                    color = sg.inkSoft,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

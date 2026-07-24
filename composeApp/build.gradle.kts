@@ -40,6 +40,10 @@ kotlin {
             implementation(libs.jetbrains.navigation.compose)
             // 게시글 피드 페이징 UI — paging-common은 shared가 api로 노출(데이터 계층 소속)
             implementation(libs.cash.paging.compose)
+            // 프로필/커버/게시글 첨부 이미지 로딩 — composeApp은 Android+Desktop 타깃뿐이라
+            // network-okhttp(JVM 엔진)로 충분(iOS는 SwiftUI 네이티브 AsyncImage 별도 사용)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.network.okhttp)
             implementation(projects.shared)
         }
         commonTest.dependencies {

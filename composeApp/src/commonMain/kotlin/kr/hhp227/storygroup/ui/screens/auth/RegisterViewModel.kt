@@ -2,12 +2,13 @@ package kr.hhp227.storygroup.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
@@ -23,8 +24,8 @@ class RegisterViewModel(
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _event = Channel<Event>(Channel.BUFFERED)
-    override val event: Flow<Event> = _event.receiveAsFlow()
+    private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    override val event: Flow<Event> = _event.asSharedFlow()
 
     override fun onAction(action: Action) {
         when (action) {
@@ -41,7 +42,7 @@ class RegisterViewModel(
             runCatching { registerUseCase(name, email, password) }
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false) }
-                    _event.trySend(Event.Registered)
+                    _event.tryEmit(Event.Registered)
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isLoading = false, error = e.message ?: "가입에 실패했습니다.") }

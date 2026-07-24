@@ -29,8 +29,11 @@ import kr.hhp227.storygroup.di.LocalSessionViewModelStoreOwner
 import kr.hhp227.storygroup.ui.screens.auth.LoginScreen
 import kr.hhp227.storygroup.ui.screens.auth.LoginViewModel
 import kr.hhp227.storygroup.ui.screens.auth.RegisterScreen
+import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
+import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
+import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
 import kr.hhp227.storygroup.ui.theme.NightMode
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -53,6 +56,18 @@ internal data class GroupDetailRoute(val groupId: Long)
 /** 게시글 작성 — groupId null이면 라운지(홈 피드)에 게시(웹 메인 피드 폼 미러) */
 @Serializable
 internal data class CreatePostRoute(val groupId: Long?)
+
+/** 계정 설정 — 프로필 수정+비밀번호 변경(웹 /settings/profile·password 미러) */
+@Serializable
+internal data object AccountSettingsRoute
+
+/** 그룹 만들기 — 이름/소개/커버 이미지+가입 방식 */
+@Serializable
+internal data object CreateGroupRoute
+
+/** 그룹 찾기 — 검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 그룹 찾기 탭 미러) */
+@Serializable
+internal data object DiscoverGroupsRoute
 
 /** 그룹 피드 작성 성공을 이전 백스택 엔트리(그룹 상세)로 알리는 결과 키 — Paging-CRUD 샘플 미러 */
 internal const val POST_CREATED_KEY = "post_created"
@@ -114,6 +129,9 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 onCreatePost = { navController.navigate(CreatePostRoute(groupId = null)) },
                 homeRefreshRequested = homeRefreshPending,
                 onHomeRefreshHandled = { homeRefreshPending = false },
+                onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
+                onOpenCreateGroup = { navController.navigate(CreateGroupRoute) },
+                onOpenDiscoverGroups = { navController.navigate(DiscoverGroupsRoute) },
                 onLogout = onLogout
             )
             NavHost(navController = navController, startDestination = ShellRoute) {
@@ -134,6 +152,33 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onCreatePost = { navController.navigate(CreatePostRoute(groupId = route.groupId)) },
                             refreshRequested = postCreated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<AccountSettingsRoute> {
+                    Surface(color = SgTheme.colors.paper) {
+                        AccountSettingsScreen(
+                            onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<CreateGroupRoute> {
+                    Surface(color = SgTheme.colors.paper) {
+                        CreateGroupScreen(
+                            onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<DiscoverGroupsRoute> {
+                    Surface(color = SgTheme.colors.paper) {
+                        DiscoverGroupsScreen(
+                            onBack = { navController.popBackStack() },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )

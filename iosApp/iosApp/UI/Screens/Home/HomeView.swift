@@ -70,6 +70,13 @@ private struct HomeContent: View {
                 viewModel.onAction(.refresh)
             }
         }
+        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+        // 같은 스트림이 새 세대(첫 페이지, 라운지 재해석 포함)를 방출한다
+        .onReceive(viewModel.event) { event in
+            switch event {
+            case .refresh: lazyPagingItems.refresh()
+            }
+        }
     }
 
     /// 레거시 layout_collapseMode="parallax" 미러 — 목록이 위로 갈 때 이미지는 절반 속도로 따라간다.

@@ -26,7 +26,10 @@ fun SgTextField(
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    // 멀티라인 입력(소개 등) — 웹 textarea 미러
+    singleLine: Boolean = true,
+    minLines: Int = 1
 ) {
     val sg = SgTheme.colors
 
@@ -42,7 +45,8 @@ fun SgTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
+            singleLine = singleLine,
+            minLines = minLines,
             enabled = enabled,
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),

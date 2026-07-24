@@ -97,6 +97,15 @@ private fun HomeContent(
             onRefreshHandled()
         }
     }
+    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
+    // 같은 스트림이 새 세대(첫 페이지, 라운지 재해석 포함)를 방출한다
+    LaunchedEffect(Unit) {
+        viewModel.event.collect { event ->
+            when (event) {
+                HomeViewModel.Event.Refresh -> lazyPagingItems.refresh()
+            }
+        }
+    }
     SgCollapsingHeaderScaffold(
         title = "우리들의 이야기",
         navigationIcon = navigationIcon,
