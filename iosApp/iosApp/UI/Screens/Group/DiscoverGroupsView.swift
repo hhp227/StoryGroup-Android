@@ -47,6 +47,8 @@ private struct DiscoverGroupsContent: View {
 
     @State private var selectedGroup: DiscoverGroup? = nil
 
+    @State private var showJoinByCode = false
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -66,6 +68,13 @@ private struct DiscoverGroupsContent: View {
                         viewModel.onAction(.changeSort(sort: .popular))
                     }
                 }
+                // 웹 group-discover 헤더의 "초대 코드로 가입" 버튼 미러(Compose와 동일 배치)
+                HStack {
+                    Spacer()
+                    Button("초대 코드로 가입") { showJoinByCode = true }
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.accent)
+                }
                 if let error = viewModel.uiState.error {
                     Text(error).font(.caption).foregroundColor(colors.rust)
                 }
@@ -83,6 +92,9 @@ private struct DiscoverGroupsContent: View {
         .onReceive(viewModel.event) { event in
             switch event {
             case .joined: onJoined()
+            case .joinedByCode:
+                showJoinByCode = false
+                onJoined()
             }
         }
         .overlay {
@@ -94,6 +106,19 @@ private struct DiscoverGroupsContent: View {
                     onDismiss: { selectedGroup = nil },
                     onJoin: { viewModel.onAction(.join(groupId: group.id)) },
                     onCancelRequest: { viewModel.onAction(.cancelRequest(groupId: group.id)) }
+                )
+            }
+        }
+        .overlay {
+            if showJoinByCode {
+                JoinByCodeDialog(
+                    isLoading: viewModel.uiState.isJoiningByCode,
+                    error: viewModel.uiState.joinByCodeError,
+                    onDismiss: {
+                        showJoinByCode = false
+                        viewModel.onAction(.dismissJoinByCodeError)
+                    },
+                    onJoin: { viewModel.onAction(.joinByCode(code: $0)) }
                 )
             }
         }
@@ -295,6 +320,58 @@ private struct GroupDetailDialog: View {
                             action: onJoin
                         )
                     }
+                }
+                .padding(16)
+            }
+            .padding(24)
+        }
+    }
+}
+
+/// 웹 JoinByCodeDialog 미러 — 전달받은 8자리 코드를 입력하면 승인 없이 바로 가입된다(Compose와 1:1).
+/// GroupDetailDialog처럼 반투명 배경+중앙 카드로 직접 구현(iOS 15 공통)
+private struct JoinByCodeDialog: View {
+    let isLoading: Bool
+
+    let error: String?
+
+    let onDismiss: () -> Void
+
+    let onJoin: (String) -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    @State private var code = ""
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            SGCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("초대 코드로 가입")
+                            .font(.headline)
+                            .foregroundColor(colors.ink)
+                        Spacer()
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark").foregroundColor(colors.inkSoft)
+                        }
+                    }
+                    Text("전달받은 8자리 초대 코드를 입력하면 바로 가입됩니다.")
+                        .font(.caption)
+                        .foregroundColor(colors.inkSoft)
+                    SGTextField(label: "초대 코드", text: $code)
+                    if let error = error {
+                        Text(error).font(.caption).foregroundColor(colors.rust)
+                    }
+                    SGPrimaryButton(
+                        title: "가입",
+                        enabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        isLoading: isLoading,
+                        action: { onJoin(code) }
+                    )
                 }
                 .padding(16)
             }

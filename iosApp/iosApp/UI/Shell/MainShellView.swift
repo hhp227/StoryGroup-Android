@@ -182,7 +182,7 @@ struct DestinationView: View {
         case .chat:
             ChatView()
         case .notifications:
-            NotificationsView()
+            NotificationsView(container: container)
         case .profile:
             ProfileView(
                 profile: profile,

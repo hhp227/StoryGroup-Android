@@ -37,6 +37,14 @@ data class DiscoverGroup(
     val createdAt: String = ""
 )
 
+/** 초대코드 생성 결과(POST /api/groups/{id}/invites) — 코드는 8자리, null 제한은 무제한/무기한 */
+data class GroupInvite(
+    val code: String,
+    val maxUses: Int? = null,
+    // 서버 ISO-8601(OffsetDateTime) 원문 — 표시 포맷팅은 각 플랫폼 UI가 담당
+    val expiresAt: String? = null
+)
+
 /** 그룹 가입 결과 — 자동 승인이면 JOINED+가입된 그룹, 승인제면 REQUESTED+group=null(POST .../join) */
 enum class JoinResult { JOINED, REQUESTED }
 

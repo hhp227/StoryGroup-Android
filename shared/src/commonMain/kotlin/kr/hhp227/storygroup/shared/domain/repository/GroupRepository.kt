@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupInvite
+import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
@@ -39,4 +41,19 @@ interface GroupRepository {
 
     /** 가입 신청 취소 — DELETE /api/groups/{id}/join */
     suspend fun cancelJoinRequest(groupId: Long): Result<Unit>
+
+    /** 승인 대기 가입 신청 목록(모더레이터 전용) — GET /api/groups/{id}/join-requests */
+    suspend fun getJoinRequests(groupId: Long): Result<List<GroupJoinRequest>>
+
+    /** 가입 신청 승인(모더레이터 전용) — POST /api/groups/{id}/join-requests/{userId}/approve */
+    suspend fun approveJoinRequest(groupId: Long, userId: Long): Result<Unit>
+
+    /** 가입 신청 거절(모더레이터 전용) — DELETE /api/groups/{id}/join-requests/{userId} */
+    suspend fun rejectJoinRequest(groupId: Long, userId: Long): Result<Unit>
+
+    /** 초대코드 생성(모더레이터 전용) — POST /api/groups/{id}/invites, null 제한은 무제한/무기한 */
+    suspend fun createInvite(groupId: Long, maxUses: Int?, expiresInDays: Int?): Result<GroupInvite>
+
+    /** 초대코드로 가입 — POST /api/groups/join/{code}, 승인제 그룹이라도 즉시 MEMBER로 가입된다 */
+    suspend fun joinByCode(code: String): Result<Group>
 }

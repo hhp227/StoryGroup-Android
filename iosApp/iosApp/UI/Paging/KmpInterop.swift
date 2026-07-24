@@ -48,6 +48,13 @@ extension GetDiscoverGroupsPagingDataUseCase {
     }
 }
 
+// Kotlin: getNotificationsPagingDataUseCase() → Flow<PagingData<AppNotification>>
+extension GetNotificationsPagingDataUseCase {
+    func callAsFunction() -> AppNotificationPagingPublisher {
+        AppNotificationPagingPublisher(adapter: pagingFlow())
+    }
+}
+
 // Kotlin의 Flow<PagingData<Group>> 대응 퍼블리셔 — PostPagingPublisher의 Group 타입 대응
 struct GroupPagingPublisher: Publisher {
     typealias Output = PagingData<Group>
@@ -78,6 +85,26 @@ struct DiscoverGroupPagingPublisher: Publisher {
 
     func cachedIn() -> DiscoverGroupPagingPublisher {
         DiscoverGroupPagingPublisher(adapter: adapter.cachedIn())
+    }
+
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
+        KotlinFlowPublisher<Output> { onEach in
+            self.adapter.subscribe(onEach: onEach)
+        }
+        .receive(subscriber: subscriber)
+    }
+}
+
+// Kotlin의 Flow<PagingData<AppNotification>> 대응 퍼블리셔 — GroupPagingPublisher의 AppNotification 타입 대응
+struct AppNotificationPagingPublisher: Publisher {
+    typealias Output = PagingData<AppNotification>
+
+    typealias Failure = Never
+
+    fileprivate let adapter: AppNotificationPagingFlowAdapter
+
+    func cachedIn() -> AppNotificationPagingPublisher {
+        AppNotificationPagingPublisher(adapter: adapter.cachedIn())
     }
 
     func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
@@ -140,6 +167,16 @@ extension Publisher where Failure == Never {
         let adapter = KmpPagingBridgeAdapter(bridge)
 
         adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<DiscoverGroup>) }
+        return LazyPagingItems(bridge: adapter)
+    }
+
+    // AppNotification 타입 대응 — 반환 타입 오버로드(호출부의 LazyPagingItems<AppNotification> 프로퍼티 타입으로 선택된다)
+    func collectAsLazyPagingItems() -> LazyPagingItems<AppNotification> {
+        let subject = PagingDataSubject<AppNotification>()
+        let bridge = unsafeDowncast(subject.bridge, to: SwiftUiPagingBridge<AppNotification>.self)
+        let adapter = KmpPagingBridgeAdapter(bridge)
+
+        adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<AppNotification>) }
         return LazyPagingItems(bridge: adapter)
     }
 }

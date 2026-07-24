@@ -13,28 +13,41 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
@@ -44,15 +57,21 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.shared.domain.model.GroupInvite
+import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.components.SgAvatar
+import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
+import kr.hhp227.storygroup.ui.components.SgPrimaryButton
+import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.collapsingParallax
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
 @Composable
 private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
@@ -63,6 +82,10 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             groupId = groupId,
             getGroupUseCase = container.getGroupUseCase,
             getGroupMembersUseCase = container.getGroupMembersUseCase,
+            getJoinRequestsUseCase = container.getJoinRequestsUseCase,
+            approveJoinRequestUseCase = container.approveJoinRequestUseCase,
+            rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
+            createGroupInviteUseCase = container.createGroupInviteUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
         )
     }
@@ -110,6 +133,7 @@ private fun GroupDetailContent(
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
+    var showInviteDialog by rememberSaveable { mutableStateOf(false) }
 
     // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
     LaunchedEffect(viewModel) {
@@ -212,6 +236,31 @@ private fun GroupDetailContent(
         val refreshState = lazyPagingItems.loadState.refresh
         val appendState = lazyPagingItems.loadState.append
 
+        // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
+        if (uiState.joinRequests.isNotEmpty()) {
+            item(key = "join-requests") {
+                JoinRequestInbox(
+                    requests = uiState.joinRequests,
+                    processingUserId = uiState.processingRequestUserId,
+                    actionError = uiState.actionError,
+                    onApprove = { viewModel.onAction(GroupDetailViewModel.Action.ApproveJoinRequest(it)) },
+                    onReject = { viewModel.onAction(GroupDetailViewModel.Action.RejectJoinRequest(it)) },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+        // 모더레이터 전용 초대코드 만들기 — 승인 우회 가입 경로라 인박스와 같은 조정 도구로 묶는다
+        if (uiState.canModerate) {
+            item(key = "invite-code") {
+                OutlinedButton(
+                    onClick = { showInviteDialog = true },
+                    shape = SgTheme.shapes.button,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
+                    Text("초대코드 만들기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                }
+            }
+        }
         if (uiState.members.isNotEmpty()) {
             item(key = "members") {
                 MemberStrip(uiState.members, Modifier.padding(horizontal = 16.dp))
@@ -278,6 +327,215 @@ private fun GroupDetailContent(
                         )
                     }
                 }
+            }
+        }
+    }
+    if (showInviteDialog) {
+        InviteDialog(
+            invite = uiState.createdInvite,
+            isLoading = uiState.isCreatingInvite,
+            error = uiState.inviteError,
+            onDismiss = {
+                showInviteDialog = false
+                // 닫을 때 결과를 비워 다음에 열면 다시 생성 폼부터 시작한다
+                viewModel.onAction(GroupDetailViewModel.Action.DismissInvite)
+            },
+            onCreate = { maxUses, expiresInDays ->
+                viewModel.onAction(GroupDetailViewModel.Action.CreateInvite(maxUses, expiresInDays))
+            }
+        )
+    }
+}
+
+/**
+ * 모더레이터용 초대코드 다이얼로그 — 생성 폼과 결과(코드+복사)를 한 다이얼로그에서 전환한다.
+ * 웹엔 생성 UI가 없어 앱이 자체 디자인 — 계약은 백엔드 CreateInviteRequest(@Min 1, @Max 365) 미러.
+ */
+@Composable
+private fun InviteDialog(
+    invite: GroupInvite?,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onCreate: (maxUses: Int?, expiresInDays: Int?) -> Unit
+) {
+    val sg = SgTheme.colors
+
+    Dialog(onDismissRequest = onDismiss) {
+        SgCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "초대코드 만들기",
+                        style = SgTheme.typography.titleMedium,
+                        color = sg.ink,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                    }
+                }
+                if (invite == null) {
+                    var maxUsesText by rememberSaveable { mutableStateOf("") }
+                    var expiresInDaysText by rememberSaveable { mutableStateOf("") }
+                    val maxUses = maxUsesText.toIntOrNull()
+                    val expiresInDays = expiresInDaysText.toIntOrNull()
+
+                    Text(
+                        "코드를 전달받은 사람은 승인 없이 바로 가입됩니다.",
+                        style = SgTheme.typography.bodySmall,
+                        color = sg.inkSoft
+                    )
+                    SgTextField(
+                        value = maxUsesText,
+                        onValueChange = { maxUsesText = it.filter(Char::isDigit) },
+                        label = "최대 사용 횟수 (비우면 무제한)",
+                        keyboardType = KeyboardType.Number
+                    )
+                    SgTextField(
+                        value = expiresInDaysText,
+                        onValueChange = { expiresInDaysText = it.filter(Char::isDigit) },
+                        label = "유효 기간(일, 비우면 무기한)",
+                        keyboardType = KeyboardType.Number
+                    )
+                    error?.let {
+                        Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
+                    }
+                    SgPrimaryButton(
+                        text = "만들기",
+                        onClick = { onCreate(maxUses, expiresInDays) },
+                        // 서버 검증(@Min 1, @Max 365)을 입력 단계에서 막는다 — 빈칸은 무제한/무기한
+                        enabled = (maxUsesText.isEmpty() || (maxUses ?: 0) >= 1) &&
+                            (expiresInDaysText.isEmpty() || (expiresInDays ?: 0) in 1..365),
+                        isLoading = isLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    val clipboard = LocalClipboardManager.current
+                    var copied by remember { mutableStateOf(false) }
+                    val limitLabel = listOfNotNull(
+                        invite.maxUses?.let { "최대 ${it}회 사용" },
+                        // 서버 ISO-8601 원문에서 날짜만 잘라 보여준다
+                        invite.expiresAt?.let { "${it.take(10)}까지 유효" }
+                    ).joinToString(" · ").ifEmpty { "사용 제한 없음" }
+
+                    Text(
+                        invite.code,
+                        style = SgTheme.typography.titleLarge,
+                        color = sg.ink,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 4.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        limitLabel,
+                        style = SgTheme.typography.bodySmall,
+                        color = sg.inkSoft,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SgPrimaryButton(
+                        text = if (copied) "복사됨" else "코드 복사",
+                        onClick = {
+                            clipboard.setText(AnnotatedString(invite.code))
+                            copied = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 모더레이터용 가입 신청 인박스 — 웹 GroupMemberList의 "가입 신청 N건" 섹션 미러 */
+@Composable
+private fun JoinRequestInbox(
+    requests: List<GroupJoinRequest>,
+    processingUserId: Long?,
+    actionError: String?,
+    onApprove: (Long) -> Unit,
+    onReject: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("가입 신청 ${requests.size}건", style = SgTheme.typography.titleSmall, color = sg.ink)
+        if (actionError != null) {
+            Text(actionError, style = SgTheme.typography.bodySmall, color = sg.rust)
+        }
+        requests.forEach { request ->
+            JoinRequestCard(
+                request = request,
+                // VM이 한 건씩만 처리하므로 처리 중엔 모든 행의 버튼을 잠근다
+                enabled = processingUserId == null,
+                isProcessing = processingUserId == request.userId,
+                onApprove = { onApprove(request.userId) },
+                onReject = { onReject(request.userId) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun JoinRequestCard(
+    request: GroupJoinRequest,
+    enabled: Boolean,
+    isProcessing: Boolean,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    SgCard(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SgAvatar(request.name, imageUrl = request.profileImg)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    request.name,
+                    style = SgTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = sg.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "${formatRelativeTime(request.requestedAt)} 신청",
+                    style = SgTheme.typography.labelSmall,
+                    color = sg.inkFaint
+                )
+            }
+            Button(
+                onClick = onApprove,
+                enabled = enabled,
+                shape = SgTheme.shapes.button,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = sg.accent,
+                    contentColor = sg.onAccent,
+                    disabledBackgroundColor = sg.accentSoft,
+                    disabledContentColor = sg.inkFaint
+                )
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.width(14.dp).height(14.dp),
+                        strokeWidth = 2.dp,
+                        color = sg.inkFaint
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text("승인", fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(onClick = onReject, enabled = enabled, shape = SgTheme.shapes.button) {
+                Text("거절", color = if (enabled) sg.ink else sg.inkFaint)
             }
         }
     }

@@ -25,6 +25,7 @@ import kr.hhp227.storygroup.shared.domain.model.GroupMembershipStatus
 import kr.hhp227.storygroup.shared.domain.model.JoinResult
 import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
@@ -40,6 +41,7 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 class DiscoverGroupsViewModel(
     private val getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase,
     private val joinGroupUseCase: JoinGroupUseCase,
+    private val joinGroupByCodeUseCase: JoinGroupByCodeUseCase,
     private val cancelJoinRequestUseCase: CancelJoinRequestUseCase
 ) : ViewModel(), MviViewModel<DiscoverGroupsViewModel.UiState, DiscoverGroupsViewModel.Action, DiscoverGroupsViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
@@ -57,6 +59,8 @@ class DiscoverGroupsViewModel(
             is Action.Search -> _uiState.update { it.copy(query = action.query) }
             is Action.ChangeSort -> _uiState.update { it.copy(sort = action.sort) }
             is Action.Join -> join(action.groupId)
+            is Action.JoinByCode -> joinByCode(action.code)
+            Action.DismissJoinByCodeError -> _uiState.update { it.copy(joinByCodeError = null) }
             is Action.CancelRequest -> cancelRequest(action.groupId)
         }
     }
@@ -79,6 +83,32 @@ class DiscoverGroupsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: "가입에 실패했습니다.") }
+                }
+        }
+    }
+
+    /** 초대코드 가입 — 승인제와 무관하게 즉시 MEMBER, 목록에 있으면 카드 상태도 낙관 갱신한다 */
+    private fun joinByCode(code: String) {
+        val trimmed = code.trim().uppercase()
+
+        if (trimmed.isEmpty() || _uiState.value.isJoiningByCode) return
+
+        _uiState.update { it.copy(isJoiningByCode = true, joinByCodeError = null) }
+        viewModelScope.launch {
+            runCatching { joinGroupByCodeUseCase(trimmed) }
+                .onSuccess { group ->
+                    _uiState.update {
+                        it.copy(
+                            isJoiningByCode = false,
+                            localOverrides = it.localOverrides + (group.id to GroupMembershipStatus.MEMBER)
+                        )
+                    }
+                    _event.tryEmit(Event.JoinedByCode)
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(isJoiningByCode = false, joinByCodeError = e.message ?: "초대 코드 가입에 실패했습니다.")
+                    }
                 }
         }
     }
@@ -121,7 +151,10 @@ class DiscoverGroupsViewModel(
         val joiningGroupId: Long? = null,
         // 가입/신청/취소 직후 서버 재조회 없이 카드·다이얼로그 상태를 낙관적으로 덮어쓴다
         val localOverrides: Map<Long, GroupMembershipStatus> = emptyMap(),
-        val error: String? = null
+        val error: String? = null,
+        // 초대코드 다이얼로그 전용 — 목록 에러(error)와 분리해 다이얼로그 안에서만 그린다
+        val isJoiningByCode: Boolean = false,
+        val joinByCodeError: String? = null
     ) {
         fun membershipOf(group: DiscoverGroup): GroupMembershipStatus = localOverrides[group.id] ?: group.membership
     }
@@ -130,11 +163,16 @@ class DiscoverGroupsViewModel(
         data class Search(val query: String) : Action
         data class ChangeSort(val sort: DiscoverSort) : Action
         data class Join(val groupId: Long) : Action
+        data class JoinByCode(val code: String) : Action
+        data object DismissJoinByCodeError : Action
         data class CancelRequest(val groupId: Long) : Action
     }
 
     sealed interface Event {
         /** 자동 승인으로 즉시 가입 완료 — 화면이 세션 GroupsViewModel을 갱신한다 */
         data object Joined : Event
+
+        /** 초대코드로 가입 완료 — 화면이 다이얼로그를 닫고 세션 GroupsViewModel을 갱신한다 */
+        data object JoinedByCode : Event
     }
 }
