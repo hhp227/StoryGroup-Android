@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,8 +58,8 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 /**
  * 채팅방 — 웹 MessageThread 미러(말풍선 정렬·작성자 변경 시에만 아바타/이름·첨부 렌더링,
  * 웹처럼 시각 표기는 없음). 목록은 웹처럼 상단부터 채우는 일반 목록(위=과거, 아래=최신)이고
- * 진입/새 메시지 때 맨 아래로 스크롤한다. "이전 메시지 보기" 버튼(웹엔 없는 앱 확장)이 맨 위.
- * iosApp ChatRoomView.swift와 1:1 미러
+ * 진입/새 메시지 때 맨 아래로 스크롤한다. 상단 근처에 닿으면 이전 페이지를 자동 로드한다
+ * (무한 스크롤 — 웹엔 없는 앱 확장). iosApp ChatRoomView.swift와 1:1 미러
  */
 @Composable
 fun ChatRoomScreen(
@@ -75,11 +76,8 @@ fun ChatRoomScreen(
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
 
-    // 마지막 표시 인덱스 = 이전 메시지 로드 행(있으면 0번) + 메시지 수
-    fun lastDisplayIndex(): Int {
-        val headerCount = if (uiState.canLoadOlder || uiState.isLoadingOlder) 1 else 0
-        return (uiState.messages.size - 1 + headerCount).coerceAtLeast(0)
-    }
+    // 마지막 표시 인덱스 — 목록은 뒤집혀 그려지므로 맨 아래(최신) = 마지막 인덱스
+    fun lastDisplayIndex(): Int = (uiState.messages.size - 1).coerceAtLeast(0)
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -107,6 +105,15 @@ fun ChatRoomScreen(
                 listState.animateScrollToItem(lastDisplayIndex())
             }
         }
+    }
+    // 상단 근처에 닿으면 이전 페이지를 자동 로드한다(무한 스크롤) — 재진입·소진 시 과호출은 VM이
+    // 거른다. 초기 하단 정렬 전(진입 직후엔 인덱스 0)에는 발화하지 않는다. 로드로 위에 끼어든
+    // 페이지는 키 기반 앵커(첫 가시 메시지)가 같은 프레임에 위치를 유지해 줘 스크롤 보정이 필요 없다
+    LaunchedEffect(Unit) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { first ->
+                if (initialScrolled && first < 3) onAction(ChatRoomViewModel.Action.LoadOlder)
+            }
     }
     // 키보드가 올라와 리스트가 줄어드는 동안, 맨 아래 근처를 보고 있었다면 최신 메시지가 가려지지
     // 않게 바닥에 앵커시킨다(새 메시지 따라가기와 같은 규칙 — 과거 메시지를 읽는 중이면 그대로 둔다)
@@ -161,23 +168,9 @@ fun ChatRoomScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (uiState.canLoadOlder || uiState.isLoadingOlder) {
-                        item(key = "load-older") {
-                            Box(Modifier.fillParentMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                                if (uiState.isLoadingOlder) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = sg.accent
-                                    )
-                                } else {
-                                    TextButton(onClick = { onAction(ChatRoomViewModel.Action.LoadOlder) }) {
-                                        Text("이전 메시지 보기", color = sg.accent)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    // 이전 페이지가 위로 끼어도 위치가 유지되는 건 키 기반 앵커가 첫 가시 "메시지"에
+                    // 붙기 때문 — 로딩 표시를 행으로 추가하면(항상 0번) 앵커가 그리로 붙어 로드 후
+                    // 최상단으로 튀므로, 로딩 표시는 리스트 밖 오버레이로 그린다
                     // VM 목록은 최신순 — 화면은 뒤집어 오래된 순(위=과거)으로 그린다(웹 reverse 미러)
                     items(
                         count = uiState.messages.size,
@@ -195,6 +188,14 @@ fun ChatRoomScreen(
                         )
                     }
                 }
+            }
+            // 이전 페이지 로딩 표시 — 행이 아닌 오버레이(위 주석 참고)
+            if (uiState.isLoadingOlder) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp).size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = sg.accent
+                )
             }
         }
         uiState.actionError?.let {

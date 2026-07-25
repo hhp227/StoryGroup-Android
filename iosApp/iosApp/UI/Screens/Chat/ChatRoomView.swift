@@ -3,13 +3,23 @@ import Shared
 
 /// 채팅방 — 웹 MessageThread·Compose ChatRoomScreen 미러(말풍선 정렬·작성자 변경 시에만
 /// 아바타/이름·첨부 렌더링, 웹처럼 시각 표기는 없음). 목록은 오래된 순으로 그리고 새 메시지가
-/// 오면 맨 아래로 따라간다. "이전 메시지 보기" 버튼(웹엔 없는 앱 확장)이 맨 위에 놓인다.
+/// 오면 맨 아래로 따라간다. 상단 근처에 닿으면 이전 페이지를 자동 로드한다(무한 스크롤 —
+/// 웹엔 없는 앱 확장).
 struct ChatRoomView: View {
     @StateObject private var viewModel: ChatRoomViewModel
 
     let title: String
 
     @State private var input = ""
+
+    /// 이전 메시지 로드 앵커 — 위로 끼어드는 과거 메시지만큼 스크롤이 최상단(새 배치의 가장
+    /// 오래된 쪽)으로 튀므로, 트리거 시점 맨 위 메시지 id를 기억해 두고 로드 완료 시 복원한다.
+    /// SwiftUI(iOS 15)엔 Compose 키 앵커 같은 네이티브 위치 유지가 없어 보정 방식이 한계
+    @State private var olderAnchorId: Int64?
+
+    /// 초기 렌더는 최상단(가장 오래된 행)부터 그려져 자동 로드 트리거가 진입 즉시 발화한다 —
+    /// 첫 하단 정렬이 끝난 다음 런루프부터 연다
+    @State private var initialScrolled = false
 
     @Environment(\.sgColors) private var colors
 
@@ -37,16 +47,6 @@ struct ChatRoomView: View {
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 4) {
-                                if uiState.canLoadOlder || uiState.isLoadingOlder {
-                                    if uiState.isLoadingOlder {
-                                        ProgressView().padding(.vertical, 8)
-                                    } else {
-                                        Button("이전 메시지 보기") { viewModel.onAction(.loadOlder) }
-                                            .font(.subheadline)
-                                            .foregroundColor(colors.accent)
-                                            .padding(.vertical, 8)
-                                    }
-                                }
                                 // VM 목록은 최신순 — 화면은 뒤집어 오래된 순으로 그린다(웹 reverse 미러)
                                 let ordered = Array(uiState.messages.reversed())
 
@@ -57,20 +57,45 @@ struct ChatRoomView: View {
                                         showAuthor: index == 0 || ordered[index - 1].userId != message.userId
                                     )
                                     .id(message.id)
+                                    // 상단 근처 행이 나타나면 이전 페이지 자동 로드(무한 스크롤) —
+                                    // 재진입·소진 시 과호출은 VM이 거른다
+                                    .onAppear {
+                                        if initialScrolled && index < 3 {
+                                            // 트리거 시점 맨 위 = 로드된 것 중 가장 오래된 메시지
+                                            olderAnchorId = uiState.messages.last?.id
+                                            viewModel.onAction(.loadOlder)
+                                        }
+                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                         }
+                        // 이전 페이지 로딩 표시 — 행으로 넣으면 등장/소멸만큼 목록이 밀린다(오버레이 고정)
+                        .overlay(alignment: .top) {
+                            if uiState.isLoadingOlder {
+                                ProgressView().padding(.top, 8)
+                            }
+                        }
                         .onAppear {
                             if let latest = uiState.messages.first?.id {
                                 proxy.scrollTo(latest, anchor: .bottom)
                             }
+                            DispatchQueue.main.async { initialScrolled = true }
                         }
                         // 새 메시지 도착/전송 시 맨 아래로 따라간다(웹 auto-scroll 미러)
                         .onChange(of: uiState.messages.first?.id) { latest in
                             if let latest {
                                 withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
+                            }
+                        }
+                        // 이전 메시지 로드 완료 시 앵커 메시지를 상단에 다시 붙인다 —
+                        // 새로 끼워진 행 레이아웃이 잡힌 다음 런루프에 스크롤해야 위치가 정확하다
+                        .onChange(of: uiState.isLoadingOlder) { isLoadingOlder in
+                            guard !isLoadingOlder, let anchorId = olderAnchorId else { return }
+                            olderAnchorId = nil
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(anchorId, anchor: .top)
                             }
                         }
                         // 키보드가 올라와 리스트가 줄어들 때 최신 메시지가 가려지지 않게 따라간다.
