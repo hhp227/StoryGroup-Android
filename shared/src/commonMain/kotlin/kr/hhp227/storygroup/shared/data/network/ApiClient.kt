@@ -10,6 +10,7 @@ import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -48,6 +49,8 @@ fun createApiClient(
             explicitNulls = false
         })
     }
+    // STOMP 채팅 수신용 — 인증 토큰은 핸드셰이크가 아니라 STOMP CONNECT 프레임 헤더로 전달된다(StompSocket)
+    install(WebSockets)
     install(Auth) {
         bearer {
             loadTokens {

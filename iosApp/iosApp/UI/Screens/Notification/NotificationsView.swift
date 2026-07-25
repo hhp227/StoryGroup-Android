@@ -13,7 +13,12 @@ struct NotificationsView: View {
     }
 
     init(container: AppContainer) {
-        _viewModel = StateObject(wrappedValue: NotificationsViewModel(container: container))
+        _viewModel = StateObject(wrappedValue: NotificationsViewModel(
+            getNotificationsPagingDataUseCase: container.getNotificationsPagingDataUseCase,
+            getUnreadNotificationCountUseCase: container.getUnreadNotificationCountUseCase,
+            markNotificationAsReadUseCase: container.markNotificationAsReadUseCase,
+            markAllNotificationsAsReadUseCase: container.markAllNotificationsAsReadUseCase
+        ))
     }
 }
 

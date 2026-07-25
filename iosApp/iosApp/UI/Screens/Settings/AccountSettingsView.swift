@@ -198,7 +198,12 @@ struct AccountSettingsView: View {
     }
 
     init(container: AppContainer, profileViewModel: ProfileViewModel) {
-        _accountSettingsViewModel = StateObject(wrappedValue: AccountSettingsViewModel(container: container))
+        _accountSettingsViewModel = StateObject(wrappedValue: AccountSettingsViewModel(
+            getMyProfileUseCase: container.getMyProfileUseCase,
+            updateMyProfileUseCase: container.updateMyProfileUseCase,
+            changePasswordUseCase: container.changePasswordUseCase,
+            uploadImageUseCase: container.uploadImageUseCase
+        ))
         self.profileViewModel = profileViewModel
     }
 }

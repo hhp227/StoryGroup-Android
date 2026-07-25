@@ -59,6 +59,9 @@ struct MainShellView: View {
     /// 계정 설정 풀스크린 push — Compose NavHost(AccountSettingsRoute) 미러
     @State private var showAccountSettings = false
 
+    /// 채팅방 풀스크린 push — Compose NavHost(ChatRoomRoute) 미러
+    @State private var selectedChatRoom: ChatRoomRef? = nil
+
     var body: some View {
         navigationRoot
             .sheet(isPresented: $showSettings) {
@@ -74,6 +77,7 @@ struct MainShellView: View {
                 shellContent
                     .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                     .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
+                    .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
             }
         } else {
             NavigationView {
@@ -94,6 +98,14 @@ struct MainShellView: View {
                         }
                         .hidden()
                     )
+                    .background(
+                        NavigationLink(isActive: showChatRoom) {
+                            chatRoomDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
             }
             .navigationViewStyle(.stack)
         }
@@ -107,6 +119,7 @@ struct MainShellView: View {
                 container: container,
                 profile: profileViewModel.uiState.profile,
                 onOpenGroup: { selectedGroupId = $0.id },
+                onOpenChatRoom: { selectedChatRoom = $0 },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
@@ -117,6 +130,7 @@ struct MainShellView: View {
                 container: container,
                 profile: profileViewModel.uiState.profile,
                 onOpenGroup: { selectedGroupId = $0.id },
+                onOpenChatRoom: { selectedChatRoom = $0 },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
@@ -126,6 +140,12 @@ struct MainShellView: View {
     @ViewBuilder private var groupDetailDestination: some View {
         if let groupId = selectedGroupId {
             GroupDetailView(groupId: groupId, container: container)
+        }
+    }
+
+    @ViewBuilder private var chatRoomDestination: some View {
+        if let room = selectedChatRoom {
+            ChatRoomView(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title, container: container)
         }
     }
 
@@ -142,8 +162,16 @@ struct MainShellView: View {
         )
     }
 
+    /// pop(백 버튼/스와이프) 시 selectedChatRoom을 nil로 되돌리는 브리지
+    private var showChatRoom: Binding<Bool> {
+        Binding(
+            get: { selectedChatRoom != nil },
+            set: { if !$0 { selectedChatRoom = nil } }
+        )
+    }
+
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
-        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(container: container))
+        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(getMyProfileUseCase: container.getMyProfileUseCase))
         self.container = container
         self.theme = theme
         self.onLogout = onLogout
@@ -164,6 +192,9 @@ struct DestinationView: View {
     /// 그룹 상세 풀스크린 push — Compose onOpenGroupDetail 미러(MainShellView selectedGroupId)
     let onOpenGroup: (Group) -> Void
 
+    /// 채팅방 풀스크린 push — Compose onOpenChatRoom 미러(MainShellView selectedChatRoom)
+    let onOpenChatRoom: (ChatRoomRef) -> Void
+
     let onOpenSettings: () -> Void
 
     /// 계정 설정 풀스크린 push — Compose onOpenAccountSettings 미러(MainShellView showAccountSettings)
@@ -180,7 +211,7 @@ struct DestinationView: View {
         case .friends:
             FriendsView()
         case .chat:
-            ChatView()
+            ChatView(container: container, onOpenChatRoom: onOpenChatRoom)
         case .notifications:
             NotificationsView(container: container)
         case .profile:

@@ -72,9 +72,12 @@ final class CreateGroupViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        createGroupUseCase = container.createGroupUseCase
-        uploadImageUseCase = container.uploadImageUseCase
+    init(
+        createGroupUseCase: CreateGroupUseCase,
+        uploadImageUseCase: UploadImageUseCase
+    ) {
+        self.createGroupUseCase = createGroupUseCase
+        self.uploadImageUseCase = uploadImageUseCase
     }
 
     struct UiState {

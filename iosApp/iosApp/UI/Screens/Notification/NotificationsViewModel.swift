@@ -82,13 +82,18 @@ final class NotificationsViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        getUnreadNotificationCountUseCase = container.getUnreadNotificationCountUseCase
-        markNotificationAsReadUseCase = container.markNotificationAsReadUseCase
-        markAllNotificationsAsReadUseCase = container.markAllNotificationsAsReadUseCase
+    init(
+        getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase,
+        getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase,
+        markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
+        markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+    ) {
+        self.getUnreadNotificationCountUseCase = getUnreadNotificationCountUseCase
+        self.markNotificationAsReadUseCase = markNotificationAsReadUseCase
+        self.markAllNotificationsAsReadUseCase = markAllNotificationsAsReadUseCase
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        container.getNotificationsPagingDataUseCase()
+        getNotificationsPagingDataUseCase()
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)

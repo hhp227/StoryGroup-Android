@@ -28,7 +28,12 @@ struct DiscoverGroupsView: View {
     }
 
     init(container: AppContainer, groupsViewModel: GroupsViewModel) {
-        _viewModel = StateObject(wrappedValue: DiscoverGroupsViewModel(container: container))
+        _viewModel = StateObject(wrappedValue: DiscoverGroupsViewModel(
+            getDiscoverGroupsPagingDataUseCase: container.getDiscoverGroupsPagingDataUseCase,
+            joinGroupUseCase: container.joinGroupUseCase,
+            joinGroupByCodeUseCase: container.joinGroupByCodeUseCase,
+            cancelJoinRequestUseCase: container.cancelJoinRequestUseCase
+        ))
         self.groupsViewModel = groupsViewModel
     }
 }

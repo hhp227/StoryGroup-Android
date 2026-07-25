@@ -19,6 +19,9 @@ struct DrawerShellView: View {
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
+    /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenChatRoom: (ChatRoomRef) -> Void
+
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
@@ -41,6 +44,7 @@ struct DrawerShellView: View {
                             container: container,
                             profile: profile,
                             onOpenGroup: onOpenGroup,
+                            onOpenChatRoom: onOpenChatRoom,
                             onOpenSettings: { showSettings = true },
                             onOpenAccountSettings: onOpenAccountSettings,
                             onLogout: onLogout
@@ -81,8 +85,11 @@ struct DrawerShellView: View {
             }
         }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { homeBarScrimVisible = $0 }
-        // 홈은 헤더 사진 위 투명→스크롤 시 표시, 나머지 탭은 항상 표시(Compose SgTopBar 미러)
-        .navigationBarScrim(visible: current == .home ? homeBarScrimVisible : true)
+        // 홈은 헤더 사진 위 투명→스크롤 시 표시, 나머지 탭은 항상 표시(Compose SgTopBar 미러).
+        // 단 드로어가 열려 있는 동안은 끈다 — UIKit 내비바는 SwiftUI 콘텐츠보다 항상 위에
+        // 그려져서, 배경이 켜져 있으면 드로어 상단이 바에 가려진다(Compose 스크림이 톱바까지
+        // 덮는 것의 근사)
+        .navigationBarScrim(visible: !drawerOpen && (current == .home ? homeBarScrimVisible : true))
     }
 
     // 구 앱 nav_header_main 미러: 프로필 헤더 + 목적지 + 설정·로그아웃

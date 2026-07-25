@@ -51,6 +51,8 @@ kotlin {
             api(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
             implementation(libs.ktor.client.auth)
+            // STOMP 채팅 실시간 수신(웹소켓) — okhttp/darwin 엔진 모두 지원
+            implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.serialization.kotlinxJson)
         }
         commonTest.dependencies {

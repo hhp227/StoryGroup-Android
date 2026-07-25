@@ -33,6 +33,13 @@ final class AppContainer {
     let getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase
     let markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
     let markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+    let getGroupChatRoomsUseCase: GetGroupChatRoomsUseCase
+    let getDirectRoomsUseCase: GetDirectRoomsUseCase
+    let getChatMessagesUseCase: GetChatMessagesUseCase
+    let sendChatMessageUseCase: SendChatMessageUseCase
+    let markChatMessagesReadUseCase: MarkChatMessagesReadUseCase
+    let observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase
+    let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
@@ -46,6 +53,12 @@ final class AppContainer {
         let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
         let mediaRepository = MediaRepositoryImpl(client: client)
         let notificationRepository = NotificationRepositoryImpl(client: client)
+        // Kotlin 기본 인자(baseUrl)는 ObjC로 내보내지지 않아 명시 전달(createApiClient와 동일)
+        let chatRepository = ChatRepositoryImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
+        )
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -76,5 +89,12 @@ final class AppContainer {
         getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository: notificationRepository)
         markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository: notificationRepository)
         markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository: notificationRepository)
+        getGroupChatRoomsUseCase = GetGroupChatRoomsUseCase(chatRepository: chatRepository)
+        getDirectRoomsUseCase = GetDirectRoomsUseCase(chatRepository: chatRepository)
+        getChatMessagesUseCase = GetChatMessagesUseCase(chatRepository: chatRepository)
+        sendChatMessageUseCase = SendChatMessageUseCase(chatRepository: chatRepository)
+        markChatMessagesReadUseCase = MarkChatMessagesReadUseCase(chatRepository: chatRepository)
+        observeChatRoomEventsUseCase = ObserveChatRoomEventsUseCase(chatRepository: chatRepository)
+        getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }

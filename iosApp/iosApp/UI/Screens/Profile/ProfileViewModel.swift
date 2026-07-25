@@ -33,8 +33,8 @@ final class ProfileViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        getMyProfileUseCase = container.getMyProfileUseCase
+    init(getMyProfileUseCase: GetMyProfileUseCase) {
+        self.getMyProfileUseCase = getMyProfileUseCase
         // 세션 수명(MainShellView)에 소유되어 "생성 = 세션 진입 1회" — 바로 로드한다(재로그인 시 재생성)
         load()
     }

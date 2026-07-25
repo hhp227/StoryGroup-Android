@@ -124,7 +124,12 @@ struct CreatePostView: View {
     }
 
     init(container: AppContainer, groupId: Int64?, onCreated: @escaping () -> Void) {
-        _viewModel = StateObject(wrappedValue: CreatePostViewModel(container: container, groupId: groupId))
+        _viewModel = StateObject(wrappedValue: CreatePostViewModel(
+            groupId: groupId,
+            createPostUseCase: container.createPostUseCase,
+            createLoungePostUseCase: container.createLoungePostUseCase,
+            uploadImageUseCase: container.uploadImageUseCase
+        ))
         self.onCreated = onCreated
     }
 }

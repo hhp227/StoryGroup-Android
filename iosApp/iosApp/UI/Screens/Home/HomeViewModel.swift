@@ -26,10 +26,10 @@ final class HomeViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
+    init(getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase) {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: getLoungePostsPagingDataUseCase().cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
-        container.getLoungePostsPagingDataUseCase()
+        getLoungePostsPagingDataUseCase()
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)

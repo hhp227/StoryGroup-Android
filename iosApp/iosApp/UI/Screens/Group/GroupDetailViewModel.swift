@@ -136,18 +136,27 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer, groupId: Int64) {
+    init(
+        groupId: Int64,
+        getGroupUseCase: GetGroupUseCase,
+        getGroupMembersUseCase: GetGroupMembersUseCase,
+        getJoinRequestsUseCase: GetJoinRequestsUseCase,
+        approveJoinRequestUseCase: ApproveJoinRequestUseCase,
+        rejectJoinRequestUseCase: RejectJoinRequestUseCase,
+        createGroupInviteUseCase: CreateGroupInviteUseCase,
+        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+    ) {
         self.groupId = groupId
-        getGroupUseCase = container.getGroupUseCase
-        getGroupMembersUseCase = container.getGroupMembersUseCase
-        getJoinRequestsUseCase = container.getJoinRequestsUseCase
-        approveJoinRequestUseCase = container.approveJoinRequestUseCase
-        rejectJoinRequestUseCase = container.rejectJoinRequestUseCase
-        createGroupInviteUseCase = container.createGroupInviteUseCase
+        self.getGroupUseCase = getGroupUseCase
+        self.getGroupMembersUseCase = getGroupMembersUseCase
+        self.getJoinRequestsUseCase = getJoinRequestsUseCase
+        self.approveJoinRequestUseCase = approveJoinRequestUseCase
+        self.rejectJoinRequestUseCase = rejectJoinRequestUseCase
+        self.createGroupInviteUseCase = createGroupInviteUseCase
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: useCase(groupId).cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
-        container.getGroupPostsPagingDataUseCase(groupId: groupId)
+        getGroupPostsPagingDataUseCase(groupId: groupId)
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
