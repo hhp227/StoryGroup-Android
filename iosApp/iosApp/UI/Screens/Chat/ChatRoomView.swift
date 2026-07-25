@@ -74,12 +74,18 @@ struct ChatRoomView: View {
                             }
                         }
                         // 키보드가 올라와 리스트가 줄어들 때 최신 메시지가 가려지지 않게 따라간다.
-                        // willShow 시점엔 키보드 회피 인셋이 아직 반영 전일 수 있어 스크롤이 짧게
-                        // 끝나기도 한다(간헐적 가림) — 애니메이션이 끝난 didShow에서 한 번 더 보정
+                        // willShow 즉시는 SwiftUI 키보드 인셋 반영 전이라 스크롤이 짧게 끝난다 —
+                        // 한 런루프 미뤄 인셋 커밋 후, 키보드와 같은 시간으로 애니메이션하면
+                        // 리스트가 키보드와 동시에 밀려 올라간다. didShow는 빗나갔을 때의 보정용
                         .onReceive(
                             NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
-                        ) { _ in
-                            scrollToLatest(proxy)
+                        ) { notification in
+                            let duration = notification
+                                .userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+
+                            DispatchQueue.main.async {
+                                scrollToLatest(proxy, duration: duration ?? 0.25)
+                            }
                         }
                         .onReceive(
                             NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)
@@ -109,9 +115,11 @@ struct ChatRoomView: View {
         }
     }
 
-    private func scrollToLatest(_ proxy: ScrollViewProxy) {
+    private func scrollToLatest(_ proxy: ScrollViewProxy, duration: Double? = nil) {
         if let latest = viewModel.uiState.messages.first?.id {
-            withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
+            withAnimation(duration.map { Animation.easeOut(duration: $0) } ?? .default) {
+                proxy.scrollTo(latest, anchor: .bottom)
+            }
         }
     }
 
