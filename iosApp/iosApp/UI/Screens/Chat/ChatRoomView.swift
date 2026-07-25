@@ -73,13 +73,18 @@ struct ChatRoomView: View {
                                 withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
                             }
                         }
-                        // 키보드가 올라와 리스트가 줄어들 때 최신 메시지가 가려지지 않게 따라간다
+                        // 키보드가 올라와 리스트가 줄어들 때 최신 메시지가 가려지지 않게 따라간다.
+                        // willShow 시점엔 키보드 회피 인셋이 아직 반영 전일 수 있어 스크롤이 짧게
+                        // 끝나기도 한다(간헐적 가림) — 애니메이션이 끝난 didShow에서 한 번 더 보정
                         .onReceive(
                             NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
                         ) { _ in
-                            if let latest = uiState.messages.first?.id {
-                                withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
-                            }
+                            scrollToLatest(proxy)
+                        }
+                        .onReceive(
+                            NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)
+                        ) { _ in
+                            scrollToLatest(proxy)
                         }
                     }
                 }
@@ -101,6 +106,12 @@ struct ChatRoomView: View {
             switch event {
             case .sent: input = ""
             }
+        }
+    }
+
+    private func scrollToLatest(_ proxy: ScrollViewProxy) {
+        if let latest = viewModel.uiState.messages.first?.id {
+            withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
         }
     }
 
