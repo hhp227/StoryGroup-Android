@@ -171,7 +171,8 @@ private struct MessageRow: View {
     @Environment(\.sgColors) private var colors
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        // 아바타는 상단 정렬 — Compose Row 기본값(Top) 미러
+        HStack(alignment: .top, spacing: 8) {
             if isMine {
                 Spacer(minLength: 48)
             } else {
