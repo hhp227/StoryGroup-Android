@@ -6,6 +6,10 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlin.io.encoding.Base64
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kr.hhp227.storygroup.shared.data.network.clearAuthTokenCache
 import kr.hhp227.storygroup.shared.data.network.dto.LoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.RefreshTokenRequest
@@ -23,6 +27,16 @@ class AuthRepositoryImpl(
 ) : AuthRepository {
 
     override fun isLoggedIn(): Boolean = tokenStorage.load() != null
+
+    override fun currentUserId(): Long? {
+        val payload = tokenStorage.load()?.accessToken?.split('.')?.getOrNull(1) ?: return null
+        return runCatching {
+            val decoded = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
+                .decode(payload)
+                .decodeToString()
+            Json.parseToJsonElement(decoded).jsonObject["sub"]?.jsonPrimitive?.content?.toLong()
+        }.getOrNull()
+    }
 
     override suspend fun register(name: String, email: String, password: String): Result<User> =
         runCatching {

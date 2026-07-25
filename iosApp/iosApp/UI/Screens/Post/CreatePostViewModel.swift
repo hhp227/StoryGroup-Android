@@ -76,11 +76,16 @@ final class CreatePostViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer, groupId: Int64?) {
+    init(
+        groupId: Int64?,
+        createPostUseCase: CreatePostUseCase,
+        createLoungePostUseCase: CreateLoungePostUseCase,
+        uploadImageUseCase: UploadImageUseCase
+    ) {
         self.groupId = groupId
-        createPostUseCase = container.createPostUseCase
-        createLoungePostUseCase = container.createLoungePostUseCase
-        uploadImageUseCase = container.uploadImageUseCase
+        self.createPostUseCase = createPostUseCase
+        self.createLoungePostUseCase = createLoungePostUseCase
+        self.uploadImageUseCase = uploadImageUseCase
     }
 
     struct UiState {

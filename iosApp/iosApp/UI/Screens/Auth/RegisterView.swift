@@ -93,7 +93,7 @@ struct RegisterView: View {
         onRegistered: @escaping () -> Void,
         onNavigateToLogin: @escaping () -> Void
     ) {
-        _registerViewModel = StateObject(wrappedValue: RegisterViewModel(container: container))
+        _registerViewModel = StateObject(wrappedValue: RegisterViewModel(registerUseCase: container.registerUseCase))
         self.onRegistered = onRegistered
         self.onNavigateToLogin = onNavigateToLogin
     }

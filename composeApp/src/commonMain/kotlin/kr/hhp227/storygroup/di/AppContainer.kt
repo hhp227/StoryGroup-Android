@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.di
 
 import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.ChatRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
@@ -11,6 +12,7 @@ import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
+import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
@@ -23,7 +25,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
@@ -40,9 +46,12 @@ import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 
@@ -62,6 +71,7 @@ class AppContainer(
     private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
     private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
     private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient)
+    private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -92,4 +102,11 @@ class AppContainer(
     val getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository)
     val markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository)
     val markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository)
+    val getGroupChatRoomsUseCase = GetGroupChatRoomsUseCase(chatRepository)
+    val getDirectRoomsUseCase = GetDirectRoomsUseCase(chatRepository)
+    val getChatMessagesUseCase = GetChatMessagesUseCase(chatRepository)
+    val sendChatMessageUseCase = SendChatMessageUseCase(chatRepository)
+    val markChatMessagesReadUseCase = MarkChatMessagesReadUseCase(chatRepository)
+    val observeChatRoomEventsUseCase = ObserveChatRoomEventsUseCase(chatRepository)
+    val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
 }

@@ -19,6 +19,9 @@ struct TabShellView: View {
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
+    /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenChatRoom: (ChatRoomRef) -> Void
+
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
@@ -39,6 +42,7 @@ struct TabShellView: View {
                         container: container,
                         profile: profile,
                         onOpenGroup: onOpenGroup,
+                        onOpenChatRoom: onOpenChatRoom,
                         onOpenSettings: { showSettings = true },
                         onOpenAccountSettings: onOpenAccountSettings,
                         onLogout: onLogout

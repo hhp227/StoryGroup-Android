@@ -20,7 +20,7 @@ struct GroupsView: View {
     }
 
     init(container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
-        _viewModel = StateObject(wrappedValue: GroupsViewModel(container: container))
+        _viewModel = StateObject(wrappedValue: GroupsViewModel(getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase))
         self.container = container
         self.onOpenGroup = onOpenGroup
     }

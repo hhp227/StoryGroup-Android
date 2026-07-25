@@ -45,10 +45,14 @@ final class LoginViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        loginUseCase = container.loginUseCase
-        logoutUseCase = container.logoutUseCase
-        uiState = UiState(isLoggedIn: container.isLoggedInUseCase.invoke())
+    init(
+        isLoggedInUseCase: IsLoggedInUseCase,
+        loginUseCase: LoginUseCase,
+        logoutUseCase: LogoutUseCase
+    ) {
+        self.loginUseCase = loginUseCase
+        self.logoutUseCase = logoutUseCase
+        uiState = UiState(isLoggedIn: isLoggedInUseCase.invoke())
     }
 
     struct UiState {

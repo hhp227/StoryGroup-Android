@@ -35,7 +35,11 @@ struct AppRootView: View {
 
     init(container: AppContainer) {
         self.container = container
-        _loginViewModel = StateObject(wrappedValue: LoginViewModel(container: container))
+        _loginViewModel = StateObject(wrappedValue: LoginViewModel(
+            isLoggedInUseCase: container.isLoggedInUseCase,
+            loginUseCase: container.loginUseCase,
+            logoutUseCase: container.logoutUseCase
+        ))
     }
 }
 

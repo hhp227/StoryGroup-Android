@@ -127,7 +127,10 @@ struct CreateGroupView: View {
     }
 
     init(container: AppContainer, groupsViewModel: GroupsViewModel) {
-        _viewModel = StateObject(wrappedValue: CreateGroupViewModel(container: container))
+        _viewModel = StateObject(wrappedValue: CreateGroupViewModel(
+            createGroupUseCase: container.createGroupUseCase,
+            uploadImageUseCase: container.uploadImageUseCase
+        ))
         self.groupsViewModel = groupsViewModel
     }
 }

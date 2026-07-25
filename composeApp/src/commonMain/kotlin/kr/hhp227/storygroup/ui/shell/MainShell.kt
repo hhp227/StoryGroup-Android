@@ -49,6 +49,8 @@ fun MainShell(
     themeState: ThemeState,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    // 채팅방 풀스크린 목적지(그룹 상세와 동일한 NavHost 배선) — 그룹 방은 groupId, DM은 null
+    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     // 홈(라운지) 글쓰기 성공 신호 — HomeScreen이 소비하고 onHomeRefreshHandled로 소거한다
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
@@ -69,6 +71,7 @@ fun MainShell(
                 onDestinationSelected = { currentDestination = it },
                 onOpenGroupDetail = onOpenGroupDetail,
                 onCreatePost = onCreatePost,
+                onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
                 onOpenSettings = { showSettings = true },
@@ -82,6 +85,7 @@ fun MainShell(
                 onDestinationSelected = { currentDestination = it },
                 onOpenGroupDetail = onOpenGroupDetail,
                 onCreatePost = onCreatePost,
+                onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
                 onOpenSettings = { showSettings = true },
@@ -111,6 +115,7 @@ internal fun DestinationContent(
     destination: MainDestination,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -132,6 +137,7 @@ internal fun DestinationContent(
                             destination = dest,
                             onOpenGroupDetail = onOpenGroupDetail,
                             onCreatePost = onCreatePost,
+                            onOpenChatRoom = onOpenChatRoom,
                             homeRefreshRequested = homeRefreshRequested,
                             onHomeRefreshHandled = onHomeRefreshHandled,
                             onOpenNotifications = onOpenNotifications,
@@ -162,6 +168,7 @@ private fun DestinationScreen(
     destination: MainDestination,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -190,7 +197,7 @@ private fun DestinationScreen(
             navigationIcon = menuNavigationIcon
         )
         MainDestination.FRIENDS -> FriendsScreen()
-        MainDestination.CHAT -> ChatScreen()
+        MainDestination.CHAT -> ChatScreen(onOpenChatRoom = onOpenChatRoom)
         MainDestination.NOTIFICATIONS -> NotificationsScreen()
         MainDestination.PROFILE -> ProfileScreen(
             onOpenAccountSettings = onOpenAccountSettings,

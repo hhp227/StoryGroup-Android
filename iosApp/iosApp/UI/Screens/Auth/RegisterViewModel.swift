@@ -35,8 +35,8 @@ final class RegisterViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        registerUseCase = container.registerUseCase
+    init(registerUseCase: RegisterUseCase) {
+        self.registerUseCase = registerUseCase
     }
 
     struct UiState {

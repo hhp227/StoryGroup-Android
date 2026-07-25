@@ -92,11 +92,15 @@ final class DiscoverGroupsViewModel: MviViewModel {
         }
     }
 
-    init(container: AppContainer) {
-        let getDiscoverGroupsPagingDataUseCase = container.getDiscoverGroupsPagingDataUseCase
-        joinGroupUseCase = container.joinGroupUseCase
-        joinGroupByCodeUseCase = container.joinGroupByCodeUseCase
-        cancelJoinRequestUseCase = container.cancelJoinRequestUseCase
+    init(
+        getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase,
+        joinGroupUseCase: JoinGroupUseCase,
+        joinGroupByCodeUseCase: JoinGroupByCodeUseCase,
+        cancelJoinRequestUseCase: CancelJoinRequestUseCase
+    ) {
+        self.joinGroupUseCase = joinGroupUseCase
+        self.joinGroupByCodeUseCase = joinGroupByCodeUseCase
+        self.cancelJoinRequestUseCase = cancelJoinRequestUseCase
 
         $uiState
             .map { ($0.query, $0.sort) }

@@ -29,6 +29,7 @@ import kr.hhp227.storygroup.di.LocalSessionViewModelStoreOwner
 import kr.hhp227.storygroup.ui.screens.auth.LoginScreen
 import kr.hhp227.storygroup.ui.screens.auth.LoginViewModel
 import kr.hhp227.storygroup.ui.screens.auth.RegisterScreen
+import kr.hhp227.storygroup.ui.screens.chat.ChatRoomScreen
 import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
@@ -52,6 +53,10 @@ internal data object ShellRoute
 
 @Serializable
 internal data class GroupDetailRoute(val groupId: Long)
+
+/** 채팅방 — 그룹 채팅(groupId 있음)/DM(null) 공용. title은 허브가 아는 표시명(그룹명/상대 이름) */
+@Serializable
+internal data class ChatRoomRoute(val chatRoomId: Long, val groupId: Long?, val title: String)
 
 /** 게시글 작성 — groupId null이면 라운지(홈 피드)에 게시(웹 메인 피드 폼 미러) */
 @Serializable
@@ -127,6 +132,9 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 themeState = themeState,
                 onOpenGroupDetail = { group -> navController.navigate(GroupDetailRoute(group.id)) },
                 onCreatePost = { navController.navigate(CreatePostRoute(groupId = null)) },
+                onOpenChatRoom = { chatRoomId, groupId, title ->
+                    navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                },
                 homeRefreshRequested = homeRefreshPending,
                 onHomeRefreshHandled = { homeRefreshPending = false },
                 onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
@@ -152,6 +160,20 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onCreatePost = { navController.navigate(CreatePostRoute(groupId = route.groupId)) },
                             refreshRequested = postCreated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<ChatRoomRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<ChatRoomRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        ChatRoomScreen(
+                            chatRoomId = route.chatRoomId,
+                            groupId = route.groupId,
+                            title = route.title,
+                            onBack = { navController.popBackStack() },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )

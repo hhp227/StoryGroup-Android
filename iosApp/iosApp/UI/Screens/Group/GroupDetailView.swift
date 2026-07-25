@@ -20,7 +20,16 @@ struct GroupDetailView: View {
     }
 
     init(groupId: Int64, container: AppContainer) {
-        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(container: container, groupId: groupId))
+        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
+            groupId: groupId,
+            getGroupUseCase: container.getGroupUseCase,
+            getGroupMembersUseCase: container.getGroupMembersUseCase,
+            getJoinRequestsUseCase: container.getJoinRequestsUseCase,
+            approveJoinRequestUseCase: container.approveJoinRequestUseCase,
+            rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
+            createGroupInviteUseCase: container.createGroupInviteUseCase,
+            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase
+        ))
         self.container = container
     }
 }
