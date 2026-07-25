@@ -143,31 +143,18 @@ private struct GroupCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // (SwiftUI.Group 래퍼는 쓰지 않는다 — 이 파일은 도메인 Group을 스코프 임포트해서 이름이 겹친다)
-            ZStack(alignment: .topTrailing) {
-                // 웹 GroupCover 미러 — group.image 있으면 실사진, 없으면 그룹별 그라데이션+이니셜 폴백
-                if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
-                    AsyncImage(url: url) { phase in
-                        if case .success(let image) = phase {
-                            image.resizable().scaledToFill()
-                        } else {
-                            groupCoverGradient(groupId: group.id, colors: colors)
-                        }
-                    }
-                } else {
-                    ZStack {
-                        groupCoverGradient(groupId: group.id, colors: colors)
-                        Text(String(group.name.prefix(1)))
-                            .font(.largeTitle.bold())
-                            .foregroundColor(.white)
+            // scaledToFill 이미지는 제안 프레임보다 커질 수 있어 GeometryReader로 셀 크기를 고정한다
+            GeometryReader { geometry in
+                ZStack(alignment: .topTrailing) {
+                    cover
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                    if group.myRole != .member {
+                        RoleChip(role: group.myRole).padding(8)
                     }
                 }
-                if group.myRole != .member {
-                    RoleChip(role: group.myRole).padding(8)
-                }
+                .clipShape(RoundedRectangle(cornerRadius: colors.radiusCard, style: .continuous))
             }
             .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: colors.radiusCard, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(group.name)
@@ -180,6 +167,27 @@ private struct GroupCard: View {
                         .foregroundColor(colors.inkSoft)
                         .lineLimit(2)
                 }
+            }
+        }
+    }
+
+    // 웹 GroupCover 미러 — group.image 있으면 실사진, 없으면 그룹별 그라데이션+이니셜 폴백.
+    // (SwiftUI.Group 래퍼는 쓰지 않는다 — 이 파일은 도메인 Group을 스코프 임포트해서 이름이 겹친다)
+    @ViewBuilder private var cover: some View {
+        if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
+            AsyncImage(url: url) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    groupCoverGradient(groupId: group.id, colors: colors)
+                }
+            }
+        } else {
+            ZStack {
+                groupCoverGradient(groupId: group.id, colors: colors)
+                Text(String(group.name.prefix(1)))
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
             }
         }
     }
