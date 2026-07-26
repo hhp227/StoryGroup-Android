@@ -71,6 +71,13 @@ private struct GroupDetailContent: View {
             .background(colors.paper)
             // 커버가 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드를 함께 갱신한다.
+            // Compose GroupDetailScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
+            .refreshable {
+                viewModel.onAction(.refresh)
+                viewModel.onAction(.refreshFeed)
+                await lazyPagingItems.awaitRefresh()
+            }
         }
         // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러
         .overlay(alignment: .bottomTrailing) {

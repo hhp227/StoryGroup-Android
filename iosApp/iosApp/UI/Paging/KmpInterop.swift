@@ -181,6 +181,17 @@ extension Publisher where Failure == Never {
     }
 }
 
+// 당겨서 새로고침(refreshable)용 — refresh 패스가 끝날 때까지 시스템 스피너를 유지한다.
+// 브리지에 완료 콜백이 없어 LoadState를 폴링한다 — 이벤트 경유 refresh()가 반영될 틈을 먼저 준다.
+extension LazyPagingItems {
+    @MainActor func awaitRefresh() async {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        while loadState.refresh is LoadState.Loading {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+}
+
 // Kotlin FlowAdapter(콜드 Flow)를 Combine Publisher로 감싸는 어댑터
 struct KotlinFlowPublisher<Output>: Publisher {
     typealias Failure = Never

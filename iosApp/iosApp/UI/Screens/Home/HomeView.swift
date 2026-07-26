@@ -59,6 +59,12 @@ private struct HomeContent: View {
             .background(colors.paper)
             // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 당겨서 새로고침 — 글쓰기 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
+            // Compose HomeScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
+            .refreshable {
+                viewModel.onAction(.refresh)
+                await lazyPagingItems.awaitRefresh()
+            }
         }
         // 레거시 fragment_lounge.xml의 fab(bottom|end) 미러
         .overlay(alignment: .bottomTrailing) {
