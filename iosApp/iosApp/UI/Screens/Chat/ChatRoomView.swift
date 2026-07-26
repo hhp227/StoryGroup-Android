@@ -2,24 +2,15 @@ import SwiftUI
 import Shared
 
 /// 채팅방 — 웹 MessageThread·Compose ChatRoomScreen 미러(말풍선 정렬·작성자 변경 시에만
-/// 아바타/이름·첨부 렌더링, 웹처럼 시각 표기는 없음). 목록은 오래된 순으로 그리고 새 메시지가
-/// 오면 맨 아래로 따라간다. 상단 근처에 닿으면 이전 페이지를 자동 로드한다(무한 스크롤 —
-/// 웹엔 없는 앱 확장).
+/// 아바타/이름·첨부 렌더링, 웹처럼 시각 표기는 없음). 목록은 플립 ScrollView(세로 뒤집기+행
+/// 되뒤집기)로 그리되 메시지가 적으면 Compose처럼 상단부터 채우고, 새 메시지가 오면 맨 아래로
+/// 따라간다. 화면 위 근처에 닿으면 이전 페이지를 자동 로드한다(무한 스크롤 — 웹엔 없는 앱 확장).
 struct ChatRoomView: View {
     @StateObject private var viewModel: ChatRoomViewModel
 
     let title: String
 
     @State private var input = ""
-
-    /// 이전 메시지 로드 앵커 — 위로 끼어드는 과거 메시지만큼 스크롤이 최상단(새 배치의 가장
-    /// 오래된 쪽)으로 튀므로, 트리거 시점 맨 위 메시지 id를 기억해 두고 로드 완료 시 복원한다.
-    /// SwiftUI(iOS 15)엔 Compose 키 앵커 같은 네이티브 위치 유지가 없어 보정 방식이 한계
-    @State private var olderAnchorId: Int64?
-
-    /// 초기 렌더는 최상단(가장 오래된 행)부터 그려져 자동 로드 트리거가 진입 즉시 발화한다 —
-    /// 첫 하단 정렬이 끝난 다음 런루프부터 연다
-    @State private var initialScrolled = false
 
     @Environment(\.sgColors) private var colors
 
@@ -45,57 +36,55 @@ struct ChatRoomView: View {
                             systemImage: "bubble.left"
                         )
                     } else {
-                        ScrollView {
-                            LazyVStack(spacing: 4) {
-                                // VM 목록은 최신순 — 화면은 뒤집어 오래된 순으로 그린다(웹 reverse 미러)
-                                let ordered = Array(uiState.messages.reversed())
+                        // 플립 리스트 — ScrollView를 세로로 뒤집고 행을 되뒤집으면 레이아웃 원점(0)이
+                        // 화면 맨 아래가 된다: 진입 즉시 최신부터 보이고, 이전 페이지 append는
+                        // 레이아웃 아래(화면 위)로만 자라 스크롤 보정 없이 위치가 그대로 유지된다
+                        // (Compose 키 앵커와 동급). VM 최신순 목록을 그대로 쓴다(플립이 곧 reverse —
+                        // 웹 reverse 미러). 인디케이터는 플립 탓에 거꾸로 움직여 숨긴다
+                        GeometryReader { geo in
+                            ScrollView(showsIndicators: false) {
+                                LazyVStack(spacing: 4) {
+                                    let messages = uiState.messages
 
-                                ForEach(Array(ordered.enumerated()), id: \.element.id) { index, message in
-                                    MessageRow(
-                                        message: message,
-                                        isMine: message.userId == uiState.myUserId,
-                                        showAuthor: index == 0 || ordered[index - 1].userId != message.userId
-                                    )
-                                    .id(message.id)
-                                    // 상단 근처 행이 나타나면 이전 페이지 자동 로드(무한 스크롤) —
-                                    // 재진입·소진 시 과호출은 VM이 거른다
-                                    .onAppear {
-                                        if initialScrolled && index < 3 {
-                                            // 트리거 시점 맨 위 = 로드된 것 중 가장 오래된 메시지
-                                            olderAnchorId = uiState.messages.last?.id
-                                            viewModel.onAction(.loadOlder)
+                                    ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                                        MessageRow(
+                                            message: message,
+                                            isMine: message.userId == uiState.myUserId,
+                                            // 최신순 목록이라 시간상 직전 메시지는 다음 인덱스(Compose 미러)
+                                            showAuthor: index == messages.count - 1
+                                                || messages[index + 1].userId != message.userId
+                                        )
+                                        .scaleEffect(x: 1, y: -1)
+                                        .id(message.id)
+                                        // 화면 위(가장 오래된 쪽) 근처 행이 나타나면 이전 페이지 자동 로드 —
+                                        // 과호출은 VM이 거른다. 초기 렌더는 레이아웃 원점(최신)부터 채워져
+                                        // 오래된 행이 미리 만들어지지 않으므로 진입 즉시 오발화도 없다
+                                        .onAppear {
+                                            if index >= messages.count - 3 {
+                                                viewModel.onAction(.loadOlder)
+                                            }
                                         }
                                     }
                                 }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                // 플립의 기본은 하단 정렬 — 메시지가 뷰포트보다 적으면 콘텐츠를
+                                // 레이아웃 아래(화면 위)로 밀어 Compose처럼 상단부터 채운다
+                                .frame(minHeight: geo.size.height, alignment: .bottom)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
+                            .scaleEffect(x: 1, y: -1)
                         }
-                        // 이전 페이지 로딩 표시 — 행으로 넣으면 등장/소멸만큼 목록이 밀린다(오버레이 고정)
+                        // 이전 페이지 로딩 표시 — 플립 밖 오버레이라 똑바로 그려지고 목록도 밀지 않는다
                         .overlay(alignment: .top) {
                             if uiState.isLoadingOlder {
                                 ProgressView().padding(.top, 8)
                             }
                         }
-                        .onAppear {
-                            if let latest = uiState.messages.first?.id {
-                                proxy.scrollTo(latest, anchor: .bottom)
-                            }
-                            DispatchQueue.main.async { initialScrolled = true }
-                        }
-                        // 새 메시지 도착/전송 시 맨 아래로 따라간다(웹 auto-scroll 미러)
+                        // 새 메시지 도착/전송 시 맨 아래로 따라간다(웹 auto-scroll 미러).
+                        // 플립에선 레이아웃 top = 화면 맨 아래라 anchor도 .top
                         .onChange(of: uiState.messages.first?.id) { latest in
                             if let latest {
-                                withAnimation { proxy.scrollTo(latest, anchor: .bottom) }
-                            }
-                        }
-                        // 이전 메시지 로드 완료 시 앵커 메시지를 상단에 다시 붙인다 —
-                        // 새로 끼워진 행 레이아웃이 잡힌 다음 런루프에 스크롤해야 위치가 정확하다
-                        .onChange(of: uiState.isLoadingOlder) { isLoadingOlder in
-                            guard !isLoadingOlder, let anchorId = olderAnchorId else { return }
-                            olderAnchorId = nil
-                            DispatchQueue.main.async {
-                                proxy.scrollTo(anchorId, anchor: .top)
+                                withAnimation { proxy.scrollTo(latest, anchor: .top) }
                             }
                         }
                         // 키보드가 올라와 리스트가 줄어들 때 최신 메시지가 가려지지 않게 따라간다.
@@ -143,7 +132,8 @@ struct ChatRoomView: View {
     private func scrollToLatest(_ proxy: ScrollViewProxy, duration: Double? = nil) {
         if let latest = viewModel.uiState.messages.first?.id {
             withAnimation(duration.map { Animation.easeOut(duration: $0) } ?? .default) {
-                proxy.scrollTo(latest, anchor: .bottom)
+                // 플립에선 레이아웃 top = 화면 맨 아래
+                proxy.scrollTo(latest, anchor: .top)
             }
         }
     }
