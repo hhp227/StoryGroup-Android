@@ -41,6 +41,12 @@ data class ChatMessage(
     val createdAt: String = ""
 )
 
+/** 방 멤버별 마지막 읽음 위치 — "읽음 N"은 이 위치들로 클라가 파생한다(서버에 읽음 수 개념 없음) */
+data class ChatReadPosition(
+    val userId: Long,
+    val lastReadMessageId: Long
+)
+
 /**
  * 채팅방 실시간 이벤트 종류 — 서버 ChatSocketEventType 미러에 클라 합성 2종을 더한 것.
  * CONNECTED/DISCONNECTED는 서버가 보내지 않는다: 소켓 세션 수립/유실 시 클라가 만들어 흘려

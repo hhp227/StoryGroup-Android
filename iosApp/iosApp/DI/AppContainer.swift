@@ -39,6 +39,10 @@ final class AppContainer {
     let sendChatMessageUseCase: SendChatMessageUseCase
     let markChatMessagesReadUseCase: MarkChatMessagesReadUseCase
     let observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase
+    let uploadChatFileUseCase: UploadChatFileUseCase
+    let sendChatTypingUseCase: SendChatTypingUseCase
+    let getChatReadPositionsUseCase: GetChatReadPositionsUseCase
+    let openDirectRoomUseCase: OpenDirectRoomUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
@@ -95,6 +99,10 @@ final class AppContainer {
         sendChatMessageUseCase = SendChatMessageUseCase(chatRepository: chatRepository)
         markChatMessagesReadUseCase = MarkChatMessagesReadUseCase(chatRepository: chatRepository)
         observeChatRoomEventsUseCase = ObserveChatRoomEventsUseCase(chatRepository: chatRepository)
+        uploadChatFileUseCase = UploadChatFileUseCase(mediaRepository: mediaRepository)
+        sendChatTypingUseCase = SendChatTypingUseCase(chatRepository: chatRepository)
+        getChatReadPositionsUseCase = GetChatReadPositionsUseCase(chatRepository: chatRepository)
+        openDirectRoomUseCase = OpenDirectRoomUseCase(chatRepository: chatRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }

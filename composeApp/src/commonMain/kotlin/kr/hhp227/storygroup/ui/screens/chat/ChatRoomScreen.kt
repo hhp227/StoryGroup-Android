@@ -29,12 +29,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -54,6 +58,9 @@ import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.rememberFilePickerLauncher
+import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
+import kotlin.math.roundToInt
 
 /**
  * 채팅방 — 웹 MessageThread 미러(말풍선 정렬·작성자 변경 시에만 아바타/이름·첨부 렌더링,
@@ -75,6 +82,16 @@ fun ChatRoomScreen(
     val sg = SgTheme.colors
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
+    val pickImage = rememberImagePickerLauncher { picked ->
+        onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
+    }
+    val pickFile = rememberFilePickerLauncher { picked ->
+        onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
+    }
+    // "읽음 N" 파생용 — 타인의 읽음 위치만 남긴다(내 위치는 세지 않는다, 웹 미러)
+    val otherReadPositions = remember(uiState.readPositions, uiState.myUserId) {
+        uiState.readPositions.filterKeys { it != uiState.myUserId }.values.toList()
+    }
 
     // 마지막 표시 인덱스 — 목록은 뒤집혀 그려지므로 맨 아래(최신) = 마지막 인덱스
     fun lastDisplayIndex(): Int = (uiState.messages.size - 1).coerceAtLeast(0)
@@ -180,11 +197,14 @@ fun ChatRoomScreen(
                         val message = uiState.messages[messageIndex]
                         // 최신순 목록이라 시간상 직전 메시지는 다음 인덱스
                         val previous = uiState.messages.getOrNull(messageIndex + 1)
+                        val isMine = message.userId == uiState.myUserId
 
                         MessageRow(
                             message = message,
-                            isMine = message.userId == uiState.myUserId,
-                            showAuthor = previous?.userId != message.userId
+                            isMine = isMine,
+                            showAuthor = previous?.userId != message.userId,
+                            // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
+                            readCount = if (isMine) otherReadPositions.count { it >= message.id } else 0
                         )
                     }
                 }
@@ -206,10 +226,32 @@ fun ChatRoomScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
+        // 입력 중 표시 — 입력바 바로 위의 얇은 띠(웹 미러)
+        if (uiState.typists.isNotEmpty()) {
+            Text(
+                "${uiState.typists.values.joinToString(", ")}님이 입력 중...",
+                style = SgTheme.typography.bodySmall,
+                color = sg.inkSoft,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+        uiState.pendingAttachment?.let { pending ->
+            PendingAttachmentChip(
+                pending = pending,
+                onClear = { onAction(ChatRoomViewModel.Action.ClearAttachment) }
+            )
+        }
         MessageInputBar(
             value = input,
-            onValueChange = { input = it },
+            onValueChange = {
+                input = it
+                // 빈 입력은 타이핑 신호를 내지 않는다(웹 미러)
+                if (it.isNotBlank()) onAction(ChatRoomViewModel.Action.Typing)
+            },
             isSending = uiState.isSending,
+            hasPendingAttachment = uiState.pendingAttachment != null,
+            onPickImage = pickImage,
+            onPickFile = pickFile,
             onSend = { onAction(ChatRoomViewModel.Action.Send(input)) }
         )
     }
@@ -227,6 +269,9 @@ private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewMod
             getChatMessagesUseCase = container.getChatMessagesUseCase,
             sendChatMessageUseCase = container.sendChatMessageUseCase,
             markChatMessagesReadUseCase = container.markChatMessagesReadUseCase,
+            uploadChatFileUseCase = container.uploadChatFileUseCase,
+            sendChatTypingUseCase = container.sendChatTypingUseCase,
+            getChatReadPositionsUseCase = container.getChatReadPositionsUseCase,
             observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
@@ -239,6 +284,7 @@ private fun MessageRow(
     message: ChatMessage,
     isMine: Boolean,
     showAuthor: Boolean,
+    readCount: Int,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -314,8 +360,57 @@ private fun MessageRow(
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
+            // 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러)
+            if (readCount > 0) {
+                Text(
+                    if (readCount > 1) "읽음 $readCount" else "읽음",
+                    style = SgTheme.typography.labelSmall,
+                    color = sg.accent,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
         }
     }
+}
+
+/** 전송 대기 첨부 칩(웹 pending chip 미러) — 취소하면 업로드 없이 그냥 버려진다 */
+@Composable
+private fun PendingAttachmentChip(
+    pending: ChatRoomViewModel.PendingAttachment,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Row(
+        modifier = modifier.fillMaxWidth().background(sg.linen).padding(start = 16.dp, end = 4.dp, top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (pending.isImage) Icons.Default.Image else Icons.Default.Description,
+            contentDescription = null,
+            tint = sg.inkSoft,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "${pending.fileName} (${formatFileSize(pending.bytes.size)})",
+            style = SgTheme.typography.bodySmall,
+            color = sg.ink,
+            maxLines = 1,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
+            Icon(Icons.Default.Close, contentDescription = "첨부 취소", tint = sg.inkSoft, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+/** 웹 formatFileSize 미러 — 1KB 미만 B, 1MB 미만 반올림 KB, 이상은 소수 1자리 MB */
+private fun formatFileSize(size: Int): String = when {
+    size < 1024 -> "${size}B"
+    size < 1024 * 1024 -> "${(size.toDouble() / 1024).roundToInt()}KB"
+    else -> "${(size.toDouble() / (1024 * 1024) * 10).roundToInt() / 10.0}MB"
 }
 
 @Composable
@@ -323,30 +418,41 @@ private fun MessageInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     isSending: Boolean,
+    hasPendingAttachment: Boolean,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
     onSend: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
+    // 첨부가 있으면 본문 없이도 전송 가능(웹 미러)
+    val canSend = (value.isNotBlank() || hasPendingAttachment) && !isSending
 
     Row(
         modifier = modifier.fillMaxWidth().background(sg.linen).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconButton(onClick = onPickImage, enabled = !isSending) {
+            Icon(Icons.Default.Image, contentDescription = "사진 첨부", tint = sg.inkSoft)
+        }
+        IconButton(onClick = onPickFile, enabled = !isSending) {
+            Icon(Icons.Default.AttachFile, contentDescription = "파일 첨부", tint = sg.inkSoft)
+        }
         SgTextField(
             value = value,
             onValueChange = onValueChange,
-            label = "메시지 입력",
+            label = if (hasPendingAttachment) "메시지 (선택)" else "메시지 입력",
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(8.dp))
-        IconButton(onClick = onSend, enabled = value.isNotBlank() && !isSending) {
+        IconButton(onClick = onSend, enabled = canSend) {
             if (isSending) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = sg.accent)
             } else {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
                     contentDescription = "전송",
-                    tint = if (value.isNotBlank()) sg.accent else sg.inkFaint
+                    tint = if (canSend) sg.accent else sg.inkFaint
                 )
             }
         }

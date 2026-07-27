@@ -158,6 +158,10 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             groupId = route.groupId,
                             onBack = { navController.popBackStack() },
                             onCreatePost = { navController.navigate(CreatePostRoute(groupId = route.groupId)) },
+                            // 멤버 스트립 DM — 셸의 채팅 허브와 같은 라우트로 들어간다
+                            onOpenChatRoom = { chatRoomId, groupId, title ->
+                                navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                            },
                             refreshRequested = postCreated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화

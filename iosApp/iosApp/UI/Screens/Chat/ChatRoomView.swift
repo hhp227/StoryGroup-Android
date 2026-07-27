@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import Shared
 
 /// 채팅방 — 웹 MessageThread·Compose ChatRoomScreen 미러(말풍선 정렬·작성자 변경 시에만
@@ -12,10 +13,18 @@ struct ChatRoomView: View {
 
     @State private var input = ""
 
+    @State private var showImagePicker = false
+
+    @State private var showFilePicker = false
+
     @Environment(\.sgColors) private var colors
 
     var body: some View {
         let uiState = viewModel.uiState
+        // "읽음 N" 파생용 — 타인의 읽음 위치만 남긴다(내 위치는 세지 않는다, 웹 미러)
+        let otherReadPositions = uiState.readPositions
+            .filter { $0.key != uiState.myUserId }
+            .map(\.value)
 
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
@@ -47,12 +56,18 @@ struct ChatRoomView: View {
                                     let messages = uiState.messages
 
                                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                                        let isMine = message.userId == uiState.myUserId
+
                                         MessageRow(
                                             message: message,
-                                            isMine: message.userId == uiState.myUserId,
+                                            isMine: isMine,
                                             // 최신순 목록이라 시간상 직전 메시지는 다음 인덱스(Compose 미러)
                                             showAuthor: index == messages.count - 1
-                                                || messages[index + 1].userId != message.userId
+                                                || messages[index + 1].userId != message.userId,
+                                            // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
+                                            readCount: isMine
+                                                ? otherReadPositions.filter { $0 >= message.id }.count
+                                                : 0
                                         )
                                         .scaleEffect(x: 1, y: -1)
                                         .id(message.id)
@@ -117,7 +132,19 @@ struct ChatRoomView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 4)
             }
-            inputBar(isSending: uiState.isSending)
+            // 입력 중 표시 — 입력바 바로 위의 얇은 띠(웹 미러)
+            if !uiState.typists.isEmpty {
+                Text("\(uiState.typists.values.sorted().joined(separator: ", "))님이 입력 중...")
+                    .font(.caption)
+                    .foregroundColor(colors.inkSoft)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+            }
+            if let pending = uiState.pendingAttachment {
+                pendingAttachmentChip(pending)
+            }
+            inputBar(isSending: uiState.isSending, hasPendingAttachment: uiState.pendingAttachment != nil)
         }
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
@@ -126,6 +153,28 @@ struct ChatRoomView: View {
             switch event {
             case .sent: input = ""
             }
+        }
+        // 빈 입력은 타이핑 신호를 내지 않는다(웹 미러)
+        .onChange(of: input) { newValue in
+            if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                viewModel.onAction(.typing)
+            }
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker { data, fileName, contentType in
+                viewModel.onAction(.attach(data: data, fileName: fileName, contentType: contentType))
+            }
+        }
+        // 일반 파일은 시스템 문서 피커 — 권한·Info.plist 키 불필요(사용자 선택 파일 읽기)
+        .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item]) { result in
+            guard case .success(let url) = result else { return }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else { return }
+            let contentType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+                ?? "application/octet-stream"
+
+            viewModel.onAction(.attach(data: data, fileName: url.lastPathComponent, contentType: contentType))
         }
     }
 
@@ -138,27 +187,69 @@ struct ChatRoomView: View {
         }
     }
 
-    private func inputBar(isSending: Bool) -> some View {
-        HStack(spacing: 8) {
-            SGTextField(label: "메시지 입력", text: $input)
+    /// 전송 대기 첨부 칩(웹 pending chip 미러) — 취소하면 업로드 없이 그냥 버려진다
+    private func pendingAttachmentChip(_ pending: ChatRoomViewModel.PendingAttachment) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: pending.isImage ? "photo" : "doc")
+                .font(.system(size: 14))
+                .foregroundColor(colors.inkSoft)
+            Text("\(pending.fileName) (\(formatFileSize(pending.data.count)))")
+                .font(.caption)
+                .foregroundColor(colors.ink)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: { viewModel.onAction(.clearAttachment) }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12))
+                    .foregroundColor(colors.inkSoft)
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .padding(.top, 6)
+        .background(colors.linen)
+    }
+
+    private func inputBar(isSending: Bool, hasPendingAttachment: Bool) -> some View {
+        // 첨부가 있으면 본문 없이도 전송 가능(웹 미러)
+        let canSend = (!input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || hasPendingAttachment)
+            && !isSending
+
+        return HStack(spacing: 8) {
+            Button(action: { showImagePicker = true }) {
+                Image(systemName: "photo")
+                    .font(.system(size: 20))
+                    .foregroundColor(colors.inkSoft)
+            }
+            .disabled(isSending)
+            Button(action: { showFilePicker = true }) {
+                Image(systemName: "paperclip")
+                    .font(.system(size: 20))
+                    .foregroundColor(colors.inkSoft)
+            }
+            .disabled(isSending)
+            SGTextField(label: hasPendingAttachment ? "메시지 (선택)" : "메시지 입력", text: $input)
             Button(action: { viewModel.onAction(.send(text: input)) }) {
                 if isSending {
                     ProgressView()
                 } else {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundColor(
-                            input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? colors.inkFaint
-                                : colors.accent
-                        )
+                        .foregroundColor(canSend ? colors.accent : colors.inkFaint)
                 }
             }
-            .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+            .disabled(!canSend)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(colors.linen)
+    }
+
+    /// 웹 formatFileSize 미러 — 1KB 미만 B, 1MB 미만 반올림 KB, 이상은 소수 1자리 MB
+    private func formatFileSize(_ size: Int) -> String {
+        if size < 1024 { return "\(size)B" }
+        if size < 1024 * 1024 { return "\(Int((Double(size) / 1024).rounded()))KB" }
+        return "\((Double(size) / (1024 * 1024) * 10).rounded() / 10)MB"
     }
 
     init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer) {
@@ -168,6 +259,9 @@ struct ChatRoomView: View {
             getChatMessagesUseCase: container.getChatMessagesUseCase,
             sendChatMessageUseCase: container.sendChatMessageUseCase,
             markChatMessagesReadUseCase: container.markChatMessagesReadUseCase,
+            uploadChatFileUseCase: container.uploadChatFileUseCase,
+            sendChatTypingUseCase: container.sendChatTypingUseCase,
+            getChatReadPositionsUseCase: container.getChatReadPositionsUseCase,
             observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
@@ -182,6 +276,8 @@ private struct MessageRow: View {
     let isMine: Bool
 
     let showAuthor: Bool
+
+    let readCount: Int
 
     @Environment(\.sgColors) private var colors
 
@@ -217,6 +313,12 @@ private struct MessageRow: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(isMine ? colors.accent : colors.linen)
                         )
+                }
+                // 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러)
+                if readCount > 0 {
+                    Text(readCount > 1 ? "읽음 \(readCount)" : "읽음")
+                        .font(.caption2)
+                        .foregroundColor(colors.accent)
                 }
             }
             if !isMine {

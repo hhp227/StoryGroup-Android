@@ -28,6 +28,8 @@ struct GroupDetailView: View {
             approveJoinRequestUseCase: container.approveJoinRequestUseCase,
             rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
             createGroupInviteUseCase: container.createGroupInviteUseCase,
+            openDirectRoomUseCase: container.openDirectRoomUseCase,
+            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase
         ))
         self.container = container
@@ -59,7 +61,29 @@ private struct GroupDetailContent: View {
     /// 모더레이터 초대코드 다이얼로그 — Compose GroupDetailScreen showInviteDialog 미러
     @State private var showInviteDialog = false
 
+    /// DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다(Compose dmTargetMember 미러)
+    @State private var dmTargetMember: GroupMember?
+
+    /// DM 성공으로 push할 채팅방 — Compose ChatRoomRoute 미러
+    @State private var dmChatRoom: ChatRoomRef?
+
+    /// 상세 안에서 채팅방을 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {
+        if #available(iOS 16.0, *) {
+            core.navigationDestination(isPresented: showDmChatRoom) { dmChatRoomDestination }
+        } else {
+            core.background(
+                NavigationLink(isActive: showDmChatRoom) {
+                    dmChatRoomDestination
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
+        }
+    }
+
+    private var core: some View {
         GeometryReader { outer in
             ScrollView {
                 VStack(spacing: 12) {
@@ -98,6 +122,20 @@ private struct GroupDetailContent: View {
                 )
             }
         }
+        .overlay {
+            if let member = dmTargetMember {
+                DmConfirmDialog(
+                    memberName: member.name,
+                    isLoading: viewModel.uiState.isOpeningDm,
+                    error: viewModel.uiState.dmError,
+                    onDismiss: {
+                        dmTargetMember = nil
+                        viewModel.onAction(.dismissDm)
+                    },
+                    onConfirm: { viewModel.onAction(.openDm(userId: member.userId, userName: member.name)) }
+                )
+            }
+        }
         // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
         .navigationTitle(viewModel.uiState.group?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
@@ -112,6 +150,10 @@ private struct GroupDetailContent: View {
         .onReceive(viewModel.event) { event in
             switch event {
             case .refreshFeed: lazyPagingItems.refresh()
+            case .dmOpened(let chatRoomId, let title):
+                dmTargetMember = nil
+                // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
+                dmChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
             }
         }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
@@ -329,7 +371,8 @@ private struct GroupDetailContent: View {
         .buttonStyle(.plain)
     }
 
-    /// 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립(Compose MemberStrip 미러)
+    /// 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립(Compose MemberStrip 미러).
+    /// 타인을 탭하면 1:1 DM 확인으로 이어진다
     private var memberStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("멤버 \(viewModel.uiState.members.count)")
@@ -338,18 +381,37 @@ private struct GroupDetailContent: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(viewModel.uiState.members, id: \.userId) { member in
-                        VStack(spacing: 4) {
-                            SGAvatar(name: member.name, imageUrl: member.profileImg)
-                            Text(member.name)
-                                .font(.caption2)
-                                .foregroundColor(colors.inkSoft)
-                                .lineLimit(1)
+                        Button(action: { dmTargetMember = member }) {
+                            VStack(spacing: 4) {
+                                SGAvatar(name: member.name, imageUrl: member.profileImg)
+                                Text(member.name)
+                                    .font(.caption2)
+                                    .foregroundColor(colors.inkSoft)
+                                    .lineLimit(1)
+                            }
                         }
+                        .buttonStyle(.plain)
+                        // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
+                        .disabled(member.userId == viewModel.uiState.myUserId)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// pop(백 버튼/스와이프) 시 dmChatRoom을 nil로 되돌리는 브리지(MainShellView 미러)
+    private var showDmChatRoom: Binding<Bool> {
+        Binding(
+            get: { dmChatRoom != nil },
+            set: { if !$0 { dmChatRoom = nil } }
+        )
+    }
+
+    @ViewBuilder private var dmChatRoomDestination: some View {
+        if let room = dmChatRoom {
+            ChatRoomView(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title, container: container)
+        }
     }
 
     init(viewModel: GroupDetailViewModel, container: AppContainer) {
@@ -462,5 +524,60 @@ private struct InviteDialog: View {
         // 서버 ISO-8601 원문에서 날짜만 잘라 보여준다
         if let expiresAt = invite.expiresAt { parts.append("\(expiresAt.prefix(10))까지 유효") }
         return parts.isEmpty ? "사용 제한 없음" : parts.joined(separator: " · ")
+    }
+}
+
+/// 멤버 탭 → 1:1 DM 확인 다이얼로그 — Compose DmConfirmDialog 미러(InviteDialog와 같은
+/// 반투명 배경+중앙 카드, iOS 15 공통). 성공 시 dmOpened 이벤트로 채팅방으로 push된다
+private struct DmConfirmDialog: View {
+    let memberName: String
+
+    let isLoading: Bool
+
+    let error: String?
+
+    let onDismiss: () -> Void
+
+    let onConfirm: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            SGCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("1:1 DM")
+                        .font(.headline)
+                        .foregroundColor(colors.ink)
+                    Text("\(memberName)님과 1:1 DM을 시작할까요?")
+                        .font(.subheadline)
+                        .foregroundColor(colors.ink)
+                    if let error = error {
+                        Text(error).font(.caption).foregroundColor(colors.rust)
+                    }
+                    HStack(spacing: 8) {
+                        Button(action: onDismiss) {
+                            Text("취소")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                // SGPrimaryButton과 같은 높이로 나란히 맞춘다
+                                .frame(height: 48)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                                        .stroke(colors.stoneBorder, lineWidth: 1)
+                                )
+                                .foregroundColor(colors.ink)
+                        }
+                        .buttonStyle(.plain)
+                        SGPrimaryButton(title: "DM 시작", isLoading: isLoading, action: onConfirm)
+                    }
+                }
+                .padding(16)
+            }
+            .padding(24)
+        }
     }
 }

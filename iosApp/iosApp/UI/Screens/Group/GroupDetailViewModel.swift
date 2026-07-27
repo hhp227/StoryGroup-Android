@@ -7,6 +7,7 @@ import Shared
 /// groupId만 받아 스스로 로드한다 — 목록이 페이징으로 바뀌어 스냅샷 lookup이 불가(로드 전 group은 nil).
 /// 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
 /// 모더레이터(방장/부방장)에겐 승인 대기 가입 신청 인박스가 함께 로드된다(웹 GroupMemberList 미러).
+/// 멤버 스트립에서 타인을 탭하면 1:1 DM을 연다(웹 GroupMemberList의 DM 액션 미러).
 final class GroupDetailViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -26,6 +27,8 @@ final class GroupDetailViewModel: MviViewModel {
 
     private let createGroupInviteUseCase: CreateGroupInviteUseCase
 
+    private let openDirectRoomUseCase: OpenDirectRoomUseCase
+
     private var cancellables = Set<AnyCancellable>()
 
     private func setPagingData(_ pagingData: PagingData<Post>) {
@@ -44,6 +47,8 @@ final class GroupDetailViewModel: MviViewModel {
         case .dismissInvite:
             uiState.createdInvite = nil
             uiState.inviteError = nil
+        case .openDm(let userId, let userName): openDm(userId: userId, userName: userName)
+        case .dismissDm: uiState.dmError = nil
         }
     }
 
@@ -136,6 +141,26 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
+    /// 멤버와 1:1 DM 열기 — get-or-create(멱등)라 이미 방이 있으면 그 방으로 간다(웹 handleDm 미러)
+    private func openDm(userId: Int64, userName: String) {
+        if uiState.isOpeningDm { return }
+
+        uiState.isOpeningDm = true
+        uiState.dmError = nil
+        Task { @MainActor in
+            do {
+                let chatRoomId = try await openDirectRoomUseCase.invoke(otherUserId: userId)
+                uiState.isOpeningDm = false
+                // 방 이름은 서버가 "DM" 고정이라 상대 이름을 제목으로 넘긴다(허브와 동일)
+                event.send(.dmOpened(chatRoomId: chatRoomId.int64Value, title: userName))
+            } catch {
+                // 차단 관계(403 BLOCKED) 등 — 다이얼로그 안에 표시된다
+                uiState.isOpeningDm = false
+                uiState.dmError = error.kotlinMessage(fallback: "DM을 열지 못했습니다.")
+            }
+        }
+    }
+
     init(
         groupId: Int64,
         getGroupUseCase: GetGroupUseCase,
@@ -144,6 +169,8 @@ final class GroupDetailViewModel: MviViewModel {
         approveJoinRequestUseCase: ApproveJoinRequestUseCase,
         rejectJoinRequestUseCase: RejectJoinRequestUseCase,
         createGroupInviteUseCase: CreateGroupInviteUseCase,
+        openDirectRoomUseCase: OpenDirectRoomUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
     ) {
         self.groupId = groupId
@@ -153,6 +180,8 @@ final class GroupDetailViewModel: MviViewModel {
         self.approveJoinRequestUseCase = approveJoinRequestUseCase
         self.rejectJoinRequestUseCase = rejectJoinRequestUseCase
         self.createGroupInviteUseCase = createGroupInviteUseCase
+        self.openDirectRoomUseCase = openDirectRoomUseCase
+        uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: useCase(groupId).cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
@@ -180,6 +209,11 @@ final class GroupDetailViewModel: MviViewModel {
         var createdInvite: GroupInvite? = nil
         var isCreatingInvite = false
         var inviteError: String? = nil
+        // 멤버 스트립에서 본인을 구분(본인은 DM 대상이 아니다) — 세션이 있는 한 nil이 아니다
+        var myUserId: Int64? = nil
+        // DM 확인 다이얼로그 전용 — 실패 문구(차단 관계 등)는 다이얼로그 안에 표시된다
+        var isOpeningDm = false
+        var dmError: String? = nil
 
         // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정(라운지 제외)
         var canModerate: Bool {
@@ -195,9 +229,13 @@ final class GroupDetailViewModel: MviViewModel {
         case rejectJoinRequest(userId: Int64)
         case createInvite(maxUses: Int?, expiresInDays: Int?)
         case dismissInvite
+        case openDm(userId: Int64, userName: String)
+        case dismissDm
     }
 
     enum Event {
         case refreshFeed
+        /// DM 방 확보 성공 — 화면이 채팅방(groupId=nil)으로 push한다
+        case dmOpened(chatRoomId: Int64, title: String)
     }
 }
