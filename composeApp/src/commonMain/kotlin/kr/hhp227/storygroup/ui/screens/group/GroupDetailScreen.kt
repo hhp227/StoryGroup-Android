@@ -133,6 +133,8 @@ private fun GroupDetailContent(
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
+    // 그룹/멤버는 UiState, 피드는 Paging3 LoadState — 다음 페이지 트리거는 prefetchDistance가 담당
+    val refreshState = lazyPagingItems.loadState.refresh
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
 
     // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
@@ -172,6 +174,13 @@ private fun GroupDetailContent(
             ) {
                 Icon(Icons.Default.Add, contentDescription = "글쓰기")
             }
+        },
+        // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드를 함께 갱신한다.
+        // 스피너는 데이터가 이미 있는 갱신에만 돈다 — 첫 로드는 목록 중앙 스피너가 담당(홈과 동일)
+        isRefreshing = lazyPagingItems.itemCount > 0 && refreshState is LoadStateLoading,
+        onRefresh = {
+            viewModel.onAction(GroupDetailViewModel.Action.Refresh)
+            viewModel.onAction(GroupDetailViewModel.Action.RefreshFeed)
         },
         header = { listState ->
             // group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백 — 콘텐츠 전체가 패럴럭스로 접힌다
@@ -232,8 +241,6 @@ private fun GroupDetailContent(
         },
         modifier = modifier
     ) {
-        // 그룹/멤버는 UiState, 피드는 Paging3 LoadState — 다음 페이지 트리거는 prefetchDistance가 담당
-        val refreshState = lazyPagingItems.loadState.refresh
         val appendState = lazyPagingItems.loadState.append
 
         // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)

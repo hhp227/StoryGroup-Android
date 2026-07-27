@@ -53,6 +53,7 @@ private val TopBarHeight = 56.dp
  * 공용 콜랩싱 헤더 스캐폴드 — 레거시 CollapsingToolbarLayout 미러(라운지 홈/그룹 상세 공유).
  * [header]가 목록 첫 아이템으로 스크롤되어 접히고, 오버레이 상단바가 접힘 비율에 따라
  * 투명(흰 콘텐츠)→linen 스크림(잉크)으로 전환된다. 레거시 snap 플래그도 미러.
+ * [onRefresh]를 주면 당겨서 새로고침이 붙는다 — 인디케이터는 콜랩싱 헤더 아래에서 내려온다.
  */
 @Composable
 fun SgCollapsingHeaderScaffold(
@@ -61,15 +62,28 @@ fun SgCollapsingHeaderScaffold(
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: (@Composable () -> Unit)? = null,
+    isRefreshing: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
     headerHeight: Dp = CollapsingHeaderHeight,
     header: @Composable BoxScope.(listState: LazyListState) -> Unit,
     content: LazyListScope.() -> Unit
 ) {
     val listState = rememberLazyListState()
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val density = LocalDensity.current
     // 접힘 구간 = 헤더 전체 - 핀 되는 상단바(상태바는 양쪽에 공통이라 상쇄) — 레거시 exitUntilCollapsed 미러
-    val collapseRangePx = with(LocalDensity.current) { (headerHeight - TopBarHeight).toPx() }
+    val collapseRangePx = with(density) { (headerHeight - TopBarHeight).toPx() }
     val collapseFraction = rememberCollapseFraction(listState, collapseRangePx)
+    // 인디케이터는 콜랩싱 헤더의 현재 하단에서 나온다 — 레거시에서 SwipeRefreshLayout이
+    // 앱바 아래(appbar_scrolling_view_behavior) RecyclerView만 감싸던 구조의 미러.
+    // 헤더가 접히면 핀 상단바 아래까지만 올라온다
+    val indicatorTopPadding by remember(listState, statusBarTop, headerHeight, density) {
+        derivedStateOf {
+            val collapsed = statusBarTop + TopBarHeight
+            val headerBottom = statusBarTop + headerHeight - with(density) { listState.firstVisibleItemScrollOffset.toDp() }
+            if (listState.firstVisibleItemIndex > 0) collapsed else headerBottom.coerceAtLeast(collapsed)
+        }
+    }
 
     // 레거시 layout_scrollFlags의 snap 미러 — 스크롤이 멎으면 가까운 쪽(펼침/접힘)으로 붙인다
     LaunchedEffect(listState, collapseRangePx) {
@@ -85,7 +99,12 @@ fun SgCollapsingHeaderScaffold(
                 }
             }
     }
-    Box(modifier) {
+    SgPullRefreshBox(
+        refreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier,
+        indicatorTopPadding = indicatorTopPadding
+    ) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),

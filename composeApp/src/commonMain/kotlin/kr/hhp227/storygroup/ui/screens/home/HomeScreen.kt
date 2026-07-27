@@ -89,6 +89,8 @@ private fun HomeContent(
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
+    // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
+    val refreshState = lazyPagingItems.loadState.refresh
 
     // 작성 화면에서 돌아온 결과 — 라운지 피드를 첫 페이지부터 다시 읽는다
     LaunchedEffect(refreshRequested) {
@@ -127,6 +129,10 @@ private fun HomeContent(
                 Icon(Icons.Default.Add, contentDescription = "글쓰기")
             }
         },
+        // 당겨서 새로고침 — 글쓰기 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
+        // 스피너는 데이터가 이미 있는 갱신에만 돈다 — 첫 로드는 목록 중앙 스피너가 담당
+        isRefreshing = lazyPagingItems.itemCount > 0 && refreshState is LoadStateLoading,
+        onRefresh = { viewModel.onAction(HomeViewModel.Action.Refresh) },
         header = { listState ->
             Image(
                 painter = painterResource(Res.drawable.header),
@@ -146,8 +152,6 @@ private fun HomeContent(
         },
         modifier = modifier
     ) {
-        // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
-        val refreshState = lazyPagingItems.loadState.refresh
         val appendState = lazyPagingItems.loadState.append
 
         when {

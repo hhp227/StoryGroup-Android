@@ -28,11 +28,6 @@ class ProfileViewModel(
         }
     }
 
-    init {
-        // 세션 스코프라 "생성 = 세션 진입 1회" — 여기서 바로 로드한다(재로그인 시 재생성)
-        load()
-    }
-
     /** 갱신 — 이전 값은 로딩 중에도 유지 */
     private fun load() {
         if (_uiState.value.isLoading) return
@@ -47,6 +42,11 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, error = e.message ?: "내 정보를 불러오지 못했습니다.") }
                 }
         }
+    }
+
+    init {
+        // 세션 스코프라 "생성 = 세션 진입 1회" — 여기서 바로 로드한다(재로그인 시 재생성)
+        load()
     }
 
     data class UiState(

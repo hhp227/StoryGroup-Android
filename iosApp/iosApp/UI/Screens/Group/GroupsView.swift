@@ -55,6 +55,12 @@ private struct GroupsContent: View {
             .padding(16)
         }
         .background(colors.paper)
+        // 당겨서 새로고침 — 그룹 생성/가입 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
+        // Compose GroupsScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
+        .refreshable {
+            viewModel.onAction(.refresh)
+            await lazyPagingItems.awaitRefresh()
+        }
         // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
         // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
         .onReceive(viewModel.event) { event in
