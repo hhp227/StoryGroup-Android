@@ -15,18 +15,22 @@ import kotlinx.serialization.json.Json
 import kr.hhp227.storygroup.shared.data.network.StompSessionEvent
 import kr.hhp227.storygroup.shared.data.network.StompSocket
 import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
+import kr.hhp227.storygroup.shared.data.network.dto.ChatRoomResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChatSocketEventResponse
 import kr.hhp227.storygroup.shared.data.network.dto.CreateMessageRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DirectRoomResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupChatRoomResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MarkChatReadRequest
+import kr.hhp227.storygroup.shared.data.network.dto.MessageAttachmentPayload
 import kr.hhp227.storygroup.shared.data.network.dto.MessageAttachmentResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MessageResponse
+import kr.hhp227.storygroup.shared.data.network.dto.ReadPositionResponse
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.model.ChatAttachment
 import kr.hhp227.storygroup.shared.domain.model.ChatEvent
 import kr.hhp227.storygroup.shared.domain.model.ChatEventType
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
+import kr.hhp227.storygroup.shared.domain.model.ChatReadPosition
 import kr.hhp227.storygroup.shared.domain.model.DirectRoom
 import kr.hhp227.storygroup.shared.domain.model.GroupChatRoom
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
@@ -70,11 +74,12 @@ class ChatRepositoryImpl(
     override suspend fun sendMessage(
         groupId: Long?,
         chatRoomId: Long,
-        text: String
+        text: String,
+        attachment: ChatAttachment?
     ): Result<ChatMessage> = runCatching {
         client.post("${roomPath(groupId, chatRoomId)}/messages") {
             contentType(ContentType.Application.Json)
-            setBody(CreateMessageRequest(text))
+            setBody(CreateMessageRequest(text, attachment?.toPayload()))
         }.body<MessageResponse>().toDomain()
     }
 
@@ -89,6 +94,23 @@ class ChatRepositoryImpl(
         }
         Unit
     }
+
+    override suspend fun getReadPositions(
+        groupId: Long?,
+        chatRoomId: Long
+    ): Result<List<ChatReadPosition>> = runCatching {
+        client.get("${roomPath(groupId, chatRoomId)}/reads")
+            .body<List<ReadPositionResponse>>().map { it.toDomain() }
+    }
+
+    override suspend fun sendTyping(chatRoomId: Long) {
+        socket.trySend("/app/chat-rooms/$chatRoomId/typing")
+    }
+
+    override suspend fun openDirectRoom(otherUserId: Long): Result<Long> =
+        runCatching {
+            client.post("/api/dm/$otherUserId").body<ChatRoomResponse>().id
+        }
 
     override fun observeRoomEvents(chatRoomId: Long): Flow<ChatEvent> =
         socket.subscribe("/topic/chat-rooms/$chatRoomId").mapNotNull { event ->
@@ -127,6 +149,18 @@ private fun MessageAttachmentResponse.toDomain() = ChatAttachment(
     name = name,
     contentType = contentType,
     size = size
+)
+
+private fun ChatAttachment.toPayload() = MessageAttachmentPayload(
+    url = url,
+    name = name,
+    contentType = contentType,
+    size = size
+)
+
+private fun ReadPositionResponse.toDomain() = ChatReadPosition(
+    userId = userId,
+    lastReadMessageId = lastReadMessageId
 )
 
 private fun MessageResponse.toDomain() = ChatMessage(

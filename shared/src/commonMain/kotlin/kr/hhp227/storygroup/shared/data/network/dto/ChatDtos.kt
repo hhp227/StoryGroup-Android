@@ -45,10 +45,36 @@ data class MessageResponse(
     val createdAt: String
 )
 
-/** POST .../messages — 첨부 전송은 후속(attachment 옵셔널 계약이라 필드 생략 가능) */
+/** POST .../messages 요청의 attachment — /api/files 업로드 응답을 그대로 실어 보낸다 */
+@Serializable
+data class MessageAttachmentPayload(
+    val url: String,
+    val name: String? = null,
+    val contentType: String? = null,
+    val size: Long? = null
+)
+
+/** POST .../messages — text와 attachment 둘 다 비면 서버가 400. 첨부는 메시지당 1개 */
 @Serializable
 data class CreateMessageRequest(
-    val text: String
+    val text: String,
+    val attachment: MessageAttachmentPayload? = null
+)
+
+/** POST /api/dm/{otherUserId} 응답 — get-or-create라 200 고정, name은 서버가 "DM" 고정 문자열 */
+@Serializable
+data class ChatRoomResponse(
+    val id: Long,
+    val groupId: Long? = null,
+    val name: String,
+    val createdAt: String
+)
+
+/** GET {room}/reads — 방 멤버별 마지막 읽음 위치(본인 포함, 읽음 기록 있는 멤버만) */
+@Serializable
+data class ReadPositionResponse(
+    val userId: Long,
+    val lastReadMessageId: Long
 )
 
 /** PUT .../read — 서버가 GREATEST로 단조 증가를 보장하므로 낡은 값 전송도 안전 */

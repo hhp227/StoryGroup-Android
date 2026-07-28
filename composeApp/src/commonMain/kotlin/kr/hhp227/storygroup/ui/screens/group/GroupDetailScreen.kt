@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.ui.screens.group
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -86,6 +87,8 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             approveJoinRequestUseCase = container.approveJoinRequestUseCase,
             rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
             createGroupInviteUseCase = container.createGroupInviteUseCase,
+            openDirectRoomUseCase = container.openDirectRoomUseCase,
+            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
         )
     }
@@ -101,6 +104,7 @@ fun GroupDetailScreen(
     groupId: Long,
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
+    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
@@ -111,6 +115,7 @@ fun GroupDetailScreen(
         viewModel = viewModel,
         onBack = onBack,
         onCreatePost = onCreatePost,
+        onOpenChatRoom = onOpenChatRoom,
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
         modifier = modifier
@@ -122,6 +127,7 @@ private fun GroupDetailContent(
     viewModel: GroupDetailViewModel,
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
+    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier
@@ -136,6 +142,8 @@ private fun GroupDetailContent(
     // 그룹/멤버는 UiState, 피드는 Paging3 LoadState — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
+    // DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다
+    var dmTargetMember by remember { mutableStateOf<GroupMember?>(null) }
 
     // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
     LaunchedEffect(viewModel) {
@@ -154,6 +162,11 @@ private fun GroupDetailContent(
         viewModel.event.collect { event ->
             when (event) {
                 GroupDetailViewModel.Event.RefreshFeed -> lazyPagingItems.refresh()
+                is GroupDetailViewModel.Event.DmOpened -> {
+                    dmTargetMember = null
+                    // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
+                    onOpenChatRoom(event.chatRoomId, null, event.title)
+                }
             }
         }
     }
@@ -270,7 +283,12 @@ private fun GroupDetailContent(
         }
         if (uiState.members.isNotEmpty()) {
             item(key = "members") {
-                MemberStrip(uiState.members, Modifier.padding(horizontal = 16.dp))
+                MemberStrip(
+                    members = uiState.members,
+                    myUserId = uiState.myUserId,
+                    onMemberClick = { dmTargetMember = it },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
         }
         if (uiState.error != null) {
@@ -351,6 +369,66 @@ private fun GroupDetailContent(
                 viewModel.onAction(GroupDetailViewModel.Action.CreateInvite(maxUses, expiresInDays))
             }
         )
+    }
+    dmTargetMember?.let { member ->
+        DmConfirmDialog(
+            memberName = member.name,
+            isLoading = uiState.isOpeningDm,
+            error = uiState.dmError,
+            onDismiss = {
+                dmTargetMember = null
+                viewModel.onAction(GroupDetailViewModel.Action.DismissDm)
+            },
+            onConfirm = { viewModel.onAction(GroupDetailViewModel.Action.OpenDm(member.userId, member.name)) }
+        )
+    }
+}
+
+/** 멤버 탭 → 1:1 DM 확인 다이얼로그 — 성공 시 DmOpened 이벤트로 채팅방으로 이동한다 */
+@Composable
+private fun DmConfirmDialog(
+    memberName: String,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sg = SgTheme.colors
+
+    Dialog(onDismissRequest = onDismiss) {
+        SgCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "1:1 DM",
+                    style = SgTheme.typography.titleMedium,
+                    color = sg.ink,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "${memberName}님과 1:1 DM을 시작할까요?",
+                    style = SgTheme.typography.bodyMedium,
+                    color = sg.ink
+                )
+                error?.let {
+                    Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = SgTheme.shapes.button,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("취소", color = sg.ink)
+                    }
+                    SgPrimaryButton(
+                        text = "DM 시작",
+                        onClick = onConfirm,
+                        isLoading = isLoading,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -548,9 +626,14 @@ private fun JoinRequestCard(
     }
 }
 
-/** 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립 */
+/** 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립. 타인을 탭하면 1:1 DM 확인으로 이어진다 */
 @Composable
-private fun MemberStrip(members: List<GroupMember>, modifier: Modifier = Modifier) {
+private fun MemberStrip(
+    members: List<GroupMember>,
+    myUserId: Long?,
+    onMemberClick: (GroupMember) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val sg = SgTheme.colors
 
     Column(modifier) {
@@ -558,7 +641,13 @@ private fun MemberStrip(members: List<GroupMember>, modifier: Modifier = Modifie
         Spacer(Modifier.height(8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(members, key = GroupMember::userId) { member ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
+                val isSelf = member.userId == myUserId
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = if (isSelf) Modifier else Modifier.clickable { onMemberClick(member) }
+                ) {
                     SgAvatar(member.name, imageUrl = member.profileImg)
                     Spacer(Modifier.height(4.dp))
                     Text(

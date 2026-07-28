@@ -26,6 +26,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
@@ -49,10 +50,13 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseC
 import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 
 /**
@@ -108,5 +112,9 @@ class AppContainer(
     val sendChatMessageUseCase = SendChatMessageUseCase(chatRepository)
     val markChatMessagesReadUseCase = MarkChatMessagesReadUseCase(chatRepository)
     val observeChatRoomEventsUseCase = ObserveChatRoomEventsUseCase(chatRepository)
+    val uploadChatFileUseCase = UploadChatFileUseCase(mediaRepository)
+    val sendChatTypingUseCase = SendChatTypingUseCase(chatRepository)
+    val getChatReadPositionsUseCase = GetChatReadPositionsUseCase(chatRepository)
+    val openDirectRoomUseCase = OpenDirectRoomUseCase(chatRepository)
     val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
 }

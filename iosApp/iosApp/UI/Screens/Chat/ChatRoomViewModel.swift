@@ -7,6 +7,8 @@ import Shared
 /// 전송·읽음 보고는 REST(웹 미러). 메시지 목록은 서버 응답 그대로 최신순으로 들고
 /// 화면이 뒤집어 그린다. 재연결(connected)·연결 유실(disconnected) 시 최신 페이지를
 /// 다시 읽어 끊김 공백을 메꾼다 — 유실 시 REST 재조회는 만료 토큰 리프레시 역할을 겸한다.
+/// 첨부는 전송 시점 업로드(웹 미러), 타이핑은 스로틀 발신+수신 자동 소멸,
+/// "읽음 N"은 멤버별 읽음 위치에서 파생한다(전부 웹 미러).
 final class ChatRoomViewModel: MviViewModel {
     @Published private(set) var uiState: UiState
 
@@ -24,11 +26,23 @@ final class ChatRoomViewModel: MviViewModel {
 
     private let markChatMessagesReadUseCase: MarkChatMessagesReadUseCase
 
+    private let uploadChatFileUseCase: UploadChatFileUseCase
+
+    private let sendChatTypingUseCase: SendChatTypingUseCase
+
+    private let getChatReadPositionsUseCase: GetChatReadPositionsUseCase
+
     /// 최신순 페이징 커서 — 재조회(loadLatest)마다 0으로 되돌아간다(웹 전체 교체 미러)
     private var oldestLoadedPage: Int32 = 0
 
     /// 첫 connected는 init 로드와 겹치므로 재연결부터 공백 메꿈 재조회를 한다
     private var hasConnectedOnce = false
+
+    /// 타이핑 발신 스로틀 기준점 — 첫 키 입력은 즉시 나간다(리딩 에지, 웹 미러)
+    private var lastTypingSentAt: Date?
+
+    /// 타이핑 수신자별 자동 소멸 타이머 — 같은 사람의 신호가 오면 리셋된다
+    private var typingExpiryTasks: [Int64: Task<Void, Never>] = [:]
 
     /// Kotlin `groupId: Long?` 파라미터 대응 — nil이면 DM 경로(/api/dm)를 탄다
     private var kotlinGroupId: KotlinLong? { groupId.map { KotlinLong(value: $0) } }
@@ -38,6 +52,11 @@ final class ChatRoomViewModel: MviViewModel {
         case .refresh: loadLatest()
         case .loadOlder: loadOlder()
         case .send(let text): send(text: text)
+        case .attach(let data, let fileName, let contentType):
+            uiState.pendingAttachment = PendingAttachment(data: data, fileName: fileName, contentType: contentType)
+            uiState.actionError = nil
+        case .clearAttachment: uiState.pendingAttachment = nil
+        case .typing: sendTypingThrottled()
         }
     }
 
@@ -61,6 +80,8 @@ final class ChatRoomViewModel: MviViewModel {
                 uiState.canLoadOlder = fetched.count == Int(Self.pageSize)
                 // 최신순 첫 항목 = 가장 최근 메시지
                 if let latest = fetched.first { reportRead(lastReadMessageId: latest.id) }
+                // 읽음 위치도 함께 새로 고침 — 재연결 시 끊김 동안의 READ 이벤트 공백을 메꾼다
+                loadReadPositions()
             } catch {
                 uiState.isLoading = false
                 uiState.error = error.kotlinMessage(fallback: "메시지를 불러오지 못했습니다.")
@@ -98,27 +119,69 @@ final class ChatRoomViewModel: MviViewModel {
 
     private func send(text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pending = uiState.pendingAttachment
 
-        if trimmed.isEmpty || uiState.isSending { return }
+        // 첨부가 있으면 본문 없이도 보낼 수 있다(웹 미러 — 서버는 둘 다 비었을 때만 400)
+        if (trimmed.isEmpty && pending == nil) || uiState.isSending { return }
 
         uiState.isSending = true
         uiState.actionError = nil
         Task { @MainActor in
             do {
+                // 첨부는 전송 시점에 업로드한다 — 선택만 하고 안 보내면 스토리지에 고아가 안 남는다(웹 미러)
+                var attachment: ChatAttachment?
+                if let pending {
+                    attachment = try await uploadChatFileUseCase.invoke(
+                        bytes: pending.data.toKotlinByteArray(),
+                        fileName: pending.fileName,
+                        contentType: pending.contentType
+                    )
+                }
                 let message = try await sendChatMessageUseCase.invoke(
                     groupId: kotlinGroupId,
                     chatRoomId: chatRoomId,
-                    text: trimmed
+                    text: trimmed,
+                    attachment: attachment
                 )
                 uiState.isSending = false
+                uiState.pendingAttachment = nil
                 // STOMP 브로드캐스트가 먼저 도착했을 수 있어 id 중복 제거를 거친다(웹 미러)
                 appendMessage(message)
                 event.send(.sent)
             } catch {
+                // 첨부는 유지 — 업로드/전송 실패 시 같은 첨부로 재시도할 수 있다(웹 미러)
                 uiState.isSending = false
                 uiState.actionError = error.kotlinMessage(fallback: "전송에 실패했습니다.")
             }
         }
+    }
+
+    /// 타이핑 신호 스로틀 발신 — 2.5초에 한 번, 발신 실패·미연결은 조용히 버려진다(웹 미러)
+    private func sendTypingThrottled() {
+        if let last = lastTypingSentAt, Date().timeIntervalSince(last) < Self.typingSendInterval { return }
+
+        lastTypingSentAt = Date()
+        Task { @MainActor in
+            try? await sendChatTypingUseCase.invoke(chatRoomId: chatRoomId)
+        }
+    }
+
+    /// 타이핑 수신 — 4초 무신호면 지운다. 발신 간격(2.5초) < 소멸(4초)이라 깜빡이지 않는다(웹 미러)
+    private func noteTypist(userId: Int64, userName: String) {
+        uiState.typists[userId] = userName
+        typingExpiryTasks[userId]?.cancel()
+        typingExpiryTasks[userId] = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.typingHideNanos)
+            if Task.isCancelled { return }
+            self?.typingExpiryTasks[userId] = nil
+            self?.uiState.typists[userId] = nil
+        }
+    }
+
+    private func clearTypist(userId: Int64) {
+        typingExpiryTasks[userId]?.cancel()
+        typingExpiryTasks[userId] = nil
+        if uiState.typists[userId] != nil { uiState.typists[userId] = nil }
     }
 
     private func handleEvent(_ chatEvent: ChatEvent) {
@@ -128,7 +191,11 @@ final class ChatRoomViewModel: MviViewModel {
         case .disconnected:
             loadLatest()
         case .messageCreated:
-            if let message = chatEvent.message { appendMessage(message) }
+            if let message = chatEvent.message {
+                // 메시지가 도착했으면 그 사람의 "입력 중"은 소멸 타이머를 기다리지 않고 즉시 걷는다(웹 미러)
+                clearTypist(userId: message.userId)
+                appendMessage(message)
+            }
         case .messageUpdated:
             if let updated = chatEvent.message {
                 uiState.messages = uiState.messages.map { $0.id == updated.id ? updated : $0 }
@@ -137,7 +204,19 @@ final class ChatRoomViewModel: MviViewModel {
             if let deletedId = chatEvent.messageId?.int64Value {
                 uiState.messages.removeAll { $0.id == deletedId }
             }
-        // 타이핑/프레즌스/읽음 수 표시는 후속
+        case .typing:
+            // 서버는 발신자 본인에게도 릴레이한다 — 내 타이핑은 거른다(웹 미러)
+            if let userId = chatEvent.userId?.int64Value, userId != uiState.myUserId {
+                noteTypist(userId: userId, userName: chatEvent.userName ?? "")
+            }
+        case .read:
+            // READ의 messageId는 "그 사람의 마지막 읽음 위치" — 순서 보장이 없어 max 병합(웹 미러)
+            if let userId = chatEvent.userId?.int64Value,
+               let lastReadMessageId = chatEvent.messageId?.int64Value,
+               lastReadMessageId > (uiState.readPositions[userId] ?? 0) {
+                uiState.readPositions[userId] = lastReadMessageId
+            }
+        // 프레즌스("보고 있어요") 표시는 후속
         default:
             break
         }
@@ -161,12 +240,31 @@ final class ChatRoomViewModel: MviViewModel {
         }
     }
 
+    /// 멤버별 읽음 위치 스냅숏 — 실패해도 치명적이지 않아 조용히 넘어간다(이후 READ 이벤트가 채운다)
+    private func loadReadPositions() {
+        Task { @MainActor in
+            guard let positions = try? await getChatReadPositionsUseCase.invoke(
+                groupId: kotlinGroupId,
+                chatRoomId: chatRoomId
+            ) else { return }
+
+            // 조회 중 도착한 READ 이벤트가 응답보다 새것일 수 있어 max 병합
+            for position in positions {
+                uiState.readPositions[position.userId] =
+                    max(uiState.readPositions[position.userId] ?? 0, position.lastReadMessageId)
+            }
+        }
+    }
+
     init(
         groupId: Int64?,
         chatRoomId: Int64,
         getChatMessagesUseCase: GetChatMessagesUseCase,
         sendChatMessageUseCase: SendChatMessageUseCase,
         markChatMessagesReadUseCase: MarkChatMessagesReadUseCase,
+        uploadChatFileUseCase: UploadChatFileUseCase,
+        sendChatTypingUseCase: SendChatTypingUseCase,
+        getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
         observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase
     ) {
@@ -175,6 +273,9 @@ final class ChatRoomViewModel: MviViewModel {
         self.getChatMessagesUseCase = getChatMessagesUseCase
         self.sendChatMessageUseCase = sendChatMessageUseCase
         self.markChatMessagesReadUseCase = markChatMessagesReadUseCase
+        self.uploadChatFileUseCase = uploadChatFileUseCase
+        self.sendChatTypingUseCase = sendChatTypingUseCase
+        self.getChatReadPositionsUseCase = getChatReadPositionsUseCase
         uiState = UiState(myUserId: getCurrentUserIdUseCase.invoke()?.int64Value)
 
         loadLatest()
@@ -196,16 +297,36 @@ final class ChatRoomViewModel: MviViewModel {
         /// 마지막으로 읽은 페이지가 꽉 찼으면 더 오래된 메시지가 남아있다고 본다
         var canLoadOlder = false
         var isSending = false
+        /// 전송 대기 첨부(메시지당 1개, 전송 시점 업로드) — 실패해도 유지돼 재시도할 수 있다
+        var pendingAttachment: PendingAttachment? = nil
+        /// 입력 중인 타인(userId→이름) — 신호가 끊기면 4초 뒤 자동 소멸
+        var typists: [Int64: String] = [:]
+        /// 멤버별 마지막 읽음 위치(userId→messageId, 본인 포함) — "읽음 N"은 화면이 파생한다
+        var readPositions: [Int64: Int64] = [:]
         /// 이력 로드 에러 — 목록이 비었을 때만 화면을 대체한다
         var error: String? = nil
         /// 전송/이전 로드 실패 문구 — 목록을 대체하지 않는다(가입 신청 인박스 actionError 패턴)
         var actionError: String? = nil
     }
 
+    /// 전송 대기 첨부 — Compose PendingAttachment 미러
+    struct PendingAttachment {
+        let data: Data
+        let fileName: String
+        let contentType: String
+
+        var isImage: Bool { contentType.hasPrefix("image/") }
+    }
+
     enum Action {
         case refresh
         case loadOlder
         case send(text: String)
+        /// 피커 선택 결과 — 업로드는 전송 시점까지 미룬다
+        case attach(data: Data, fileName: String, contentType: String)
+        case clearAttachment
+        /// 입력 변화 신호 — VM이 스로틀해 STOMP 타이핑 신호로 발신한다
+        case typing
     }
 
     enum Event {
@@ -215,4 +336,13 @@ final class ChatRoomViewModel: MviViewModel {
 
     /// 서버 상한과 동일(웹도 50 고정) — 한 번에 최대한 넓은 공백 메꿈
     private static let pageSize: Int32 = 50
+
+    /// 웹 TYPING_SEND_INTERVAL_MS/TYPING_HIDE_MS 미러 — 발신 간격 < 소멸 시간이라 연속 입력 중 깜빡이지 않는다
+    private static let typingSendInterval: TimeInterval = 2.5
+
+    private static let typingHideNanos: UInt64 = 4_000_000_000
+
+    deinit {
+        typingExpiryTasks.values.forEach { $0.cancel() }
+    }
 }

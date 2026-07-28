@@ -26,7 +26,8 @@ internal sealed interface StompSessionEvent {
 }
 
 /**
- * 서버 /ws 엔드포인트용 최소 STOMP 1.2 클라이언트(수신 전용 — 메시지 전송은 REST 계약).
+ * 서버 /ws 엔드포인트용 최소 STOMP 1.2 클라이언트.
+ * 메시지 전송은 REST 계약이고, 클라 SEND는 서버 인터셉터가 타이핑 신호만 화이트리스트한다(trySend).
  * - 인증: 핸드셰이크가 아니라 CONNECT 프레임 native 헤더 `Authorization: Bearer`(서버 인터셉터 계약)
  * - 하트비트: 서버 10s/10s 계약 — 10초마다 LF 송신, 30초(3주기) 무수신이면 죽은 연결로 보고 재연결
  * - 재연결: 유실 시 5초 간격 무한 재시도(웹 stompjs reconnectDelay 미러). CONNECTED에 이르렀던
@@ -39,6 +40,9 @@ internal class StompSocket(
 ) {
     private val wsUrl = baseUrl.replaceFirst("http", "ws") + "/ws"
     private val host = baseUrl.substringAfter("://").substringBefore('/')
+
+    // 화면당 구독 1개(채팅방 VM 수명) 전제의 단일 슬롯 — trySend가 살아있는 세션을 빌려 쓴다
+    private var activeSession: DefaultClientWebSocketSession? = null
 
     fun subscribe(destination: String): Flow<StompSessionEvent> = flow {
         while (true) {
@@ -63,6 +67,7 @@ internal class StompSocket(
                     awaitConnected()
                     sendFrame("SUBSCRIBE", "id" to "sub-0", "destination" to destination)
                     reachedConnected = true
+                    activeSession = this
                     emit(StompSessionEvent.Connected)
 
                     val heartbeatJob = launch {
@@ -82,6 +87,7 @@ internal class StompSocket(
                         }
                     } finally {
                         heartbeatJob.cancel()
+                        if (activeSession === this) activeSession = null
                     }
                 }
             } catch (_: TimeoutCancellationException) {
@@ -95,6 +101,15 @@ internal class StompSocket(
             if (reachedConnected) emit(StompSessionEvent.Disconnected)
             delay(RECONNECT_DELAY_MS)
         }
+    }
+
+    /**
+     * 살아있는 세션으로 SEND 프레임 발신(빈 바디) — 연결이 없으면 조용히 버린다.
+     * 타이핑 같은 휘발 신호 전용: 실패도 무시하고 재시도하지 않는다(웹 client.connected 가드 미러).
+     */
+    suspend fun trySend(destination: String) {
+        val session = activeSession ?: return
+        runCatching { session.sendFrame("SEND", "destination" to destination) }
     }
 
     /** CONNECTED를 기다린다 — ERROR(토큰 만료 등)면 예외로 세션을 접는다 */

@@ -23,10 +23,12 @@ import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
@@ -36,6 +38,7 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 바뀌어 스냅샷 lookup이 불가하고, 딥링크 진입에도 대비된다(로드 전 group은 null).
  * 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
  * 모더레이터(방장/부방장)에겐 승인 대기 가입 신청 인박스가 함께 로드된다(웹 GroupMemberList 미러).
+ * 멤버 스트립에서 타인을 탭하면 1:1 DM을 연다(웹 GroupMemberList의 DM 액션 미러).
  * iosApp GroupDetailViewModel.swift와 1:1 미러
  */
 class GroupDetailViewModel(
@@ -46,9 +49,11 @@ class GroupDetailViewModel(
     private val approveJoinRequestUseCase: ApproveJoinRequestUseCase,
     private val rejectJoinRequestUseCase: RejectJoinRequestUseCase,
     private val createGroupInviteUseCase: CreateGroupInviteUseCase,
+    private val openDirectRoomUseCase: OpenDirectRoomUseCase,
+    getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
-    private val _uiState = MutableStateFlow(UiState())
+    private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -67,6 +72,8 @@ class GroupDetailViewModel(
             is Action.RejectJoinRequest -> rejectJoinRequest(action.userId)
             is Action.CreateInvite -> createInvite(action.maxUses, action.expiresInDays)
             Action.DismissInvite -> _uiState.update { it.copy(createdInvite = null, inviteError = null) }
+            is Action.OpenDm -> openDm(action.userId, action.userName)
+            Action.DismissDm -> _uiState.update { it.copy(dmError = null) }
         }
     }
 
@@ -164,6 +171,25 @@ class GroupDetailViewModel(
         }
     }
 
+    /** 멤버와 1:1 DM 열기 — get-or-create(멱등)라 이미 방이 있으면 그 방으로 간다(웹 handleDm 미러) */
+    private fun openDm(userId: Long, userName: String) {
+        if (_uiState.value.isOpeningDm) return
+
+        _uiState.update { it.copy(isOpeningDm = true, dmError = null) }
+        viewModelScope.launch {
+            runCatching { openDirectRoomUseCase(userId) }
+                .onSuccess { chatRoomId ->
+                    _uiState.update { it.copy(isOpeningDm = false) }
+                    // 방 이름은 서버가 "DM" 고정이라 상대 이름을 제목으로 넘긴다(허브와 동일)
+                    _event.tryEmit(Event.DmOpened(chatRoomId, userName))
+                }
+                .onFailure { e ->
+                    // 차단 관계(403 BLOCKED) 등 — 다이얼로그 안에 표시된다
+                    _uiState.update { it.copy(isOpeningDm = false, dmError = e.message ?: "DM을 열지 못했습니다.") }
+                }
+        }
+    }
+
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         getGroupPostsPagingDataUseCase(groupId)
@@ -173,6 +199,8 @@ class GroupDetailViewModel(
     }
 
     data class UiState(
+        // 멤버 스트립에서 본인을 구분(본인은 DM 대상이 아니다) — 세션이 있는 한 null이 아니다
+        val myUserId: Long? = null,
         // 로드 전 null — 화면은 그룹 정보 자리만 비워 두고 커버/피드를 먼저 그린다
         val group: Group? = null,
         val pagingData: PagingData<Post> = PagingData.empty(),
@@ -188,7 +216,10 @@ class GroupDetailViewModel(
         // 초대코드 다이얼로그 전용 — 생성 성공 시 createdInvite가 채워져 결과 뷰로 전환된다
         val createdInvite: GroupInvite? = null,
         val isCreatingInvite: Boolean = false,
-        val inviteError: String? = null
+        val inviteError: String? = null,
+        // DM 확인 다이얼로그 전용 — 실패 문구(차단 관계 등)는 다이얼로그 안에 표시된다
+        val isOpeningDm: Boolean = false,
+        val dmError: String? = null
     ) {
         // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정
         val canModerate: Boolean get() = group?.canModerate == true
@@ -201,10 +232,14 @@ class GroupDetailViewModel(
         data class RejectJoinRequest(val userId: Long) : Action
         data class CreateInvite(val maxUses: Int?, val expiresInDays: Int?) : Action
         data object DismissInvite : Action
+        data class OpenDm(val userId: Long, val userName: String) : Action
+        data object DismissDm : Action
     }
 
     sealed interface Event {
         data object RefreshFeed : Event
+        /** DM 방 확보 성공 — 화면이 채팅방(groupId=null)으로 이동한다 */
+        data class DmOpened(val chatRoomId: Long, val title: String) : Event
     }
 }
 
