@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -82,6 +83,13 @@ fun ChatRoomScreen(
     val sg = SgTheme.colors
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
+    // 허브(세션 VM)에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
+    val hubViewModel = sessionChatViewModel()
+
+    DisposableEffect(chatRoomId) {
+        hubViewModel.onAction(ChatViewModel.Action.RoomOpened(chatRoomId))
+        onDispose { hubViewModel.onAction(ChatViewModel.Action.RoomClosed(chatRoomId)) }
+    }
     val pickImage = rememberImagePickerLauncher { picked ->
         onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
     }

@@ -50,6 +50,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseC
 import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
@@ -74,7 +75,7 @@ class AppContainer(
     private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
     private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
     private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
-    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient)
+    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
     private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
@@ -106,6 +107,7 @@ class AppContainer(
     val getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository)
     val markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository)
     val markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository)
+    val observePersonalEventsUseCase = ObservePersonalEventsUseCase(notificationRepository)
     val getGroupChatRoomsUseCase = GetGroupChatRoomsUseCase(chatRepository)
     val getDirectRoomsUseCase = GetDirectRoomsUseCase(chatRepository)
     val getChatMessagesUseCase = GetChatMessagesUseCase(chatRepository)

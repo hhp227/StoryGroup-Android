@@ -11,8 +11,9 @@ struct ChatRoomRef: Equatable {
 
 /// 채팅 허브 — 웹 /dm·Compose ChatScreen 미러(그룹 채팅 + 다이렉트 메시지, 라운지 제외).
 /// 행 탭 시 채팅방 풀스크린 push — 그룹 방은 그룹명, DM은 상대 이름이 제목이 된다.
+/// VM은 셸(MainShellView)이 소유·주입한다 — 채팅 탭 뱃지와 같은 인스턴스(Compose sessionChatViewModel 미러)
 struct ChatView: View {
-    @StateObject private var viewModel: ChatViewModel
+    @ObservedObject var viewModel: ChatViewModel
 
     /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenChatRoom: (ChatRoomRef) -> Void
@@ -51,7 +52,8 @@ struct ChatView: View {
                                 title: room.groupName,
                                 subtitle: room.name,
                                 imageUrl: nil,
-                                isGroup: true
+                                isGroup: true,
+                                unreadCount: room.unreadCount
                             ) {
                                 onOpenChatRoom(ChatRoomRef(chatRoomId: room.id, groupId: room.groupId, title: room.groupName))
                             }
@@ -67,7 +69,8 @@ struct ChatView: View {
                                 title: room.otherUserName,
                                 subtitle: nil,
                                 imageUrl: room.otherUserProfileImg,
-                                isGroup: false
+                                isGroup: false,
+                                unreadCount: room.unreadCount
                             ) {
                                 onOpenChatRoom(ChatRoomRef(chatRoomId: room.id, groupId: nil, title: room.otherUserName))
                             }
@@ -80,11 +83,8 @@ struct ChatView: View {
         }
     }
 
-    init(container: AppContainer, onOpenChatRoom: @escaping (ChatRoomRef) -> Void) {
-        _viewModel = StateObject(wrappedValue: ChatViewModel(
-            getGroupChatRoomsUseCase: container.getGroupChatRoomsUseCase,
-            getDirectRoomsUseCase: container.getDirectRoomsUseCase
-        ))
+    init(viewModel: ChatViewModel, onOpenChatRoom: @escaping (ChatRoomRef) -> Void) {
+        self.viewModel = viewModel
         self.onOpenChatRoom = onOpenChatRoom
     }
 }
@@ -97,6 +97,8 @@ private struct ChatRoomRow: View {
     let imageUrl: String?
 
     let isGroup: Bool
+
+    let unreadCount: Int64
 
     let onTap: () -> Void
 
@@ -122,6 +124,7 @@ private struct ChatRoomRow: View {
                         }
                     }
                     Spacer()
+                    SGUnreadBadge(count: unreadCount)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

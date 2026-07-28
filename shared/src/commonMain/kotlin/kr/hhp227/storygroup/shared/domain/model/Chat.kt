@@ -7,7 +7,9 @@ data class GroupChatRoom(
     val groupName: String,
     val name: String,
     // 서버 ISO-8601(OffsetDateTime) 원문 — 표시 포맷팅은 각 플랫폼 UI가 담당
-    val createdAt: String = ""
+    val createdAt: String = "",
+    // 내 읽음 위치 이후의 남의 메시지 수(차단·삭제 제외) — 서버 집계 스냅숏, 실시간 증가는 개인 큐 이벤트로 클라가 얹는다
+    val unreadCount: Long = 0
 )
 
 /** 1:1 DM 방(GET /api/dm) — 웹 DirectRoom 미러. 방 이름은 서버에 "DM" 고정이라 상대 정보로 표시한다 */
@@ -16,7 +18,8 @@ data class DirectRoom(
     val otherUserId: Long,
     val otherUserName: String,
     val otherUserProfileImg: String? = null,
-    val createdAt: String = ""
+    val createdAt: String = "",
+    val unreadCount: Long = 0
 )
 
 /** 메시지 첨부(메시지당 최대 1개) — 이미지/파일 구분은 contentType으로 판단 */

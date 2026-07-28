@@ -4,14 +4,15 @@ import kotlinx.serialization.Serializable
 
 // StoryGroup-WebApp chat/dto/ChatDtos.kt 계약과 1:1
 
-/** GET /api/chat-rooms — 내 그룹 채팅방(라운지는 서버가 제외) */
+/** GET /api/chat-rooms — 내 그룹 채팅방(라운지는 서버가 제외). unreadCount 기본값은 구버전 서버 방어 */
 @Serializable
 data class GroupChatRoomResponse(
     val id: Long,
     val groupId: Long,
     val groupName: String,
     val name: String,
-    val createdAt: String
+    val createdAt: String,
+    val unreadCount: Long = 0
 )
 
 /** GET /api/dm — 내 DM 방(방 이름 대신 상대 정보로 표시) */
@@ -21,7 +22,8 @@ data class DirectRoomResponse(
     val otherUserId: Long,
     val otherUserName: String,
     val otherUserProfileImg: String? = null,
-    val createdAt: String
+    val createdAt: String,
+    val unreadCount: Long = 0
 )
 
 @Serializable

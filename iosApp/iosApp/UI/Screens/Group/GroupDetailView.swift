@@ -15,11 +15,14 @@ struct GroupDetailView: View {
     /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
+    /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
+    private let chatViewModel: ChatViewModel
+
     var body: some View {
-        GroupDetailContent(viewModel: viewModel, container: container)
+        GroupDetailContent(viewModel: viewModel, container: container, chatViewModel: chatViewModel)
     }
 
-    init(groupId: Int64, container: AppContainer) {
+    init(groupId: Int64, container: AppContainer, chatViewModel: ChatViewModel) {
         _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
             groupId: groupId,
             getGroupUseCase: container.getGroupUseCase,
@@ -33,6 +36,7 @@ struct GroupDetailView: View {
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase
         ))
         self.container = container
+        self.chatViewModel = chatViewModel
     }
 }
 
@@ -40,6 +44,9 @@ private struct GroupDetailContent: View {
     @ObservedObject var viewModel: GroupDetailViewModel
 
     let container: AppContainer
+
+    /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
+    let chatViewModel: ChatViewModel
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -410,17 +417,24 @@ private struct GroupDetailContent: View {
 
     @ViewBuilder private var dmChatRoomDestination: some View {
         if let room = dmChatRoom {
-            ChatRoomView(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title, container: container)
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
         }
     }
 
-    init(viewModel: GroupDetailViewModel, container: AppContainer) {
+    init(viewModel: GroupDetailViewModel, container: AppContainer, chatViewModel: ChatViewModel) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
+        self.chatViewModel = chatViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

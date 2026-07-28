@@ -4,21 +4,13 @@ import Shared
 
 /// 알림 — 웹 /notifications·Compose NotificationsScreen 미러: 미읽음 헤더(N건+모두 읽음 처리)+타입 라벨 목록.
 /// 서버 응답엔 행위자/본문이 없어 타입 라벨+상대시각만 그리고, 클릭 이동도 웹처럼 아직 없다.
-/// 셸 목적지라 내비바는 셸이 소유. 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
+/// 셸 목적지라 내비바는 셸이 소유. VM도 셸(MainShellView)이 소유·주입한다 — 종 아이콘 뱃지와
+/// 같은 인스턴스(Compose sessionNotificationsViewModel 미러). 계층은 Compose와 1:1.
 struct NotificationsView: View {
-    @StateObject private var viewModel: NotificationsViewModel
+    @ObservedObject var viewModel: NotificationsViewModel
 
     var body: some View {
         NotificationsContent(viewModel: viewModel)
-    }
-
-    init(container: AppContainer) {
-        _viewModel = StateObject(wrappedValue: NotificationsViewModel(
-            getNotificationsPagingDataUseCase: container.getNotificationsPagingDataUseCase,
-            getUnreadNotificationCountUseCase: container.getUnreadNotificationCountUseCase,
-            markNotificationAsReadUseCase: container.markNotificationAsReadUseCase,
-            markAllNotificationsAsReadUseCase: container.markAllNotificationsAsReadUseCase
-        ))
     }
 }
 

@@ -240,6 +240,24 @@ struct SGSectionTitle: View {
     }
 }
 
+/// 미읽음 수 뱃지 — Compose SgUnreadBadge 미러(0이면 그리지 않고, 99 초과는 "99+")
+struct SGUnreadBadge: View {
+    let count: Int64
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        if count > 0 {
+            Text(count > 99 ? "99+" : "\(count)")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(colors.onAccent)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(colors.accent))
+        }
+    }
+}
+
 /// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
 /// 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속 작업)
 struct SGPostCard: View {

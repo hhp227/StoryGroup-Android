@@ -9,6 +9,11 @@ import Shared
 struct ChatRoomView: View {
     @StateObject private var viewModel: ChatRoomViewModel
 
+    /// 허브(셸 소유 세션 VM) 진입/이탈 신호용 — Compose ChatRoomScreen의 sessionChatViewModel 미러
+    private let chatViewModel: ChatViewModel
+
+    private let chatRoomId: Int64
+
     let title: String
 
     @State private var input = ""
@@ -149,6 +154,9 @@ struct ChatRoomView: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        // 허브에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
+        .onAppear { chatViewModel.onAction(.roomOpened(chatRoomId: chatRoomId)) }
+        .onDisappear { chatViewModel.onAction(.roomClosed(chatRoomId: chatRoomId)) }
         .onReceive(viewModel.event) { event in
             switch event {
             case .sent: input = ""
@@ -252,7 +260,7 @@ struct ChatRoomView: View {
         return "\((Double(size) / (1024 * 1024) * 10).rounded() / 10)MB"
     }
 
-    init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer) {
+    init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer, chatViewModel: ChatViewModel) {
         _viewModel = StateObject(wrappedValue: ChatRoomViewModel(
             groupId: groupId,
             chatRoomId: chatRoomId,
@@ -265,6 +273,8 @@ struct ChatRoomView: View {
             observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
+        self.chatViewModel = chatViewModel
+        self.chatRoomId = chatRoomId
         self.title = title
     }
 }

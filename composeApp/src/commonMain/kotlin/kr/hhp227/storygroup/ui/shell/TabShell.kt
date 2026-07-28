@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.BadgedBox
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Divider
@@ -23,13 +24,18 @@ import androidx.compose.material.NavigationRailItem
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.components.SgUnreadBadge
+import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
+import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 레일 전환 폭 — M3 window size class의 compact/medium 경계(600dp) */
@@ -55,6 +61,9 @@ internal fun TabShell(
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
+    // 셸 뱃지 — 알림 화면/채팅 허브와 같은 세션 VM을 조회한다(드로어 셸 ProfileViewModel 선례)
+    val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
+    val chatUiState by sessionChatViewModel().uiState.collectAsState()
 
     BoxWithConstraints {
         val useRail = maxWidth >= RailBreakpoint
@@ -70,7 +79,12 @@ internal fun TabShell(
                         NavigationRailItem(
                             selected = destination == currentDestination,
                             onClick = { onDestinationSelected(destination) },
-                            icon = { Icon(destination.icon, contentDescription = destination.label) },
+                            icon = {
+                                DestinationIcon(
+                                    destination = destination,
+                                    chatUnreadCount = chatUiState.totalUnread
+                                )
+                            },
                             label = { Text(destination.label) },
                             selectedContentColor = sg.accent,
                             unselectedContentColor = sg.inkSoft
@@ -89,9 +103,10 @@ internal fun TabShell(
                             actions = {
                                 // 알림은 탭에서 빠지고 상단바 종 아이콘으로 진입(알림 화면에서는 숨김)
                                 if (currentDestination != MainDestination.NOTIFICATIONS) {
-                                    IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
-                                        Icon(Icons.Default.Notifications, contentDescription = "알림")
-                                    }
+                                    SgBellAction(
+                                        unreadCount = notificationsUiState.unreadCount,
+                                        onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }
+                                    )
                                 }
                                 if (currentDestination == MainDestination.PROFILE) {
                                     IconButton(onClick = onOpenSettings) {
@@ -112,7 +127,12 @@ internal fun TabShell(
                                     BottomNavigationItem(
                                         selected = destination == currentDestination,
                                         onClick = { onDestinationSelected(destination) },
-                                        icon = { Icon(destination.icon, contentDescription = destination.label) },
+                                        icon = {
+                                            DestinationIcon(
+                                                destination = destination,
+                                                chatUnreadCount = chatUiState.totalUnread
+                                            )
+                                        },
                                         label = { Text(destination.label) },
                                         selectedContentColor = sg.accent,
                                         unselectedContentColor = sg.inkSoft
@@ -144,5 +164,17 @@ internal fun TabShell(
                 )
             }
         }
+    }
+}
+
+/** 탭/레일 아이콘 — 채팅 목적지만 허브 미읽음 합계 뱃지를 얹는다 */
+@Composable
+private fun DestinationIcon(destination: MainDestination, chatUnreadCount: Long) {
+    if (destination == MainDestination.CHAT) {
+        BadgedBox(badge = { SgUnreadBadge(chatUnreadCount) }) {
+            Icon(destination.icon, contentDescription = destination.label)
+        }
+    } else {
+        Icon(destination.icon, contentDescription = destination.label)
     }
 }

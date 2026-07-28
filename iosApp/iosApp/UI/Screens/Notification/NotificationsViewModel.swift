@@ -7,6 +7,8 @@ import Shared
 /// 별도 로드(첫 페이지 밖 미읽음까지 반영 — "모두 읽음 처리" 노출 기준). 진입마다 refresh가 미읽음 수를
 /// 다시 읽고 Event.refreshList로 목록도 첫 페이지부터 다시 읽는다(신선도 우선).
 /// 단건 읽음은 서버 재조회 없이 readOverrides로 낙관 갱신한다(그룹 탐색 localOverrides 패턴).
+/// 셸 종 아이콘 뱃지도 이 VM의 unreadCount를 공유한다(셸이 소유·주입) — 세션 시작에 즉시 로드하고,
+/// 개인 큐(STOMP) NOTIFICATION 이벤트로 실시간 증가시킨다.
 final class NotificationsViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -19,6 +21,9 @@ final class NotificationsViewModel: MviViewModel {
     private let markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
 
     private let markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+
+    /// 재연결부터만 refresh를 걸기 위한 가드 — 첫 연결은 init의 초기 로드와 겹친다(채팅방 VM 미러)
+    private var hasConnectedOnce = false
 
     private func setPagingData(_ pagingData: PagingData<AppNotification>) {
         uiState.pagingData = pagingData
@@ -82,11 +87,28 @@ final class NotificationsViewModel: MviViewModel {
         }
     }
 
+    /// 개인 큐 실시간 이벤트 — NOTIFICATION이면 뱃지 수를 올리고, 열려 있는 알림 화면 목록도 갱신시킨다
+    private func handlePersonalEvent(_ personalEvent: PersonalEvent) {
+        switch personalEvent.type {
+        case .connected:
+            // 재연결이면 끊김 공백에 놓친 알림 수를 REST로 메꾼다
+            if hasConnectedOnce { refresh() }
+            hasConnectedOnce = true
+        case .notification:
+            uiState.unreadCount += 1
+            event.send(.refreshList)
+        // CHAT_MESSAGE는 채팅 허브 VM 소관, DISCONNECTED는 재연결 CONNECTED가 정리한다
+        default:
+            break
+        }
+    }
+
     init(
         getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase,
         getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase,
         markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
-        markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+        markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
+        observePersonalEventsUseCase: ObservePersonalEventsUseCase
     ) {
         self.getUnreadNotificationCountUseCase = getUnreadNotificationCountUseCase
         self.markNotificationAsReadUseCase = markNotificationAsReadUseCase
@@ -97,6 +119,13 @@ final class NotificationsViewModel: MviViewModel {
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
+        // 셸 종 뱃지가 세션 시작부터 그려지므로 화면 진입을 기다리지 않고 미읽음 수를 로드한다
+        refresh()
+        KotlinFlowPublisher<PersonalEvent> { onEach in
+            observePersonalEventsUseCase.eventsFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] in self?.handlePersonalEvent($0) }
+        .store(in: &cancellables)
     }
 
     struct UiState {
