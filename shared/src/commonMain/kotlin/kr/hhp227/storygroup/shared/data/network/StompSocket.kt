@@ -27,7 +27,7 @@ internal sealed interface StompSessionEvent {
 
 /**
  * 서버 /ws 엔드포인트용 최소 STOMP 1.2 클라이언트.
- * 메시지 전송은 REST 계약이고, 클라 SEND는 서버 인터셉터가 타이핑 신호만 화이트리스트한다(trySend).
+ * 메시지 전송은 REST 계약이고, 클라 SEND는 서버 인터셉터가 타이핑·rtc 신호만 화이트리스트한다(trySend).
  * - 인증: 핸드셰이크가 아니라 CONNECT 프레임 native 헤더 `Authorization: Bearer`(서버 인터셉터 계약)
  * - 하트비트: 서버 10s/10s 계약 — 10초마다 LF 송신, 30초(3주기) 무수신이면 죽은 연결로 보고 재연결
  * - 재연결: 유실 시 5초 간격 무한 재시도(웹 stompjs reconnectDelay 미러). CONNECTED에 이르렀던
@@ -112,6 +112,22 @@ internal class StompSocket(
         runCatching { session.sendFrame("SEND", "destination" to destination) }
     }
 
+    /**
+     * JSON 바디를 실은 SEND — WebRTC 시그널(SDP/ICE) 릴레이용. 빈 바디판과 같은 휘발 계약:
+     * 세션이 없거나 실패하면 조용히 버린다(서버도 방 밖 수신자 신호를 조용히 버리는 것과 결).
+     */
+    suspend fun trySend(destination: String, body: String) {
+        val session = activeSession ?: return
+        runCatching {
+            session.sendFrame(
+                "SEND",
+                "destination" to destination,
+                "content-type" to "application/json",
+                body = body
+            )
+        }
+    }
+
     /** CONNECTED를 기다린다 — ERROR(토큰 만료 등)면 예외로 세션을 접는다 */
     private suspend fun DefaultClientWebSocketSession.awaitConnected() {
         while (true) {
@@ -138,12 +154,16 @@ internal class StompSocket(
 
     private suspend fun DefaultClientWebSocketSession.sendFrame(
         command: String,
-        vararg headers: Pair<String, String>
+        vararg headers: Pair<String, String>,
+        body: String = ""
     ) {
         val raw = buildString {
             append(command).append('\n')
             headers.forEach { (key, value) -> append(key).append(':').append(value).append('\n') }
+            // 바디가 있으면 content-length(UTF-8 바이트 수)를 실어 서버 파서가 NUL 종료에 의존하지 않게 한다
+            if (body.isNotEmpty()) append("content-length:").append(body.encodeToByteArray().size).append('\n')
             append('\n')
+            append(body)
             append('\u0000')
         }
         send(Frame.Text(raw))

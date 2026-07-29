@@ -42,3 +42,29 @@ data class MeetingCallEvent(
     val type: MeetingCallEventType,
     val peers: List<MeetingCallPeer> = emptyList()
 )
+
+/** WebRTC 시그널 종류 — 서버 RtcSignalType 미러. payload는 서버가 파싱하지 않는 불투명 JSON 문자열 */
+enum class MeetingRtcSignalType {
+    OFFER, ANSWER, ICE
+}
+
+/** 시그널 채널(/user/queue/rtc) 이벤트 종류 — CONNECTED/DISCONNECTED는 클라 합성(채팅과 같은 규칙) */
+enum class MeetingRtcSignalEventType {
+    CONNECTED, DISCONNECTED, SIGNAL
+}
+
+/** 시그널 채널 실시간 이벤트 — SIGNAL일 때만 signalType/fromUserId/payload가 채워진다 */
+data class MeetingRtcSignalEvent(
+    val type: MeetingRtcSignalEventType,
+    val signalType: MeetingRtcSignalType? = null,
+    val fromUserId: Long? = null,
+    val fromUserName: String? = null,
+    val payload: String? = null
+)
+
+/** ICE 서버 구성 — 필드가 브라우저 RTCIceServer와 동일해 그대로 PeerConnection에 넣는다 */
+data class IceServer(
+    val urls: List<String>,
+    val username: String? = null,
+    val credential: String? = null
+)

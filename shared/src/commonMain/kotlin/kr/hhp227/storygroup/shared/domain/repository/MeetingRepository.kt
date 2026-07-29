@@ -2,9 +2,12 @@ package kr.hhp227.storygroup.shared.domain.repository
 
 import app.cash.paging.PagingData
 import kotlinx.coroutines.flow.Flow
+import kr.hhp227.storygroup.shared.domain.model.IceServer
 import kr.hhp227.storygroup.shared.domain.model.Meeting
 import kr.hhp227.storygroup.shared.domain.model.MeetingCallEvent
 import kr.hhp227.storygroup.shared.domain.model.MeetingParticipant
+import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalEvent
+import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalType
 
 /**
  * 그룹 화상회의 데이터 접근 — REST는 참가 "기록"(DB), rtc 토픽은 지금 통화에 "있는" 로스터를 담당한다.
@@ -38,4 +41,20 @@ interface MeetingRepository {
      * 종료된 회의는 서버가 구독을 거부하므로(ERROR 프레임) 화면은 진행 중일 때만 수집해야 한다.
      */
     fun observeCallEvents(meetingId: Long): Flow<MeetingCallEvent>
+
+    /**
+     * SDP/ICE 시그널 채널 구독(/user/queue/rtc, 표적 전달) — 큐 하나가 모든 방을 나르므로
+     * 이 회의(roomKey=meetings/{id}) 신호만 걸러 흘린다. 시그널 SEND도 이 채널의 세션을 쓰므로
+     * 신호를 보내려면 반드시 수집 중이어야 한다.
+     */
+    fun observeSignalEvents(meetingId: Long): Flow<MeetingRtcSignalEvent>
+
+    /**
+     * SDP/ICE 시그널 발신 — STOMP SEND(휘발, 실패 무시). 서버는 수신자가 같은 rtc 방에
+     * 없으면 조용히 버리므로 상대가 PEERS에 나타난 뒤에 보내야 한다.
+     */
+    suspend fun sendSignal(meetingId: Long, type: MeetingRtcSignalType, toUserId: Long, payload: String)
+
+    /** ICE 서버 구성 조회 — 실패 시 호출 측이 STUN 폴백을 쓴다(조회 실패가 통화를 막으면 안 된다) */
+    suspend fun getIceServers(): Result<List<IceServer>>
 }

@@ -1,0 +1,439 @@
+package kr.hhp227.storygroup.ui.rtc
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kr.hhp227.storygroup.shared.domain.model.IceServer
+import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalType
+import org.json.JSONObject
+import org.webrtc.AudioSource
+import org.webrtc.AudioTrack
+import org.webrtc.Camera1Enumerator
+import org.webrtc.Camera2Enumerator
+import org.webrtc.CameraEnumerator
+import org.webrtc.CameraVideoCapturer
+import org.webrtc.DataChannel
+import org.webrtc.DefaultVideoDecoderFactory
+import org.webrtc.DefaultVideoEncoderFactory
+import org.webrtc.EglBase
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpTransceiver
+import org.webrtc.SdpObserver
+import org.webrtc.SessionDescription
+import org.webrtc.SurfaceTextureHelper
+import org.webrtc.VideoSource
+import org.webrtc.VideoTrack
+
+/** 팩토리는 applicationContext만 캡처한다 — VM(라우트 스코프)에 넘겨 보관해도 누수가 없다 */
+@Composable
+actual fun rememberRtcMediaSessionFactory(): RtcMediaSessionFactory {
+    val appContext = LocalContext.current.applicationContext
+
+    return remember { AndroidRtcMediaSessionFactory(appContext) }
+}
+
+/** 참가 시점 권한 게이트 — 이미 허용이면 다이얼로그 없이 즉시 true(웹 getUserMedia 프롬프트 미러) */
+@Composable
+actual fun rememberRtcPermissionsRequester(onResult: (granted: Boolean) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val currentOnResult by rememberUpdatedState(onResult)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        currentOnResult(grants.values.all { it })
+    }
+
+    return {
+        val permissions = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+
+        if (permissions.all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
+            currentOnResult(true)
+        } else {
+            launcher.launch(permissions)
+        }
+    }
+}
+
+internal class AndroidRtcMediaSessionFactory(private val appContext: Context) : RtcMediaSessionFactory {
+    override fun create(iceServers: List<IceServer>): RtcMediaSession = AndroidRtcMediaSession(appContext, iceServers)
+}
+
+/** 렌더러(RtcVideoView.android)가 소비하는 트랙+EGL 컨텍스트 묶음 — 로컬 미리보기만 미러 */
+internal class AndroidRtcVideoTrackHandle(
+    val track: VideoTrack,
+    val eglContext: EglBase.Context,
+    val mirror: Boolean
+) : RtcVideoTrackHandle
+
+/**
+ * libwebrtc 기반 미디어 세션 — 웹 use-rtc-session의 Android판.
+ * 시그널 payload는 웹과 같은 JSON({type,sdp} / {candidate,sdpMid,sdpMLineIndex})으로 상호운용된다.
+ * libwebrtc 콜백은 내부 시그널링 스레드에서 오므로 피어 맵은 lock으로 보호하고,
+ * 밖으로는 스레드 안전한 Flow만 노출한다. 카메라 실패 시 오디오 전용으로 계속한다(웹 폴백 미러).
+ */
+internal class AndroidRtcMediaSession(
+    private val appContext: Context,
+    iceServers: List<IceServer>
+) : RtcMediaSession {
+
+    private val lock = Any()
+    private val eglBase: EglBase = EglBase.create()
+    private val factory: PeerConnectionFactory
+    private val rtcConfig: PeerConnection.RTCConfiguration
+    private val peers = mutableMapOf<Long, PeerHandle>()
+    private var audioSource: AudioSource? = null
+    private var videoSource: VideoSource? = null
+    private var localAudioTrack: AudioTrack? = null
+    private var localVideoTrack: VideoTrack? = null
+    private var videoCapturer: CameraVideoCapturer? = null
+    private var surfaceHelper: SurfaceTextureHelper? = null
+    private var micEnabled = true
+    private var camEnabled = true
+    private var started = false
+    private var disposed = false
+
+    private val _localVideo = MutableStateFlow<RtcVideoTrackHandle?>(null)
+    override val localVideo: StateFlow<RtcVideoTrackHandle?> = _localVideo.asStateFlow()
+
+    private val _remoteVideos = MutableStateFlow<Map<Long, RtcVideoTrackHandle>>(emptyMap())
+    override val remoteVideos: StateFlow<Map<Long, RtcVideoTrackHandle>> = _remoteVideos.asStateFlow()
+
+    // VM이 수집을 시작한 뒤에야 피어가 생기지만, 순간 폭주(ICE 다발)에 대비해 버퍼를 넉넉히 둔다
+    private val _outgoingSignals = MutableSharedFlow<RtcOutgoingSignal>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    override val outgoingSignals: Flow<RtcOutgoingSignal> = _outgoingSignals.asSharedFlow()
+
+    init {
+        initializeFactoryOnce(appContext)
+        factory = PeerConnectionFactory.builder()
+            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglBase.eglBaseContext, true, true))
+            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
+            .createPeerConnectionFactory()
+        rtcConfig = PeerConnection.RTCConfiguration(
+            iceServers.map { server ->
+                PeerConnection.IceServer.builder(server.urls).apply {
+                    val username = server.username
+                    val credential = server.credential
+
+                    if (!username.isNullOrEmpty() && !credential.isNullOrEmpty()) {
+                        setUsername(username)
+                        setPassword(credential)
+                    }
+                }.createIceServer()
+            }
+        ).apply { sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN }
+    }
+
+    override fun start() {
+        synchronized(lock) {
+            if (disposed || started) return
+            started = true
+
+            val newAudioSource = factory.createAudioSource(MediaConstraints())
+
+            audioSource = newAudioSource
+            localAudioTrack = factory.createAudioTrack("audio0", newAudioSource).apply { setEnabled(micEnabled) }
+
+            // 카메라가 없거나 캡처 시작에 실패하면 오디오 전용으로 계속한다(웹 getUserMedia 폴백 미러)
+            val capturer = createCameraCapturer() ?: return
+            val newVideoSource = factory.createVideoSource(capturer.isScreencast)
+            val helper = SurfaceTextureHelper.create("SgRtcCapture", eglBase.eglBaseContext)
+
+            capturer.initialize(helper, appContext, newVideoSource.capturerObserver)
+            val captureStarted = runCatching { capturer.startCapture(CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS) }.isSuccess
+
+            if (captureStarted) {
+                videoSource = newVideoSource
+                surfaceHelper = helper
+                videoCapturer = capturer
+                val track = factory.createVideoTrack("video0", newVideoSource).apply { setEnabled(camEnabled) }
+
+                localVideoTrack = track
+                _localVideo.value = AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = true)
+            } else {
+                runCatching { capturer.dispose() }
+                runCatching { helper.dispose() }
+                runCatching { newVideoSource.dispose() }
+            }
+        }
+    }
+
+    override fun createPeer(peerId: Long, initiator: Boolean) {
+        val handle = synchronized(lock) {
+            if (disposed || peers.containsKey(peerId)) return
+            val handle = PeerHandle(peerId)
+            val pc = factory.createPeerConnection(rtcConfig, PeerObserver(handle)) ?: return
+
+            handle.pc = pc
+            peers[peerId] = handle
+            localAudioTrack?.let { pc.addTrack(it) }
+            localVideoTrack?.let { pc.addTrack(it) }
+            handle
+        }
+
+        if (initiator) createAndSendOffer(handle)
+    }
+
+    override fun closePeer(peerId: Long) {
+        val handle = synchronized(lock) { peers.remove(peerId) } ?: return
+
+        _remoteVideos.update { it - peerId }
+        // dispose는 세션 폐기 때 일괄 — 콜백 경합 중 네이티브 해제를 피한다(close만으로 연결은 끊긴다)
+        runCatching { handle.pc.close() }
+    }
+
+    override fun closeAllPeers() {
+        val closing = synchronized(lock) {
+            val copy = peers.values.toList()
+
+            peers.clear()
+            copy
+        }
+
+        _remoteVideos.value = emptyMap()
+        closing.forEach { runCatching { it.pc.close() } }
+    }
+
+    override fun applySignal(fromUserId: Long, type: MeetingRtcSignalType, payload: String) {
+        val handle = synchronized(lock) { peers[fromUserId] } ?: return
+
+        when (type) {
+            MeetingRtcSignalType.OFFER -> applyRemoteOffer(handle, payload)
+            MeetingRtcSignalType.ANSWER -> applyRemoteAnswer(handle, payload)
+            MeetingRtcSignalType.ICE -> applyRemoteCandidate(handle, payload)
+        }
+    }
+
+    override fun setMicEnabled(enabled: Boolean) {
+        micEnabled = enabled
+        localAudioTrack?.setEnabled(enabled)
+    }
+
+    override fun setCamEnabled(enabled: Boolean) {
+        camEnabled = enabled
+        localVideoTrack?.setEnabled(enabled)
+    }
+
+    override fun dispose() {
+        val closing = synchronized(lock) {
+            if (disposed) return
+            disposed = true
+            val copy = peers.values.toList()
+
+            peers.clear()
+            copy
+        }
+
+        _localVideo.value = null
+        _remoteVideos.value = emptyMap()
+        closing.forEach {
+            runCatching { it.pc.close() }
+            runCatching { it.pc.dispose() }
+        }
+        runCatching { videoCapturer?.stopCapture() }
+        runCatching { videoCapturer?.dispose() }
+        runCatching { surfaceHelper?.dispose() }
+        runCatching { localVideoTrack?.dispose() }
+        runCatching { localAudioTrack?.dispose() }
+        runCatching { videoSource?.dispose() }
+        runCatching { audioSource?.dispose() }
+        runCatching { factory.dispose() }
+        runCatching { eglBase.release() }
+    }
+
+    /** offer 생성 → 로컬 SDP 설정 성공 후에만 릴레이(웹이 pc.localDescription을 보내는 것과 동일 시점) */
+    private fun createAndSendOffer(handle: PeerHandle) {
+        handle.pc.createOffer(object : SdpObserverAdapter() {
+            override fun onCreateSuccess(description: SessionDescription?) {
+                val offer = description ?: return
+
+                handle.pc.setLocalDescription(object : SdpObserverAdapter() {
+                    override fun onSetSuccess() {
+                        emitDescription(handle.peerId, MeetingRtcSignalType.OFFER, offer)
+                    }
+                }, offer)
+            }
+        }, MediaConstraints())
+    }
+
+    private fun applyRemoteOffer(handle: PeerHandle, payload: String) {
+        val offer = parseDescription(payload) ?: return
+
+        handle.pc.setRemoteDescription(object : SdpObserverAdapter() {
+            override fun onSetSuccess() {
+                drainPendingCandidates(handle)
+                handle.pc.createAnswer(object : SdpObserverAdapter() {
+                    override fun onCreateSuccess(description: SessionDescription?) {
+                        val answer = description ?: return
+
+                        handle.pc.setLocalDescription(object : SdpObserverAdapter() {
+                            override fun onSetSuccess() {
+                                emitDescription(handle.peerId, MeetingRtcSignalType.ANSWER, answer)
+                            }
+                        }, answer)
+                    }
+                }, MediaConstraints())
+            }
+        }, offer)
+    }
+
+    private fun applyRemoteAnswer(handle: PeerHandle, payload: String) {
+        val answer = parseDescription(payload) ?: return
+
+        handle.pc.setRemoteDescription(object : SdpObserverAdapter() {
+            override fun onSetSuccess() {
+                drainPendingCandidates(handle)
+            }
+        }, answer)
+    }
+
+    /** 원격 SDP 설정 전에 도착한 candidate는 큐잉했다가 적용한다(표준 패턴, 웹 pendingCandidates 미러) */
+    private fun applyRemoteCandidate(handle: PeerHandle, payload: String) {
+        val candidate = parseCandidate(payload) ?: return
+        val applyNow = synchronized(lock) {
+            if (handle.remoteDescriptionSet) true else {
+                handle.pendingCandidates += candidate
+                false
+            }
+        }
+
+        if (applyNow) runCatching { handle.pc.addIceCandidate(candidate) }
+    }
+
+    private fun drainPendingCandidates(handle: PeerHandle) {
+        val queued = synchronized(lock) {
+            handle.remoteDescriptionSet = true
+            val copy = handle.pendingCandidates.toList()
+
+            handle.pendingCandidates.clear()
+            copy
+        }
+
+        queued.forEach { runCatching { handle.pc.addIceCandidate(it) } }
+    }
+
+    private fun emitDescription(peerId: Long, type: MeetingRtcSignalType, description: SessionDescription) {
+        val payload = JSONObject()
+            .put("type", description.type.canonicalForm())
+            .put("sdp", description.description)
+            .toString()
+
+        _outgoingSignals.tryEmit(RtcOutgoingSignal(toUserId = peerId, type = type, payload = payload))
+    }
+
+    /** 웹 JSON.stringify(localDescription)와 같은 {type,sdp} 형태를 파싱한다 */
+    private fun parseDescription(payload: String): SessionDescription? = runCatching {
+        val json = JSONObject(payload)
+
+        SessionDescription(
+            SessionDescription.Type.fromCanonicalForm(json.getString("type")),
+            json.getString("sdp")
+        )
+    }.getOrNull()
+
+    /** 웹 JSON.stringify(candidate)와 같은 {candidate,sdpMid,sdpMLineIndex} 형태를 파싱한다 */
+    private fun parseCandidate(payload: String): IceCandidate? = runCatching {
+        val json = JSONObject(payload)
+
+        IceCandidate(
+            json.optString("sdpMid"),
+            json.optInt("sdpMLineIndex", 0),
+            json.getString("candidate")
+        )
+    }.getOrNull()
+
+    private fun createCameraCapturer(): CameraVideoCapturer? {
+        val enumerator: CameraEnumerator =
+            if (Camera2Enumerator.isSupported(appContext)) Camera2Enumerator(appContext) else Camera1Enumerator(true)
+        val deviceNames = enumerator.deviceNames
+        val deviceName = deviceNames.firstOrNull(enumerator::isFrontFacing) ?: deviceNames.firstOrNull() ?: return null
+
+        return enumerator.createCapturer(deviceName, null)
+    }
+
+    private class PeerHandle(val peerId: Long) {
+        lateinit var pc: PeerConnection
+        val pendingCandidates = mutableListOf<IceCandidate>()
+        var remoteDescriptionSet = false
+    }
+
+    /** libwebrtc 콜백 어댑터 — 시그널링 스레드에서 불리므로 Flow 발행만 하고 상태는 건드리지 않는다 */
+    private inner class PeerObserver(private val handle: PeerHandle) : PeerConnection.Observer {
+        override fun onIceCandidate(candidate: IceCandidate?) {
+            if (candidate == null) return
+            val payload = JSONObject()
+                .put("candidate", candidate.sdp)
+                .put("sdpMid", candidate.sdpMid)
+                .put("sdpMLineIndex", candidate.sdpMLineIndex)
+                .toString()
+
+            _outgoingSignals.tryEmit(RtcOutgoingSignal(toUserId = handle.peerId, type = MeetingRtcSignalType.ICE, payload = payload))
+        }
+
+        override fun onTrack(transceiver: RtpTransceiver?) {
+            val track = transceiver?.receiver?.track()
+
+            if (track is VideoTrack) {
+                _remoteVideos.update {
+                    it + (handle.peerId to AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = false))
+                }
+            }
+        }
+
+        override fun onSignalingChange(newState: PeerConnection.SignalingState?) = Unit
+        override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) = Unit
+        override fun onIceConnectionReceivingChange(receiving: Boolean) = Unit
+        override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) = Unit
+        override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) = Unit
+        override fun onAddStream(stream: MediaStream?) = Unit
+        override fun onRemoveStream(stream: MediaStream?) = Unit
+        override fun onDataChannel(dataChannel: DataChannel?) = Unit
+        override fun onRenegotiationNeeded() = Unit
+    }
+
+    /** SdpObserver 4메소드 중 필요한 것만 덮는 어댑터 — 실패는 로그 대상이지만 통화를 멈추진 않는다 */
+    private abstract class SdpObserverAdapter : SdpObserver {
+        override fun onCreateSuccess(description: SessionDescription?) = Unit
+        override fun onSetSuccess() = Unit
+        override fun onCreateFailure(error: String?) = Unit
+        override fun onSetFailure(error: String?) = Unit
+    }
+
+    private companion object {
+        const val CAPTURE_WIDTH = 1280
+        const val CAPTURE_HEIGHT = 720
+        const val CAPTURE_FPS = 30
+
+        private var factoryInitialized = false
+
+        /** PeerConnectionFactory 전역 초기화는 프로세스당 1회면 충분하다 */
+        fun initializeFactoryOnce(appContext: Context) {
+            synchronized(this) {
+                if (factoryInitialized) return
+                factoryInitialized = true
+                PeerConnectionFactory.initialize(
+                    PeerConnectionFactory.InitializationOptions.builder(appContext).createInitializationOptions()
+                )
+            }
+        }
+    }
+}

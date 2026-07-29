@@ -36,6 +36,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMeetingsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
@@ -60,12 +61,14 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveMeetingCallEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveMeetingRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SendMeetingRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
@@ -137,5 +140,8 @@ class AppContainer(
     val endMeetingUseCase = EndMeetingUseCase(meetingRepository)
     val getMeetingParticipantsUseCase = GetMeetingParticipantsUseCase(meetingRepository)
     val observeMeetingCallEventsUseCase = ObserveMeetingCallEventsUseCase(meetingRepository)
+    val observeMeetingRtcSignalsUseCase = ObserveMeetingRtcSignalsUseCase(meetingRepository)
+    val sendMeetingRtcSignalUseCase = SendMeetingRtcSignalUseCase(meetingRepository)
+    val getIceServersUseCase = GetIceServersUseCase(meetingRepository)
     val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
 }
