@@ -30,5 +30,8 @@ data class PersonalSocketEventResponse(
     val notification: NotificationResponse? = null,
     val chatRoomId: Long? = null,
     val messageId: Long? = null,
-    val senderId: Long? = null
+    val senderId: Long? = null,
+    // CALL_INVITE 전용 — 서버 CallInviteEvent는 발신자를 fromUserId/fromUserName으로 싣는다
+    val fromUserId: Long? = null,
+    val fromUserName: String? = null
 )

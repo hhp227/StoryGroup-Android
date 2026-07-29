@@ -4,6 +4,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
@@ -14,7 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,9 +30,13 @@ import kotlinx.serialization.Serializable
 import kr.hhp227.storygroup.di.AppContainer
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.di.LocalSessionViewModelStoreOwner
+import kr.hhp227.storygroup.di.sessionViewModel
+import kr.hhp227.storygroup.ui.rtc.IncomingCallBanner
+import kr.hhp227.storygroup.ui.rtc.IncomingCallViewModel
 import kr.hhp227.storygroup.ui.screens.auth.LoginScreen
 import kr.hhp227.storygroup.ui.screens.auth.LoginViewModel
 import kr.hhp227.storygroup.ui.screens.auth.RegisterScreen
+import kr.hhp227.storygroup.ui.screens.call.DmCallScreen
 import kr.hhp227.storygroup.ui.screens.chat.ChatRoomScreen
 import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
@@ -80,9 +88,16 @@ internal data object DiscoverGroupsRoute
 @Serializable
 internal data class MeetingsRoute(val groupId: Long)
 
-/** 회의 상세 — 참가 기록+실시간 통화 로스터. 미디어(카메라/마이크)는 후속 마일스톤 */
+/** 회의 상세 — 참가 기록+실시간 영상 통화(비디오 그리드) */
 @Serializable
 internal data class MeetingDetailRoute(val groupId: Long, val meetingId: Long)
+
+/**
+ * DM 1:1 통화 — ring=true는 발신(입장+벨울림), false는 수신 배너 수락으로 진입.
+ * title은 상대 이름(채팅방과 동일하게 호출 측이 아는 표시명)
+ */
+@Serializable
+internal data class DmCallRoute(val chatRoomId: Long, val title: String, val ring: Boolean)
 
 /** 그룹 피드 작성 성공을 이전 백스택 엔트리(그룹 상세)로 알리는 결과 키 — Paging-CRUD 샘플 미러 */
 internal const val POST_CREATED_KEY = "post_created"
@@ -136,6 +151,9 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
         val navController = rememberNavController()
         // 홈(라운지) 작성 성공 신호 — 셸이 항상 살아있으므로 상태로 내려보낸다(그룹은 savedStateHandle)
         var homeRefreshPending by remember { mutableStateOf(false) }
+        // DM 수신 통화 배너 — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받는다
+        val incomingCallViewModel = sessionViewModel { IncomingCallViewModel(it.observePersonalEventsUseCase) }
+        val incomingCallUiState by incomingCallViewModel.uiState.collectAsState()
 
         Box {
             MainShell(
@@ -189,6 +207,24 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             chatRoomId = route.chatRoomId,
                             groupId = route.groupId,
                             title = route.title,
+                            onBack = { navController.popBackStack() },
+                            // DM 통화 발신 — 입장+벨울림(그룹 방은 화면이 버튼을 숨긴다)
+                            onStartCall = {
+                                navController.navigate(DmCallRoute(route.chatRoomId, route.title, ring = true))
+                            },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<DmCallRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<DmCallRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        DmCallScreen(
+                            chatRoomId = route.chatRoomId,
+                            title = route.title,
+                            ring = route.ring,
                             onBack = { navController.popBackStack() },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
@@ -271,6 +307,22 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                         )
                     }
                 }
+            }
+            // DM 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Box의 마지막 자식 = 최상단, 웹 헤더 배너 미러)
+            incomingCallUiState.incomingCall?.let { call ->
+                IncomingCallBanner(
+                    call = call,
+                    onAccept = {
+                        incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss)
+                        // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false)
+                        navController.navigate(DmCallRoute(call.chatRoomId, call.callerName, ring = false))
+                    },
+                    onDecline = { incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss) },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
         }
     }

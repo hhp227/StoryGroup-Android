@@ -5,19 +5,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kr.hhp227.storygroup.shared.domain.model.MeetingCallEvent
-import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalEvent
-import kr.hhp227.storygroup.shared.domain.usecase.ObserveMeetingCallEventsUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.ObserveMeetingRtcSignalsUseCase
+import kr.hhp227.storygroup.shared.domain.model.RtcCallEvent
+import kr.hhp227.storygroup.shared.domain.model.RtcRoom
+import kr.hhp227.storygroup.shared.domain.model.RtcRoomKind
+import kr.hhp227.storygroup.shared.domain.model.RtcSignalEvent
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 
 /**
  * 통화 실시간 이벤트 Flow 대응 핸들 — ChatEventFlowAdapter와 동일 구조.
  * Swift 쪽은 KmpInterop의 KotlinFlowPublisher가 subscribe(onEach:)를 감싼다.
  */
-class MeetingCallEventFlowAdapter internal constructor(
-    private val source: Flow<MeetingCallEvent>
+class RtcCallEventFlowAdapter internal constructor(
+    private val source: Flow<RtcCallEvent>
 ) {
-    fun subscribe(onEach: (MeetingCallEvent) -> Unit): FlowSubscription {
+    fun subscribe(onEach: (RtcCallEvent) -> Unit): FlowSubscription {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
         scope.launch { source.collect { onEach(it) } }
@@ -25,15 +27,19 @@ class MeetingCallEventFlowAdapter internal constructor(
     }
 }
 
-/** Kotlin의 observeMeetingCallEventsUseCase(meetingId) 호출 대응 — Swift callAsFunction이 감싼다 */
-fun ObserveMeetingCallEventsUseCase.eventsFlow(meetingId: Long): MeetingCallEventFlowAdapter =
-    MeetingCallEventFlowAdapter(invoke(meetingId))
+/** 회의 통화 로스터 구독 대응 — Swift callAsFunction이 감싼다 */
+fun ObserveRtcCallEventsUseCase.meetingEventsFlow(meetingId: Long): RtcCallEventFlowAdapter =
+    RtcCallEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.MEETING, meetingId)))
 
-/** 시그널 채널(/user/queue/rtc) Flow 대응 핸들 — MeetingCallEventFlowAdapter와 동일 구조 */
-class MeetingRtcSignalEventFlowAdapter internal constructor(
-    private val source: Flow<MeetingRtcSignalEvent>
+/** DM 통화 로스터 구독 대응 */
+fun ObserveRtcCallEventsUseCase.directEventsFlow(chatRoomId: Long): RtcCallEventFlowAdapter =
+    RtcCallEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.DIRECT, chatRoomId)))
+
+/** 시그널 채널(/user/queue/rtc) Flow 대응 핸들 — RtcCallEventFlowAdapter와 동일 구조 */
+class RtcSignalEventFlowAdapter internal constructor(
+    private val source: Flow<RtcSignalEvent>
 ) {
-    fun subscribe(onEach: (MeetingRtcSignalEvent) -> Unit): FlowSubscription {
+    fun subscribe(onEach: (RtcSignalEvent) -> Unit): FlowSubscription {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
         scope.launch { source.collect { onEach(it) } }
@@ -41,6 +47,10 @@ class MeetingRtcSignalEventFlowAdapter internal constructor(
     }
 }
 
-/** Kotlin의 observeMeetingRtcSignalsUseCase(meetingId) 호출 대응 — Swift callAsFunction이 감싼다 */
-fun ObserveMeetingRtcSignalsUseCase.eventsFlow(meetingId: Long): MeetingRtcSignalEventFlowAdapter =
-    MeetingRtcSignalEventFlowAdapter(invoke(meetingId))
+/** 회의 시그널 채널 구독 대응 */
+fun ObserveRtcSignalsUseCase.meetingEventsFlow(meetingId: Long): RtcSignalEventFlowAdapter =
+    RtcSignalEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.MEETING, meetingId)))
+
+/** DM 시그널 채널 구독 대응 */
+fun ObserveRtcSignalsUseCase.directEventsFlow(chatRoomId: Long): RtcSignalEventFlowAdapter =
+    RtcSignalEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.DIRECT, chatRoomId)))

@@ -104,11 +104,14 @@ private fun NotificationResponse.toDomain(): AppNotification? {
     )
 }
 
-/** 모르는 봉투 타입(CALL_INVITE 등)은 항목째 제외 — 목록의 미지 알림 타입 정책과 동일 */
+/** 모르는 봉투 타입은 항목째 제외 — 목록의 미지 알림 타입 정책과 동일 */
 private fun PersonalSocketEventResponse.toDomain(): PersonalEvent? = when (type) {
     "NOTIFICATION" -> notification?.toDomain()
         ?.let { PersonalEvent(PersonalEventType.NOTIFICATION, notification = it) }
     "CHAT_MESSAGE" -> chatRoomId
         ?.let { PersonalEvent(PersonalEventType.CHAT_MESSAGE, chatRoomId = it, messageId = messageId, senderId = senderId) }
+    // DM 벨울림(휘발) — 발신자 필드명이 서버 CallInviteEvent 계약(fromUserId/fromUserName)이라 별도 매핑
+    "CALL_INVITE" -> chatRoomId
+        ?.let { PersonalEvent(PersonalEventType.CALL_INVITE, chatRoomId = it, senderId = fromUserId, senderName = fromUserName) }
     else -> null
 }

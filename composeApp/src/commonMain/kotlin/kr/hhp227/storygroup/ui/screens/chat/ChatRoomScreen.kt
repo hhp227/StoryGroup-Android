@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
@@ -75,6 +76,7 @@ fun ChatRoomScreen(
     groupId: Long?,
     title: String,
     onBack: () -> Unit,
+    onStartCall: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
 ) {
@@ -159,6 +161,14 @@ fun ChatRoomScreen(
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = sg.ink)
+                }
+            },
+            actions = {
+                // 1:1 통화는 DM 전용 — 그룹 채팅방은 회의(그룹 상세 진입)가 담당한다(웹 D6 미러)
+                if (groupId == null) {
+                    IconButton(onClick = onStartCall) {
+                        Icon(Icons.Default.Call, contentDescription = "통화", tint = sg.accent)
+                    }
                 }
             }
         )

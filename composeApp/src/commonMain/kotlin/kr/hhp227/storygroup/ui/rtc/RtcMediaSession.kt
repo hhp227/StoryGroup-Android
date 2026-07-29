@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kr.hhp227.storygroup.shared.domain.model.IceServer
-import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalType
+import kr.hhp227.storygroup.shared.domain.model.RtcSignalType
 
 /** 비디오 트랙 핸들 — 플랫폼 구현이 실제 트랙을 감싼다(commonMain은 불투명, RtcVideoView가 소비) */
 interface RtcVideoTrackHandle
@@ -12,7 +12,7 @@ interface RtcVideoTrackHandle
 /** 미디어 세션이 밖으로 흘리는 시그널 — VM이 STOMP(/app/rtc/.../signal)로 릴레이한다 */
 data class RtcOutgoingSignal(
     val toUserId: Long,
-    val type: MeetingRtcSignalType,
+    val type: RtcSignalType,
     val payload: String
 )
 
@@ -45,7 +45,7 @@ interface RtcMediaSession {
     fun closeAllPeers()
 
     /** 수신 시그널 적용 — OFFER면 answer를 만들어 되흘리고, ICE는 원격 SDP 설정 전이면 큐잉한다 */
-    fun applySignal(fromUserId: Long, type: MeetingRtcSignalType, payload: String)
+    fun applySignal(fromUserId: Long, type: RtcSignalType, payload: String)
 
     fun setMicEnabled(enabled: Boolean)
 

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kr.hhp227.storygroup.shared.domain.model.IceServer
-import kr.hhp227.storygroup.shared.domain.model.MeetingRtcSignalType
+import kr.hhp227.storygroup.shared.domain.model.RtcSignalType
 import org.json.JSONObject
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
@@ -213,13 +213,13 @@ internal class AndroidRtcMediaSession(
         closing.forEach { runCatching { it.pc.close() } }
     }
 
-    override fun applySignal(fromUserId: Long, type: MeetingRtcSignalType, payload: String) {
+    override fun applySignal(fromUserId: Long, type: RtcSignalType, payload: String) {
         val handle = synchronized(lock) { peers[fromUserId] } ?: return
 
         when (type) {
-            MeetingRtcSignalType.OFFER -> applyRemoteOffer(handle, payload)
-            MeetingRtcSignalType.ANSWER -> applyRemoteAnswer(handle, payload)
-            MeetingRtcSignalType.ICE -> applyRemoteCandidate(handle, payload)
+            RtcSignalType.OFFER -> applyRemoteOffer(handle, payload)
+            RtcSignalType.ANSWER -> applyRemoteAnswer(handle, payload)
+            RtcSignalType.ICE -> applyRemoteCandidate(handle, payload)
         }
     }
 
@@ -268,7 +268,7 @@ internal class AndroidRtcMediaSession(
 
                 handle.pc.setLocalDescription(object : SdpObserverAdapter() {
                     override fun onSetSuccess() {
-                        emitDescription(handle.peerId, MeetingRtcSignalType.OFFER, offer)
+                        emitDescription(handle.peerId, RtcSignalType.OFFER, offer)
                     }
                 }, offer)
             }
@@ -287,7 +287,7 @@ internal class AndroidRtcMediaSession(
 
                         handle.pc.setLocalDescription(object : SdpObserverAdapter() {
                             override fun onSetSuccess() {
-                                emitDescription(handle.peerId, MeetingRtcSignalType.ANSWER, answer)
+                                emitDescription(handle.peerId, RtcSignalType.ANSWER, answer)
                             }
                         }, answer)
                     }
@@ -331,7 +331,7 @@ internal class AndroidRtcMediaSession(
         queued.forEach { runCatching { handle.pc.addIceCandidate(it) } }
     }
 
-    private fun emitDescription(peerId: Long, type: MeetingRtcSignalType, description: SessionDescription) {
+    private fun emitDescription(peerId: Long, type: RtcSignalType, description: SessionDescription) {
         val payload = JSONObject()
             .put("type", description.type.canonicalForm())
             .put("sdp", description.description)
@@ -386,7 +386,7 @@ internal class AndroidRtcMediaSession(
                 .put("sdpMLineIndex", candidate.sdpMLineIndex)
                 .toString()
 
-            _outgoingSignals.tryEmit(RtcOutgoingSignal(toUserId = handle.peerId, type = MeetingRtcSignalType.ICE, payload = payload))
+            _outgoingSignals.tryEmit(RtcOutgoingSignal(toUserId = handle.peerId, type = RtcSignalType.ICE, payload = payload))
         }
 
         override fun onTrack(transceiver: RtpTransceiver?) {

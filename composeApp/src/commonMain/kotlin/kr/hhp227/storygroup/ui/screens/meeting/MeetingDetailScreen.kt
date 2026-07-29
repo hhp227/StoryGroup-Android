@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -36,23 +34,22 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.Meeting
-import kr.hhp227.storygroup.shared.domain.model.MeetingCallPeer
 import kr.hhp227.storygroup.shared.domain.model.MeetingParticipant
+import kr.hhp227.storygroup.shared.domain.model.RtcCallPeer
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
 import kr.hhp227.storygroup.ui.components.SgSectionTitle
 import kr.hhp227.storygroup.ui.components.SgTopBar
-import kr.hhp227.storygroup.ui.rtc.RtcVideoView
+import kr.hhp227.storygroup.ui.rtc.RtcCallToggleButton
+import kr.hhp227.storygroup.ui.rtc.RtcVideoGrid
 import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
 import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -73,9 +70,9 @@ private fun meetingDetailViewModel(groupId: Long, meetingId: Long): MeetingDetai
             joinMeetingUseCase = container.joinMeetingUseCase,
             leaveMeetingUseCase = container.leaveMeetingUseCase,
             endMeetingUseCase = container.endMeetingUseCase,
-            observeMeetingCallEventsUseCase = container.observeMeetingCallEventsUseCase,
-            observeMeetingRtcSignalsUseCase = container.observeMeetingRtcSignalsUseCase,
-            sendMeetingRtcSignalUseCase = container.sendMeetingRtcSignalUseCase,
+            observeRtcCallEventsUseCase = container.observeRtcCallEventsUseCase,
+            observeRtcSignalsUseCase = container.observeRtcSignalsUseCase,
+            sendRtcSignalUseCase = container.sendRtcSignalUseCase,
             getIceServersUseCase = container.getIceServersUseCase,
             rtcMediaSessionFactory = rtcMediaSessionFactory,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
@@ -235,7 +232,7 @@ private fun MeetingInfoCard(meeting: Meeting, hostName: String?, modifier: Modif
 
 /**
  * 통화 섹션 — 참가 전엔 버튼만, 참가 중엔 비디오 그리드(미디어)나 아바타 로스터(로스터 전용)와
- * 마이크/카메라 토글·나가기. PEERS가 전체 목록이라 그리드는 로스터 기준으로 그린다.
+ * 마이크/카메라 토글·나가기. 그리드/토글은 DM 통화 화면과 공용(ui/rtc/RtcCallUi).
  */
 @Composable
 private fun CallSection(
@@ -247,6 +244,7 @@ private fun CallSection(
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
+    val call = uiState.call
 
     SgCard(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -258,35 +256,35 @@ private fun CallSection(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                if (uiState.isInCall) {
+                if (call.isInCall) {
                     Text(
-                        if (uiState.isCallConnected) "통화 중 ${uiState.callPeers.size}명" else "재연결 중…",
+                        if (call.isConnected) "통화 중 ${call.peers.size}명" else "재연결 중…",
                         style = SgTheme.typography.labelSmall,
-                        color = if (uiState.isCallConnected) sg.accent2 else sg.inkSoft
+                        color = if (call.isConnected) sg.accent2 else sg.inkSoft
                     )
                 }
             }
-            if (uiState.isInCall) {
-                if (uiState.isMediaActive) {
-                    VideoGrid(uiState = uiState)
+            if (call.isInCall) {
+                if (call.isMediaActive) {
+                    RtcVideoGrid(state = call, myUserId = uiState.myUserId)
                 } else {
-                    RosterOnlyStrip(uiState = uiState)
+                    RosterOnlyStrip(peers = call.peers, myUserId = uiState.myUserId)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (uiState.isMediaActive) {
-                        CallToggleButton(
-                            icon = if (uiState.micOn) Icons.Default.Mic else Icons.Default.MicOff,
-                            contentDescription = if (uiState.micOn) "마이크 끄기" else "마이크 켜기",
-                            active = uiState.micOn,
+                    if (call.isMediaActive) {
+                        RtcCallToggleButton(
+                            icon = if (call.micOn) Icons.Default.Mic else Icons.Default.MicOff,
+                            contentDescription = if (call.micOn) "마이크 끄기" else "마이크 켜기",
+                            active = call.micOn,
                             onClick = onToggleMic
                         )
-                        CallToggleButton(
-                            icon = if (uiState.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                            contentDescription = if (uiState.camOn) "카메라 끄기" else "카메라 켜기",
-                            active = uiState.camOn,
+                        RtcCallToggleButton(
+                            icon = if (call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                            contentDescription = if (call.camOn) "카메라 끄기" else "카메라 켜기",
+                            active = call.camOn,
                             onClick = onToggleCam
                         )
                     }
@@ -299,7 +297,7 @@ private fun CallSection(
                         Text("통화 나가기", style = SgTheme.typography.labelLarge)
                     }
                 }
-                if (!uiState.isMediaActive) {
+                if (!call.isMediaActive) {
                     // 권한 거부(Android)·미지원 플랫폼(Desktop) — 명단만 실시간으로 표시된다
                     Text(
                         "카메라·마이크 없이 참여 중입니다. 통화 명단만 실시간으로 표시됩니다.",
@@ -319,79 +317,21 @@ private fun CallSection(
     }
 }
 
-/** 비디오 그리드 — 로스터(PEERS) 기준 타일 2열. 비디오 없는 상대(오디오 전용)는 아바타 폴백 */
+/** 로스터 전용 표시(미디어 없음) — 아바타 스트립 */
 @Composable
-private fun VideoGrid(uiState: MeetingDetailViewModel.UiState, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        uiState.callPeers.chunked(2).forEach { rowPeers ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rowPeers.forEach { peer ->
-                    PeerTile(
-                        peer = peer,
-                        isMe = peer.userId == uiState.myUserId,
-                        uiState = uiState,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                // 홀수 개일 때 마지막 행 반칸 유지
-                if (rowPeers.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun PeerTile(
-    peer: MeetingCallPeer,
-    isMe: Boolean,
-    uiState: MeetingDetailViewModel.UiState,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-    val video = if (isMe) uiState.localVideo else uiState.remoteVideos[peer.userId]
-
-    Box(
-        modifier = modifier
-            .aspectRatio(3f / 4f)
-            .clip(SgTheme.shapes.card)
-            .background(sg.linen),
-        contentAlignment = Alignment.Center
-    ) {
-        if (video != null && (!isMe || uiState.camOn)) {
-            RtcVideoView(track = video, modifier = Modifier.fillMaxSize())
-        } else {
-            SgAvatar(name = peer.userName, size = 48.dp)
-        }
-        Text(
-            if (isMe) "나" else peer.userName,
-            style = SgTheme.typography.labelSmall,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(6.dp)
-                .background(Color.Black.copy(alpha = 0.45f), SgTheme.shapes.button)
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-        )
-    }
-}
-
-/** 로스터 전용 표시(미디어 없음) — 1차 마일스톤의 아바타 스트립 유지 */
-@Composable
-private fun RosterOnlyStrip(uiState: MeetingDetailViewModel.UiState, modifier: Modifier = Modifier) {
+private fun RosterOnlyStrip(peers: List<RtcCallPeer>, myUserId: Long?, modifier: Modifier = Modifier) {
     val sg = SgTheme.colors
 
-    if (uiState.callPeers.isEmpty()) {
+    if (peers.isEmpty()) {
         Text("통화 명단을 불러오는 중…", style = SgTheme.typography.bodySmall, color = sg.inkSoft, modifier = modifier)
     } else {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = modifier) {
-            items(uiState.callPeers, key = MeetingCallPeer::userId) { peer ->
+            items(peers, key = RtcCallPeer::userId) { peer ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     SgAvatar(name = peer.userName)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        if (peer.userId == uiState.myUserId) "나" else peer.userName,
+                        if (peer.userId == myUserId) "나" else peer.userName,
                         style = SgTheme.typography.labelSmall,
                         color = sg.inkSoft,
                         maxLines = 1,
@@ -400,24 +340,6 @@ private fun RosterOnlyStrip(uiState: MeetingDetailViewModel.UiState, modifier: M
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun CallToggleButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    active: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-
-    IconButton(
-        onClick = onClick,
-        modifier = modifier.background(if (active) sg.accentSoft else sg.linen, CircleShape)
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = if (active) sg.accent else sg.inkSoft)
     }
 }
 
