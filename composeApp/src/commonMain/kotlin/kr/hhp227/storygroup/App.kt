@@ -33,6 +33,8 @@ import kr.hhp227.storygroup.ui.screens.chat.ChatRoomScreen
 import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
+import kr.hhp227.storygroup.ui.screens.meeting.MeetingDetailScreen
+import kr.hhp227.storygroup.ui.screens.meeting.MeetingsScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
@@ -73,6 +75,14 @@ internal data object CreateGroupRoute
 /** 그룹 찾기 — 검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 그룹 찾기 탭 미러) */
 @Serializable
 internal data object DiscoverGroupsRoute
+
+/** 그룹 화상회의 목록 — 회의 시작과 상세 진입(PRD Phase 7) */
+@Serializable
+internal data class MeetingsRoute(val groupId: Long)
+
+/** 회의 상세 — 참가 기록+실시간 통화 로스터. 미디어(카메라/마이크)는 후속 마일스톤 */
+@Serializable
+internal data class MeetingDetailRoute(val groupId: Long, val meetingId: Long)
 
 /** 그룹 피드 작성 성공을 이전 백스택 엔트리(그룹 상세)로 알리는 결과 키 — Paging-CRUD 샘플 미러 */
 internal const val POST_CREATED_KEY = "post_created"
@@ -162,6 +172,8 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onOpenChatRoom = { chatRoomId, groupId, title ->
                                 navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
                             },
+                            // 상단바 액션 — 그룹 화상회의 목록(PRD Phase 7)
+                            onOpenMeetings = { navController.navigate(MeetingsRoute(route.groupId)) },
                             refreshRequested = postCreated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
@@ -204,6 +216,34 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 composable<DiscoverGroupsRoute> {
                     Surface(color = SgTheme.colors.paper) {
                         DiscoverGroupsScreen(
+                            onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<MeetingsRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<MeetingsRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        MeetingsScreen(
+                            groupId = route.groupId,
+                            onBack = { navController.popBackStack() },
+                            onOpenMeeting = { meetingId ->
+                                navController.navigate(MeetingDetailRoute(route.groupId, meetingId))
+                            },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<MeetingDetailRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<MeetingDetailRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        MeetingDetailScreen(
+                            groupId = route.groupId,
+                            meetingId = route.meetingId,
                             onBack = { navController.popBackStack() },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -105,6 +106,7 @@ fun GroupDetailScreen(
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
+    onOpenMeetings: () -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
@@ -116,6 +118,7 @@ fun GroupDetailScreen(
         onBack = onBack,
         onCreatePost = onCreatePost,
         onOpenChatRoom = onOpenChatRoom,
+        onOpenMeetings = onOpenMeetings,
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
         modifier = modifier
@@ -128,6 +131,7 @@ private fun GroupDetailContent(
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
+    onOpenMeetings: () -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier
@@ -176,6 +180,12 @@ private fun GroupDetailContent(
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+            }
+        },
+        // 화상회의 진입 — 상단바 액션(PRD Phase 7, 웹 그룹 회의 탭 미러)
+        actions = {
+            IconButton(onClick = onOpenMeetings) {
+                Icon(Icons.Default.Videocam, contentDescription = "화상회의")
             }
         },
         // 레거시 fragment_group_detail.xml의 fab 미러
