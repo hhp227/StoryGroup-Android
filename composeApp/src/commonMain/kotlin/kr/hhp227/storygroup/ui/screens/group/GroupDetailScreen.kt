@@ -25,6 +25,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
@@ -88,6 +89,7 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
             createGroupInviteUseCase = container.createGroupInviteUseCase,
             openDirectRoomUseCase = container.openDirectRoomUseCase,
+            getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
         )
@@ -176,6 +178,18 @@ private fun GroupDetailContent(
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+            }
+        },
+        // 그룹 채팅방 진입 — 상단바 액션(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
+        // 기본 방 id는 상세 로드에 실려 온다 — 로드 전/실패 시엔 버튼이 숨는다
+        actions = {
+            uiState.defaultChatRoomId?.let { chatRoomId ->
+                IconButton(onClick = {
+                    // 방 제목은 허브(그룹 방 목록)와 동일하게 그룹명을 쓴다
+                    onOpenChatRoom(chatRoomId, viewModel.groupId, uiState.group?.name.orEmpty())
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "채팅")
+                }
             }
         },
         // 레거시 fragment_group_detail.xml의 fab 미러

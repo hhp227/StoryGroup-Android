@@ -16,6 +16,11 @@ struct DrawerShellView: View {
 
     let profile: Profile?
 
+    /// 셸 뱃지 — MainShellView 소유 세션 VM(Compose sessionNotificationsViewModel/sessionChatViewModel 미러)
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
+
+    @ObservedObject var chatViewModel: ChatViewModel
+
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
@@ -43,6 +48,8 @@ struct DrawerShellView: View {
                             destination: destination,
                             container: container,
                             profile: profile,
+                            notificationsViewModel: notificationsViewModel,
+                            chatViewModel: chatViewModel,
                             onOpenGroup: onOpenGroup,
                             onOpenChatRoom: onOpenChatRoom,
                             onOpenSettings: { showSettings = true },
@@ -77,7 +84,13 @@ struct DrawerShellView: View {
                 }
                 // 탭 쉘과 동일하게 내비바 우측에서도 알림 진입(알림 화면에서는 숨김)
                 if current != .notifications {
-                    Button(action: { current = .notifications }) { Image(systemName: "bell.fill") }
+                    Button(action: { current = .notifications }) {
+                        Image(systemName: "bell.fill")
+                            .overlay(alignment: .topTrailing) {
+                                SGUnreadBadge(count: notificationsViewModel.uiState.unreadCount)
+                                    .offset(x: 10, y: -8)
+                            }
+                    }
                 }
                 if current == .profile {
                     Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }
@@ -107,7 +120,12 @@ struct DrawerShellView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(SGDestination.allCases) { destination in
-                        drawerRow(destination.label, destination.systemImage, selected: destination == current) {
+                        drawerRow(
+                            destination.label,
+                            destination.systemImage,
+                            selected: destination == current,
+                            badgeCount: drawerBadgeCount(for: destination)
+                        ) {
                             current = destination
                             withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false }
                         }
@@ -129,13 +147,29 @@ struct DrawerShellView: View {
         .background(colors.linen.ignoresSafeArea())
     }
 
-    private func drawerRow(_ label: String, _ systemImage: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    /// 드로어 목적지별 뱃지 수 — Compose DrawerShell badgeCount 미러
+    private func drawerBadgeCount(for destination: SGDestination) -> Int64 {
+        switch destination {
+        case .chat: return chatViewModel.uiState.totalUnread
+        case .notifications: return notificationsViewModel.uiState.unreadCount
+        default: return 0
+        }
+    }
+
+    private func drawerRow(
+        _ label: String,
+        _ systemImage: String,
+        selected: Bool,
+        badgeCount: Int64 = 0,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: systemImage)
                     .frame(width: 24)
                 Text(label).font(.system(size: 15, weight: .semibold))
                 Spacer()
+                SGUnreadBadge(count: badgeCount)
             }
             .foregroundColor(selected ? colors.accent : colors.inkSoft)
             .padding(.horizontal, 12)

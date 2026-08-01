@@ -19,15 +19,13 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,10 +46,12 @@ import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
+import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgColors
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
@@ -98,6 +98,8 @@ private fun GroupsContent(
     val sg = SgTheme.colors
     // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
+    // 종 아이콘 뱃지 — 알림 화면과 같은 세션 VM의 미읽음 수
+    val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
 
     // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
     // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
@@ -114,9 +116,10 @@ private fun GroupsContent(
             title = "그룹",
             navigationIcon = navigationIcon,
             actions = {
-                IconButton(onClick = onOpenNotifications) {
-                    Icon(Icons.Default.Notifications, contentDescription = "알림")
-                }
+                SgBellAction(
+                    unreadCount = notificationsUiState.unreadCount,
+                    onClick = onOpenNotifications
+                )
             }
         )
         // 당겨서 새로고침 — 그룹 생성/가입 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.

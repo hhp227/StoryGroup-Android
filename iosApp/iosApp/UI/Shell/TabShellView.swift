@@ -16,6 +16,11 @@ struct TabShellView: View {
 
     let profile: Profile?
 
+    /// 셸 뱃지 — MainShellView 소유 세션 VM(Compose sessionNotificationsViewModel/sessionChatViewModel 미러)
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
+
+    @ObservedObject var chatViewModel: ChatViewModel
+
     /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenGroup: (Group) -> Void
 
@@ -41,6 +46,8 @@ struct TabShellView: View {
                         destination: destination,
                         container: container,
                         profile: profile,
+                        notificationsViewModel: notificationsViewModel,
+                        chatViewModel: chatViewModel,
                         onOpenGroup: onOpenGroup,
                         onOpenChatRoom: onOpenChatRoom,
                         onOpenSettings: { showSettings = true },
@@ -58,6 +65,13 @@ struct TabShellView: View {
                         VStack(spacing: 4) {
                             Image(systemName: destination.systemImage)
                                 .font(.system(size: 20))
+                                // 채팅 탭만 허브 미읽음 합계 뱃지 — Compose DestinationIcon 미러
+                                .overlay(alignment: .topTrailing) {
+                                    if destination == .chat {
+                                        SGUnreadBadge(count: chatViewModel.uiState.totalUnread)
+                                            .offset(x: 12, y: -6)
+                                    }
+                                }
                             Text(destination.label)
                                 .font(.system(size: 11, weight: .semibold))
                         }
@@ -80,7 +94,13 @@ struct TabShellView: View {
                 }
                 // 알림은 탭에서 빠지고 내비바 종 아이콘으로 진입(알림 화면에서는 숨김)
                 if current != .notifications {
-                    Button(action: { current = .notifications }) { Image(systemName: "bell.fill") }
+                    Button(action: { current = .notifications }) {
+                        Image(systemName: "bell.fill")
+                            .overlay(alignment: .topTrailing) {
+                                SGUnreadBadge(count: notificationsViewModel.uiState.unreadCount)
+                                    .offset(x: 10, y: -8)
+                            }
+                    }
                 }
                 if current == .profile {
                     Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }

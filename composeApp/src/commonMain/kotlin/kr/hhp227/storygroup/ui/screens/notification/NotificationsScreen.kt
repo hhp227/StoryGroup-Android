@@ -53,16 +53,21 @@ import kr.hhp227.storygroup.ui.util.formatRelativeTime
 @Composable
 fun NotificationsScreen(
     modifier: Modifier = Modifier,
-    viewModel: NotificationsViewModel = sessionViewModel {
-        NotificationsViewModel(
-            getNotificationsPagingDataUseCase = it.getNotificationsPagingDataUseCase,
-            getUnreadNotificationCountUseCase = it.getUnreadNotificationCountUseCase,
-            markNotificationAsReadUseCase = it.markNotificationAsReadUseCase,
-            markAllNotificationsAsReadUseCase = it.markAllNotificationsAsReadUseCase
-        )
-    }
+    viewModel: NotificationsViewModel = sessionNotificationsViewModel()
 ) {
     NotificationsContent(viewModel = viewModel, modifier = modifier)
+}
+
+/** 세션 공유 알림 VM — 알림 화면과 셸 종 아이콘 뱃지(탭/드로어/홈/그룹)가 같은 인스턴스를 쓴다 */
+@Composable
+fun sessionNotificationsViewModel(): NotificationsViewModel = sessionViewModel {
+    NotificationsViewModel(
+        getNotificationsPagingDataUseCase = it.getNotificationsPagingDataUseCase,
+        getUnreadNotificationCountUseCase = it.getUnreadNotificationCountUseCase,
+        markNotificationAsReadUseCase = it.markNotificationAsReadUseCase,
+        markAllNotificationsAsReadUseCase = it.markAllNotificationsAsReadUseCase,
+        observePersonalEventsUseCase = it.observePersonalEventsUseCase
+    )
 }
 
 @Composable

@@ -33,6 +33,7 @@ final class AppContainer {
     let getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase
     let markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
     let markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+    let observePersonalEventsUseCase: ObservePersonalEventsUseCase
     let getGroupChatRoomsUseCase: GetGroupChatRoomsUseCase
     let getDirectRoomsUseCase: GetDirectRoomsUseCase
     let getChatMessagesUseCase: GetChatMessagesUseCase
@@ -43,6 +44,12 @@ final class AppContainer {
     let sendChatTypingUseCase: SendChatTypingUseCase
     let getChatReadPositionsUseCase: GetChatReadPositionsUseCase
     let openDirectRoomUseCase: OpenDirectRoomUseCase
+    let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
+    let observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase
+    let observeRtcSignalsUseCase: ObserveRtcSignalsUseCase
+    let sendRtcSignalUseCase: SendRtcSignalUseCase
+    let sendCallInviteUseCase: SendCallInviteUseCase
+    let getIceServersUseCase: GetIceServersUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
@@ -56,9 +63,18 @@ final class AppContainer {
         let groupRepository = GroupRepositoryImpl(client: client)
         let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
         let mediaRepository = MediaRepositoryImpl(client: client)
-        let notificationRepository = NotificationRepositoryImpl(client: client)
         // Kotlin 기본 인자(baseUrl)는 ObjC로 내보내지지 않아 명시 전달(createApiClient와 동일)
+        let notificationRepository = NotificationRepositoryImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
+        )
         let chatRepository = ChatRepositoryImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
+        )
+        let rtcRepository = RtcRepositoryImpl(
             client: client,
             tokenStorage: tokenStorage,
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
@@ -93,6 +109,7 @@ final class AppContainer {
         getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository: notificationRepository)
         markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository: notificationRepository)
         markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository: notificationRepository)
+        observePersonalEventsUseCase = ObservePersonalEventsUseCase(notificationRepository: notificationRepository)
         getGroupChatRoomsUseCase = GetGroupChatRoomsUseCase(chatRepository: chatRepository)
         getDirectRoomsUseCase = GetDirectRoomsUseCase(chatRepository: chatRepository)
         getChatMessagesUseCase = GetChatMessagesUseCase(chatRepository: chatRepository)
@@ -103,6 +120,12 @@ final class AppContainer {
         sendChatTypingUseCase = SendChatTypingUseCase(chatRepository: chatRepository)
         getChatReadPositionsUseCase = GetChatReadPositionsUseCase(chatRepository: chatRepository)
         openDirectRoomUseCase = OpenDirectRoomUseCase(chatRepository: chatRepository)
+        getGroupDefaultChatRoomUseCase = GetGroupDefaultChatRoomUseCase(chatRepository: chatRepository)
+        observeRtcCallEventsUseCase = ObserveRtcCallEventsUseCase(rtcRepository: rtcRepository)
+        observeRtcSignalsUseCase = ObserveRtcSignalsUseCase(rtcRepository: rtcRepository)
+        sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository: rtcRepository)
+        sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository: rtcRepository)
+        getIceServersUseCase = GetIceServersUseCase(rtcRepository: rtcRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }

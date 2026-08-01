@@ -15,11 +15,14 @@ struct GroupDetailView: View {
     /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
+    /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
+    private let chatViewModel: ChatViewModel
+
     var body: some View {
-        GroupDetailContent(viewModel: viewModel, container: container)
+        GroupDetailContent(viewModel: viewModel, container: container, chatViewModel: chatViewModel)
     }
 
-    init(groupId: Int64, container: AppContainer) {
+    init(groupId: Int64, container: AppContainer, chatViewModel: ChatViewModel) {
         _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
             groupId: groupId,
             getGroupUseCase: container.getGroupUseCase,
@@ -29,10 +32,12 @@ struct GroupDetailView: View {
             rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
             createGroupInviteUseCase: container.createGroupInviteUseCase,
             openDirectRoomUseCase: container.openDirectRoomUseCase,
+            getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase
         ))
         self.container = container
+        self.chatViewModel = chatViewModel
     }
 }
 
@@ -40,6 +45,9 @@ private struct GroupDetailContent: View {
     @ObservedObject var viewModel: GroupDetailViewModel
 
     let container: AppContainer
+
+    /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
+    let chatViewModel: ChatViewModel
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -64,17 +72,17 @@ private struct GroupDetailContent: View {
     /// DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다(Compose dmTargetMember 미러)
     @State private var dmTargetMember: GroupMember?
 
-    /// DM 성공으로 push할 채팅방 — Compose ChatRoomRoute 미러
-    @State private var dmChatRoom: ChatRoomRef?
+    /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 스트립 DM 공용)
+    @State private var pushedChatRoom: ChatRoomRef?
 
     /// 상세 안에서 채팅방을 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
-            core.navigationDestination(isPresented: showDmChatRoom) { dmChatRoomDestination }
+            core.navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
         } else {
             core.background(
-                NavigationLink(isActive: showDmChatRoom) {
-                    dmChatRoomDestination
+                NavigationLink(isActive: showChatRoom) {
+                    chatRoomDestination
                 } label: {
                     EmptyView()
                 }
@@ -139,6 +147,24 @@ private struct GroupDetailContent: View {
         // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
         .navigationTitle(viewModel.uiState.group?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        // 그룹 채팅방 진입 — 상단바 액션(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
+        // 기본 방 id는 상세 로드에 실려 온다 — 로드 전/실패 시엔 버튼이 숨는다(Compose 미러)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if let chatRoomId = viewModel.uiState.defaultChatRoomId {
+                    Button {
+                        // 방 제목은 허브(그룹 방 목록)와 동일하게 그룹명을 쓴다
+                        pushedChatRoom = ChatRoomRef(
+                            chatRoomId: chatRoomId,
+                            groupId: viewModel.groupId,
+                            title: viewModel.uiState.group?.name ?? ""
+                        )
+                    } label: {
+                        Image(systemName: "bubble.left.fill")
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showCreatePost) {
             // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
             CreatePostView(container: container, groupId: viewModel.groupId) {
@@ -153,7 +179,7 @@ private struct GroupDetailContent: View {
             case .dmOpened(let chatRoomId, let title):
                 dmTargetMember = nil
                 // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
-                dmChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
+                pushedChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
             }
         }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
@@ -400,27 +426,34 @@ private struct GroupDetailContent: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// pop(백 버튼/스와이프) 시 dmChatRoom을 nil로 되돌리는 브리지(MainShellView 미러)
-    private var showDmChatRoom: Binding<Bool> {
+    /// pop(백 버튼/스와이프) 시 pushedChatRoom을 nil로 되돌리는 브리지(MainShellView 미러)
+    private var showChatRoom: Binding<Bool> {
         Binding(
-            get: { dmChatRoom != nil },
-            set: { if !$0 { dmChatRoom = nil } }
+            get: { pushedChatRoom != nil },
+            set: { if !$0 { pushedChatRoom = nil } }
         )
     }
 
-    @ViewBuilder private var dmChatRoomDestination: some View {
-        if let room = dmChatRoom {
-            ChatRoomView(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title, container: container)
+    @ViewBuilder private var chatRoomDestination: some View {
+        if let room = pushedChatRoom {
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
         }
     }
 
-    init(viewModel: GroupDetailViewModel, container: AppContainer) {
+    init(viewModel: GroupDetailViewModel, container: AppContainer, chatViewModel: ChatViewModel) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
+        self.chatViewModel = chatViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

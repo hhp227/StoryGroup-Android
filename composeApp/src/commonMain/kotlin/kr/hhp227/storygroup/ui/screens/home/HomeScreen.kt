@@ -16,10 +16,11 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,11 +36,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Post
+import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.collapsingParallax
+import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import org.jetbrains.compose.resources.painterResource
 import storygroup.composeapp.generated.resources.Res
@@ -91,6 +94,8 @@ private fun HomeContent(
     val sg = SgTheme.colors
     // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
+    // 종 아이콘 뱃지 — 알림 화면과 같은 세션 VM의 미읽음 수
+    val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
 
     // 작성 화면에서 돌아온 결과 — 라운지 피드를 첫 페이지부터 다시 읽는다
     LaunchedEffect(refreshRequested) {
@@ -115,9 +120,10 @@ private fun HomeContent(
             IconButton(onClick = { /* TODO: 검색 */ }) {
                 Icon(Icons.Default.Search, contentDescription = "검색")
             }
-            IconButton(onClick = onOpenNotifications) {
-                Icon(Icons.Default.Notifications, contentDescription = "알림")
-            }
+            SgBellAction(
+                unreadCount = notificationsUiState.unreadCount,
+                onClick = onOpenNotifications
+            )
         },
         // 레거시 fragment_lounge.xml의 fab(ic_add_white_24dp) 미러
         floatingActionButton = {

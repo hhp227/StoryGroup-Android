@@ -16,10 +16,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.AppNotification
+import kr.hhp227.storygroup.shared.domain.model.PersonalEvent
+import kr.hhp227.storygroup.shared.domain.model.PersonalEventType
 import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
@@ -28,19 +31,25 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 세션 스코프 VM이라 진입마다 Action.Refresh가 미읽음 수를 다시 읽고 Event.RefreshList로 목록도
  * 첫 페이지부터 다시 읽는다(새 알림 확인이 이 화면의 목적이라 스크롤 보존보다 신선도가 우선).
  * 단건 읽음은 서버 재조회 없이 readOverrides로 낙관 갱신한다(그룹 탐색 localOverrides 패턴).
+ * 셸 종 아이콘 뱃지도 이 VM의 unreadCount를 공유한다 — 세션 시작에 즉시 로드하고,
+ * 개인 큐(STOMP) NOTIFICATION 이벤트로 실시간 증가시킨다.
  * iosApp NotificationsViewModel.swift와 1:1 미러
  */
 class NotificationsViewModel(
     getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase,
     private val getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase,
     private val markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
-    private val markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
+    private val markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
+    observePersonalEventsUseCase: ObservePersonalEventsUseCase
 ) : ViewModel(), MviViewModel<NotificationsViewModel.UiState, NotificationsViewModel.Action, NotificationsViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val event: Flow<Event> = _event.asSharedFlow()
+
+    // 재연결부터만 refresh를 걸기 위한 가드 — 첫 연결은 init의 초기 로드와 겹친다(채팅방 VM 미러)
+    private var hasConnectedOnce = false
 
     private fun setPagingData(pagingData: PagingData<AppNotification>) {
         _uiState.update { it.copy(pagingData = pagingData) }
@@ -105,11 +114,33 @@ class NotificationsViewModel(
         }
     }
 
+    /** 개인 큐 실시간 이벤트 — NOTIFICATION이면 뱃지 수를 올리고, 열려 있는 알림 화면 목록도 갱신시킨다 */
+    private fun handlePersonalEvent(personalEvent: PersonalEvent) {
+        when (personalEvent.type) {
+            PersonalEventType.CONNECTED -> {
+                // 재연결이면 끊김 공백에 놓친 알림 수를 REST로 메꾼다
+                if (hasConnectedOnce) refresh()
+                hasConnectedOnce = true
+            }
+            PersonalEventType.NOTIFICATION -> {
+                _uiState.update { it.copy(unreadCount = it.unreadCount + 1) }
+                _event.tryEmit(Event.RefreshList)
+            }
+            // CHAT_MESSAGE는 채팅 허브 VM 소관, DISCONNECTED는 재연결 CONNECTED가 정리한다
+            else -> Unit
+        }
+    }
+
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         getNotificationsPagingDataUseCase()
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
+            .launchIn(viewModelScope)
+        // 셸 종 뱃지가 세션 시작부터 그려지므로 화면 진입을 기다리지 않고 미읽음 수를 로드한다
+        refresh()
+        observePersonalEventsUseCase()
+            .onEach(::handlePersonalEvent)
             .launchIn(viewModelScope)
     }
 

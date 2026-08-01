@@ -49,6 +49,15 @@ struct MainShellView: View {
     /// 화면 전용 VM(홈/그룹)은 각 화면(HomeView/GroupsView)이 소유한다(Compose default parameter 미러).
     @StateObject private var profileViewModel: ProfileViewModel
 
+    /// 종 아이콘 뱃지와 알림 화면이 공유 — Compose sessionNotificationsViewModel 미러
+    @StateObject private var notificationsViewModel: NotificationsViewModel
+
+    /// 채팅 탭 뱃지·허브·채팅방 진입/이탈 신호가 공유 — Compose sessionChatViewModel 미러
+    @StateObject private var chatViewModel: ChatViewModel
+
+    /// 수신 통화 배너(DM·그룹 방) — 개인 큐 CALL_INVITE를 세션 전역에서 받는다(Compose 미러)
+    @StateObject private var incomingCallViewModel: IncomingCallViewModel
+
     @State private var current: SGDestination = .home
 
     @State private var showSettings = false
@@ -62,10 +71,30 @@ struct MainShellView: View {
     /// 채팅방 풀스크린 push — Compose NavHost(ChatRoomRoute) 미러
     @State private var selectedChatRoom: ChatRoomRef? = nil
 
+    /// 수신 통화 수락으로 push할 통화 화면 — Compose CallRoute(ring=false) 미러
+    @State private var acceptedCall: CallRef? = nil
+
     var body: some View {
         navigationRoot
             .sheet(isPresented: $showSettings) {
                 SGSettingsView(theme: theme)
+            }
+            // 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Compose Box 최상단 오버레이 미러)
+            .overlay(alignment: .top) {
+                if let call = incomingCallViewModel.uiState.incomingCall {
+                    SGIncomingCallBanner(
+                        call: call,
+                        onAccept: {
+                            incomingCallViewModel.onAction(.dismiss)
+                            // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false).
+                            // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(Compose와 동일 규칙)
+                            acceptedCall = CallRef(chatRoomId: call.chatRoomId, title: call.roomName ?? call.callerName, ring: false)
+                        },
+                        onDecline: { incomingCallViewModel.onAction(.dismiss) }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                }
             }
     }
 
@@ -78,6 +107,7 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                     .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
                     .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                    .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
             }
         } else {
             NavigationView {
@@ -106,6 +136,14 @@ struct MainShellView: View {
                         }
                         .hidden()
                     )
+                    .background(
+                        NavigationLink(isActive: showAcceptedCall) {
+                            acceptedCallDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
             }
             .navigationViewStyle(.stack)
         }
@@ -118,6 +156,8 @@ struct MainShellView: View {
                 showSettings: $showSettings,
                 container: container,
                 profile: profileViewModel.uiState.profile,
+                notificationsViewModel: notificationsViewModel,
+                chatViewModel: chatViewModel,
                 onOpenGroup: { selectedGroupId = $0.id },
                 onOpenChatRoom: { selectedChatRoom = $0 },
                 onOpenAccountSettings: { showAccountSettings = true },
@@ -129,6 +169,8 @@ struct MainShellView: View {
                 showSettings: $showSettings,
                 container: container,
                 profile: profileViewModel.uiState.profile,
+                notificationsViewModel: notificationsViewModel,
+                chatViewModel: chatViewModel,
                 onOpenGroup: { selectedGroupId = $0.id },
                 onOpenChatRoom: { selectedChatRoom = $0 },
                 onOpenAccountSettings: { showAccountSettings = true },
@@ -139,13 +181,19 @@ struct MainShellView: View {
 
     @ViewBuilder private var groupDetailDestination: some View {
         if let groupId = selectedGroupId {
-            GroupDetailView(groupId: groupId, container: container)
+            GroupDetailView(groupId: groupId, container: container, chatViewModel: chatViewModel)
         }
     }
 
     @ViewBuilder private var chatRoomDestination: some View {
         if let room = selectedChatRoom {
-            ChatRoomView(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title, container: container)
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
         }
     }
 
@@ -170,8 +218,37 @@ struct MainShellView: View {
         )
     }
 
+    @ViewBuilder private var acceptedCallDestination: some View {
+        if let call = acceptedCall {
+            CallView(chatRoomId: call.chatRoomId, title: call.title, ring: call.ring, container: container)
+        }
+    }
+
+    /// pop(백 버튼/스와이프·끊기) 시 acceptedCall을 nil로 되돌리는 브리지
+    private var showAcceptedCall: Binding<Bool> {
+        Binding(
+            get: { acceptedCall != nil },
+            set: { if !$0 { acceptedCall = nil } }
+        )
+    }
+
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(getMyProfileUseCase: container.getMyProfileUseCase))
+        _notificationsViewModel = StateObject(wrappedValue: NotificationsViewModel(
+            getNotificationsPagingDataUseCase: container.getNotificationsPagingDataUseCase,
+            getUnreadNotificationCountUseCase: container.getUnreadNotificationCountUseCase,
+            markNotificationAsReadUseCase: container.markNotificationAsReadUseCase,
+            markAllNotificationsAsReadUseCase: container.markAllNotificationsAsReadUseCase,
+            observePersonalEventsUseCase: container.observePersonalEventsUseCase
+        ))
+        _chatViewModel = StateObject(wrappedValue: ChatViewModel(
+            getGroupChatRoomsUseCase: container.getGroupChatRoomsUseCase,
+            getDirectRoomsUseCase: container.getDirectRoomsUseCase,
+            observePersonalEventsUseCase: container.observePersonalEventsUseCase
+        ))
+        _incomingCallViewModel = StateObject(wrappedValue: IncomingCallViewModel(
+            observePersonalEventsUseCase: container.observePersonalEventsUseCase
+        ))
         self.container = container
         self.theme = theme
         self.onLogout = onLogout
@@ -188,6 +265,12 @@ struct DestinationView: View {
     let container: AppContainer
 
     let profile: Profile?
+
+    /// 셸 소유 세션 VM — 알림 화면이 종 뱃지와 같은 인스턴스를 쓴다(ProfileViewModel 주입 선례)
+    let notificationsViewModel: NotificationsViewModel
+
+    /// 셸 소유 세션 VM — 허브가 채팅 탭 뱃지와 같은 인스턴스를 쓴다
+    let chatViewModel: ChatViewModel
 
     /// 그룹 상세 풀스크린 push — Compose onOpenGroupDetail 미러(MainShellView selectedGroupId)
     let onOpenGroup: (Group) -> Void
@@ -211,9 +294,9 @@ struct DestinationView: View {
         case .friends:
             FriendsView()
         case .chat:
-            ChatView(container: container, onOpenChatRoom: onOpenChatRoom)
+            ChatView(viewModel: chatViewModel, onOpenChatRoom: onOpenChatRoom)
         case .notifications:
-            NotificationsView(container: container)
+            NotificationsView(viewModel: notificationsViewModel)
         case .profile:
             ProfileView(
                 profile: profile,

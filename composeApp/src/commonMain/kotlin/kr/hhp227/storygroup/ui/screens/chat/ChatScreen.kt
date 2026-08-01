@@ -29,6 +29,7 @@ import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgSectionTitle
+import kr.hhp227.storygroup.ui.components.SgUnreadBadge
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /**
@@ -40,12 +41,7 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 fun ChatScreen(
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChatViewModel = sessionViewModel {
-        ChatViewModel(
-            getGroupChatRoomsUseCase = it.getGroupChatRoomsUseCase,
-            getDirectRoomsUseCase = it.getDirectRoomsUseCase
-        )
-    }
+    viewModel: ChatViewModel = sessionChatViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -88,6 +84,7 @@ fun ChatScreen(
                         subtitle = room.name,
                         imageUrl = null,
                         isGroup = true,
+                        unreadCount = room.unreadCount,
                         onClick = { onOpenChatRoom(room.id, room.groupId, room.groupName) }
                     )
                 }
@@ -103,6 +100,7 @@ fun ChatScreen(
                         subtitle = null,
                         imageUrl = room.otherUserProfileImg,
                         isGroup = false,
+                        unreadCount = room.unreadCount,
                         onClick = { onOpenChatRoom(room.id, null, room.otherUserName) }
                     )
                 }
@@ -111,12 +109,23 @@ fun ChatScreen(
     }
 }
 
+/** 세션 공유 채팅 허브 VM — 허브 화면·셸 채팅 탭 뱃지·채팅방 진입/이탈 신호가 같은 인스턴스를 쓴다 */
+@Composable
+fun sessionChatViewModel(): ChatViewModel = sessionViewModel {
+    ChatViewModel(
+        getGroupChatRoomsUseCase = it.getGroupChatRoomsUseCase,
+        getDirectRoomsUseCase = it.getDirectRoomsUseCase,
+        observePersonalEventsUseCase = it.observePersonalEventsUseCase
+    )
+}
+
 @Composable
 private fun ChatRoomRow(
     title: String,
     subtitle: String?,
     imageUrl: String?,
     isGroup: Boolean,
+    unreadCount: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -145,6 +154,10 @@ private fun ChatRoomRow(
                         maxLines = 1
                     )
                 }
+            }
+            if (unreadCount > 0) {
+                Spacer(Modifier.width(12.dp))
+                SgUnreadBadge(unreadCount)
             }
         }
     }

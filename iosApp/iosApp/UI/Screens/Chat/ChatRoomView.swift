@@ -9,7 +9,21 @@ import Shared
 struct ChatRoomView: View {
     @StateObject private var viewModel: ChatRoomViewModel
 
+    /// 허브(셸 소유 세션 VM) 진입/이탈 신호용 — Compose ChatRoomScreen의 sessionChatViewModel 미러
+    private let chatViewModel: ChatViewModel
+
+    private let chatRoomId: Int64
+
+    /// 상단바 통화 버튼 아이콘 분기용 — DM(nil)=전화, 그룹 방=화상회의(Compose 미러)
+    private let groupId: Int64?
+
+    /// 통화 화면(CallView) push의 VM 생성에 쓰인다
+    private let container: AppContainer
+
     let title: String
+
+    /// 통화 화면 push — Compose CallRoute(ring=true) 미러(발신=입장+벨울림)
+    @State private var showCall = false
 
     @State private var input = ""
 
@@ -19,7 +33,27 @@ struct ChatRoomView: View {
 
     @Environment(\.sgColors) private var colors
 
+    /// 통화 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
+        if #available(iOS 16.0, *) {
+            core.navigationDestination(isPresented: $showCall) { callDestination }
+        } else {
+            core.background(
+                NavigationLink(isActive: $showCall) {
+                    callDestination
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
+        }
+    }
+
+    private var callDestination: some View {
+        CallView(chatRoomId: chatRoomId, title: title, ring: true, container: container)
+    }
+
+    @ViewBuilder private var core: some View {
         let uiState = viewModel.uiState
         // "읽음 N" 파생용 — 타인의 읽음 위치만 남긴다(내 위치는 세지 않는다, 웹 미러)
         let otherReadPositions = uiState.readPositions
@@ -149,6 +183,18 @@ struct ChatRoomView: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러, Compose ChatRoomScreen과 동일).
+        // DM=상대 벨울림(웹 D6), 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showCall = true }) {
+                    Image(systemName: groupId == nil ? "phone.fill" : "video.fill")
+                }
+            }
+        }
+        // 허브에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
+        .onAppear { chatViewModel.onAction(.roomOpened(chatRoomId: chatRoomId)) }
+        .onDisappear { chatViewModel.onAction(.roomClosed(chatRoomId: chatRoomId)) }
         .onReceive(viewModel.event) { event in
             switch event {
             case .sent: input = ""
@@ -252,7 +298,7 @@ struct ChatRoomView: View {
         return "\((Double(size) / (1024 * 1024) * 10).rounded() / 10)MB"
     }
 
-    init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer) {
+    init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer, chatViewModel: ChatViewModel) {
         _viewModel = StateObject(wrappedValue: ChatRoomViewModel(
             groupId: groupId,
             chatRoomId: chatRoomId,
@@ -265,6 +311,10 @@ struct ChatRoomView: View {
             observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
+        self.chatViewModel = chatViewModel
+        self.chatRoomId = chatRoomId
+        self.groupId = groupId
+        self.container = container
         self.title = title
     }
 }

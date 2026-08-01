@@ -26,7 +26,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -45,7 +44,11 @@ import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
+import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.components.SgUnreadBadge
+import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
+import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
@@ -71,6 +74,9 @@ internal fun DrawerShell(
     // 드로어 헤더는 프로필 화면과 같은 세션 공유 VM을 조회한다(선언·로드는 ProfileViewModel init)
     val profileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
     val profileUiState by profileViewModel.uiState.collectAsState()
+    // 셸 뱃지 — 알림 화면/채팅 허브와 같은 세션 VM을 조회한다
+    val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
+    val chatUiState by sessionChatViewModel().uiState.collectAsState()
 
     ModalDrawer(
         drawerState = drawerState,
@@ -82,6 +88,11 @@ internal fun DrawerShell(
                     label = destination.label,
                     icon = destination.icon,
                     selected = destination == currentDestination,
+                    badgeCount = when (destination) {
+                        MainDestination.CHAT -> chatUiState.totalUnread
+                        MainDestination.NOTIFICATIONS -> notificationsUiState.unreadCount
+                        else -> 0
+                    },
                     onClick = {
                         onDestinationSelected(destination)
                         scope.launch { drawerState.close() }
@@ -127,9 +138,10 @@ internal fun DrawerShell(
                         actions = {
                             // 탭 쉘과 동일하게 상단바 우측에서도 알림 진입(알림 화면에서는 숨김)
                             if (currentDestination != MainDestination.NOTIFICATIONS) {
-                                IconButton(onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }) {
-                                    Icon(Icons.Default.Notifications, contentDescription = "알림")
-                                }
+                                SgBellAction(
+                                    unreadCount = notificationsUiState.unreadCount,
+                                    onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }
+                                )
                             }
                         }
                     )
@@ -170,7 +182,8 @@ private fun DrawerItem(
     label: String,
     icon: ImageVector,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    badgeCount: Long = 0
 ) {
     val sg = SgTheme.colors
 
@@ -195,8 +208,10 @@ private fun DrawerItem(
             label,
             style = SgTheme.typography.bodyLarge,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = if (selected) sg.accent else sg.ink
+            color = if (selected) sg.accent else sg.ink,
+            modifier = Modifier.weight(1f)
         )
+        SgUnreadBadge(badgeCount)
     }
 }
 
