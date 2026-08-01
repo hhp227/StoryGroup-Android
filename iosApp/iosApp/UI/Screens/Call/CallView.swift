@@ -133,13 +133,13 @@ private struct CallContent: View {
     }
 
     /// 비디오 그리드 — 내 미리보기(거울)+상대 타일, 비디오 없는 상대는 아바타 타일
-    /// (Compose RtcVideoGrid 미러)
+    /// (Compose RtcVideoGrid 미러). 내 타일은 카메라를 끄면 아바타 폴백(Compose camOn 게이트 미러)
     private func videoGrid(_ uiState: CallViewModel.UiState) -> some View {
         let myUserId = uiState.myUserId
         let remotePeers = uiState.call.peers.filter { $0.userId != myUserId }
 
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            videoTile(label: "나", track: uiState.call.localVideoTrack, mirror: true)
+            videoTile(label: "나", track: uiState.call.camOn ? uiState.call.localVideoTrack : nil, mirror: true)
             ForEach(remotePeers, id: \.userId) { peer in
                 videoTile(label: peer.userName, track: uiState.call.remoteVideoTracks[peer.userId], mirror: false)
             }
@@ -165,7 +165,9 @@ private struct CallContent: View {
                 .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.black.opacity(0.55)))
                 .padding(8)
         }
-        .aspectRatio(4 / 3, contentMode: .fit)
+        // 세로 3:4 크롭 — Compose RtcPeerTile(aspectRatio 3/4)과 동일 비율(모바일 세로 프레임에 맞춤).
+        // 웹(4:3 가로)은 데스크톱 웹캠 기준이라 앱과 다른 게 의도다
+        .aspectRatio(3 / 4, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
