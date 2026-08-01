@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B33300CBB26009BCB1F /* Paging */; };
+		0A8D2B37300CBB26009BCB1F /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B36300CBB26009BCB1F /* WebRTC */; };
 		A1010002AABBCCDDEEFF0002 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011002AABBCCDDEEFF0002 /* iOSApp.swift */; };
 		A1010004AABBCCDDEEFF0004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011004AABBCCDDEEFF0004 /* Assets.xcassets */; };
 		A1010005AABBCCDDEEFF0005 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */; };
@@ -54,6 +55,8 @@
 		A1010030AABBCCDDEEFF0030 /* CallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011030AABBCCDDEEFF0030 /* CallView.swift */; };
 		A1010031AABBCCDDEEFF0031 /* CallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */; };
 		A1010032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */; };
+		A1010033AABBCCDDEEFF0033 /* RtcMediaSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011033AABBCCDDEEFF0033 /* RtcMediaSession.swift */; };
+		A1010034AABBCCDDEEFF0034 /* RtcVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011034AABBCCDDEEFF0034 /* RtcVideoView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -105,6 +108,8 @@
 		A1011030AABBCCDDEEFF0030 /* CallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallView.swift; sourceTree = "<group>"; };
 		A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViewModel.swift; sourceTree = "<group>"; };
 		A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallViewModel.swift; sourceTree = "<group>"; };
+		A1011033AABBCCDDEEFF0033 /* RtcMediaSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtcMediaSession.swift; sourceTree = "<group>"; };
+		A1011034AABBCCDDEEFF0034 /* RtcVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtcVideoView.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -114,6 +119,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */,
+				0A8D2B37300CBB26009BCB1F /* WebRTC in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +263,8 @@
 				A1011030AABBCCDDEEFF0030 /* CallView.swift */,
 				A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */,
 				A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */,
+				A1011033AABBCCDDEEFF0033 /* RtcMediaSession.swift */,
+				A1011034AABBCCDDEEFF0034 /* RtcVideoView.swift */,
 			);
 			path = Call;
 			sourceTree = "<group>";
@@ -378,6 +386,7 @@
 			name = iosApp;
 			packageProductDependencies = (
 				0A8D2B33300CBB26009BCB1F /* Paging */,
+				0A8D2B36300CBB26009BCB1F /* WebRTC */,
 			);
 			productName = iosApp;
 			productReference = FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */;
@@ -409,6 +418,7 @@
 			mainGroup = FBFDA0ED57CE363227DB6AC1;
 			packageReferences = (
 				0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */,
+				0A8D2B35300CBB26009BCB1F /* XCRemoteSwiftPackageReference "WebRTC" */,
 			);
 			productRefGroup = 7332ACCB08708982CBFABD2D /* Products */;
 			projectDirPath = "";
@@ -498,6 +508,8 @@
 				A1010030AABBCCDDEEFF0030 /* CallView.swift in Sources */,
 				A1010031AABBCCDDEEFF0031 /* CallViewModel.swift in Sources */,
 				A1010032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift in Sources */,
+				A1010033AABBCCDDEEFF0033 /* RtcMediaSession.swift in Sources */,
+				A1010034AABBCCDDEEFF0034 /* RtcVideoView.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,
 				A101002CAABBCCDDEEFF002C /* NotificationsViewModel.swift in Sources */,
 				A1010016AABBCCDDEEFF0016 /* ProfileView.swift in Sources */,
@@ -737,6 +749,14 @@
 				minimumVersion = 0.3.0;
 			};
 		};
+		0A8D2B35300CBB26009BCB1F /* XCRemoteSwiftPackageReference "WebRTC" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stasel/WebRTC";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 120.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -744,6 +764,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */;
 			productName = Paging;
+		};
+		0A8D2B36300CBB26009BCB1F /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A8D2B35300CBB26009BCB1F /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

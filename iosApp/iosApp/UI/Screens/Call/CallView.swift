@@ -1,4 +1,6 @@
+import AVFoundation
 import SwiftUI
+import WebRTC
 import Shared
 
 /// 통화 push 대상 — Compose CallRoute(chatRoomId, title, ring) 미러(ChatRoomRef와 같은 규칙).
@@ -10,9 +12,8 @@ struct CallRef: Equatable {
 }
 
 /// 방 통화 — DM 1:1과 그룹 방 공용(페이스톡 미러)·composeApp CallScreen 미러.
-/// 진입 즉시 통화에 입장한다(발신=벨울림 포함, 수신=배너 수락으로 진입).
-/// 카메라/마이크 미디어는 네이티브 WebRTC SDK 도입 후속이라 로스터 전용으로 참가한다
-/// (Compose Desktop과 동일한 표시 — 명단만 실시간).
+/// 진입 즉시 카메라/마이크 권한을 물어 통화에 입장한다(발신=벨울림 포함, 수신=배너 수락으로 진입).
+/// 허용=영상 통화(WebRTC 풀 메시), 거부=로스터 전용(명단만 실시간 — Compose 권한 거부 폴백 미러).
 struct CallView: View {
     @StateObject private var viewModel: CallViewModel
 
@@ -28,7 +29,9 @@ struct CallView: View {
             ring: ring,
             observeRtcCallEventsUseCase: container.observeRtcCallEventsUseCase,
             observeRtcSignalsUseCase: container.observeRtcSignalsUseCase,
+            sendRtcSignalUseCase: container.sendRtcSignalUseCase,
             sendCallInviteUseCase: container.sendCallInviteUseCase,
+            getIceServersUseCase: container.getIceServersUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
         self.title = title
@@ -53,20 +56,34 @@ private struct CallContent: View {
                     Text(statusLabel(uiState))
                         .font(.subheadline)
                         .foregroundColor(colors.inkSoft)
-                    rosterStrip(peers: uiState.call.peers)
-                    if uiState.call.isInCall {
-                        // 미디어 미지원(네이티브 WebRTC SDK 후속) — 명단만 실시간으로 표시된다
-                        Text("카메라·마이크 없이 참여 중입니다. 통화 명단만 실시간으로 표시됩니다.")
-                            .font(.caption)
-                            .foregroundColor(colors.inkFaint)
+                    if uiState.call.isMediaActive {
+                        videoGrid(uiState)
+                    } else {
+                        rosterStrip(peers: uiState.call.peers)
+                        if uiState.call.isInCall {
+                            // 권한 거부 — 명단만 실시간으로 표시된다(Compose 미러)
+                            Text("카메라·마이크 없이 참여 중입니다. 통화 명단만 실시간으로 표시됩니다.")
+                                .font(.caption)
+                                .foregroundColor(colors.inkFaint)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
             }
-            // 통화 컨트롤 바 — 하단 고정(Compose CallScreen 미러, 미디어 토글은 SDK 도입 후속)
-            HStack {
+            // 통화 컨트롤 바 — 하단 고정(토글은 미디어 활성 시에만, Compose CallScreen 미러)
+            HStack(spacing: 16) {
                 Spacer()
+                if uiState.call.isMediaActive {
+                    toggleButton(
+                        systemImage: uiState.call.micOn ? "mic.fill" : "mic.slash.fill",
+                        active: uiState.call.micOn
+                    ) { viewModel.onAction(.toggleMic) }
+                    toggleButton(
+                        systemImage: uiState.call.camOn ? "video.fill" : "video.slash.fill",
+                        active: uiState.call.camOn
+                    ) { viewModel.onAction(.toggleCam) }
+                }
                 Button {
                     viewModel.onAction(.hangUp)
                 } label: {
@@ -84,11 +101,25 @@ private struct CallContent: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        // 진입 즉시 참가 — 이미 통화 중(재진입)이면 VM 가드가 무시한다
-        .onAppear { viewModel.onAction(.join) }
+        // 진입 즉시 권한 → 참가 — 이미 통화 중(재진입)이면 VM 가드가 무시한다(Compose 미러)
+        .onAppear { requestPermissionsAndJoin() }
         .onReceive(viewModel.event) { event in
             switch event {
             case .ended: dismiss()
+            }
+        }
+    }
+
+    /// 카메라+마이크 권한 요청 — 이미 허용이면 즉시, 하나라도 거부면 로스터 전용 참가
+    /// (Compose rememberRtcPermissionsRequester 미러)
+    private func requestPermissionsAndJoin() {
+        if viewModel.uiState.call.isInCall { return }
+
+        AVCaptureDevice.requestAccess(for: .video) { videoGranted in
+            AVCaptureDevice.requestAccess(for: .audio) { audioGranted in
+                DispatchQueue.main.async {
+                    viewModel.onAction(.join(withMedia: videoGranted && audioGranted))
+                }
             }
         }
     }
@@ -99,6 +130,54 @@ private struct CallContent: View {
         if uiState.isAloneInCall, uiState.isRinging { return "응답을 기다리는 중…" }
         if uiState.isAloneInCall { return "아직 다른 참여자가 없습니다." }
         return "통화 중 \(uiState.call.peers.count)명"
+    }
+
+    /// 비디오 그리드 — 내 미리보기(거울)+상대 타일, 비디오 없는 상대는 아바타 타일
+    /// (Compose RtcVideoGrid 미러)
+    private func videoGrid(_ uiState: CallViewModel.UiState) -> some View {
+        let myUserId = uiState.myUserId
+        let remotePeers = uiState.call.peers.filter { $0.userId != myUserId }
+
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            videoTile(label: "나", track: uiState.call.localVideoTrack, mirror: true)
+            ForEach(remotePeers, id: \.userId) { peer in
+                videoTile(label: peer.userName, track: uiState.call.remoteVideoTracks[peer.userId], mirror: false)
+            }
+        }
+    }
+
+    @ViewBuilder private func videoTile(label: String, track: RTCVideoTrack?, mirror: Bool) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            if let track {
+                RtcVideoView(track: track, mirror: mirror)
+            } else {
+                // 비디오 없는 참여자(오디오 전용) — 아바타 자리 표시(웹 hasVideo=false 타일 미러)
+                ZStack {
+                    colors.linen
+                    SGAvatar(name: label, size: 48)
+                }
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.black.opacity(0.55)))
+                .padding(8)
+        }
+        .aspectRatio(4 / 3, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func toggleButton(systemImage: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18))
+                .foregroundColor(active ? colors.ink : colors.onAccent)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(active ? colors.linen : colors.inkSoft))
+        }
+        .buttonStyle(.plain)
     }
 
     /// 로스터 표시(미디어 없음) — 아바타 스트립(Compose RosterOnlyStrip 미러)

@@ -11,6 +11,7 @@ import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 class SendRtcSignalUseCase(
     private val rtcRepository: RtcRepository
 ) {
+    @Throws(Exception::class)
     suspend operator fun invoke(room: RtcRoom, type: RtcSignalType, toUserId: Long, payload: String) {
         rtcRepository.sendSignal(room, type, toUserId, payload)
     }

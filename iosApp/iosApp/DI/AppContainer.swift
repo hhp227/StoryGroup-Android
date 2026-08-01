@@ -47,7 +47,9 @@ final class AppContainer {
     let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
     let observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase
     let observeRtcSignalsUseCase: ObserveRtcSignalsUseCase
+    let sendRtcSignalUseCase: SendRtcSignalUseCase
     let sendCallInviteUseCase: SendCallInviteUseCase
+    let getIceServersUseCase: GetIceServersUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
@@ -121,7 +123,9 @@ final class AppContainer {
         getGroupDefaultChatRoomUseCase = GetGroupDefaultChatRoomUseCase(chatRepository: chatRepository)
         observeRtcCallEventsUseCase = ObserveRtcCallEventsUseCase(rtcRepository: rtcRepository)
         observeRtcSignalsUseCase = ObserveRtcSignalsUseCase(rtcRepository: rtcRepository)
+        sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository: rtcRepository)
         sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository: rtcRepository)
+        getIceServersUseCase = GetIceServersUseCase(rtcRepository: rtcRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }
