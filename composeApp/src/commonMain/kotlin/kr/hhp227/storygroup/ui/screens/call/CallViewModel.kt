@@ -19,30 +19,31 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.SendDmCallInviteUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 import kr.hhp227.storygroup.ui.rtc.RtcCallController
 import kr.hhp227.storygroup.ui.rtc.RtcMediaSessionFactory
 
 /**
- * DM 1:1 통화 — 통화 걸기 = rtc 방(chat-rooms/{id}) 입장 + 벨울림(invite) SEND(웹 D6 미러).
- * 오케스트레이션은 회의와 공용인 RtcCallController 소관이고, 이 VM은 벨울림 발신 시점
+ * 방 통화(DM 1:1·그룹 방 공용, 페이스톡 미러) — 통화 걸기 = rtc 방(chat-rooms/{id}) 입장 +
+ * 벨울림(invite) SEND(웹 D6 미러, 그룹 방은 서버가 방 멤버 전원 팬아웃·진행 중 합류엔 안 울림).
+ * 오케스트레이션은 RtcCallController 소관이고, 이 VM은 벨울림 발신 시점
  * (시그널 채널 최초 연결 — 세션이 살아있음이 보장된다)과 UiState 미러링만 담당한다.
  * 수락/거절 시그널은 없다 — 건 쪽은 상대가 PEERS에 안 들어오면 대기 표시가 계속될 뿐이고,
- * 받는 쪽 거절은 그냥 배너 닫기다. iosApp DmCallViewModel.swift와 1:1 미러
+ * 받는 쪽 거절은 그냥 배너 닫기다. iosApp CallViewModel.swift와 1:1 미러
  */
-class DmCallViewModel(
+class CallViewModel(
     val chatRoomId: Long,
     private val ring: Boolean,
     observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase,
     observeRtcSignalsUseCase: ObserveRtcSignalsUseCase,
     sendRtcSignalUseCase: SendRtcSignalUseCase,
     getIceServersUseCase: GetIceServersUseCase,
-    private val sendDmCallInviteUseCase: SendDmCallInviteUseCase,
+    private val sendCallInviteUseCase: SendCallInviteUseCase,
     rtcMediaSessionFactory: RtcMediaSessionFactory,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase
-) : ViewModel(), MviViewModel<DmCallViewModel.UiState, DmCallViewModel.Action, DmCallViewModel.Event> {
+) : ViewModel(), MviViewModel<CallViewModel.UiState, CallViewModel.Action, CallViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase(), isRinging = ring))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -58,8 +59,9 @@ class DmCallViewModel(
         sendRtcSignalUseCase = sendRtcSignalUseCase,
         getIceServersUseCase = getIceServersUseCase,
         mediaSessionFactory = rtcMediaSessionFactory,
-        // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다)
-        onFirstSignalConnected = { if (ring) sendDmCallInviteUseCase(chatRoomId) }
+        // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다).
+        // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다
+        onFirstSignalConnected = { if (ring) sendCallInviteUseCase(chatRoomId) }
     )
 
     override fun onAction(action: Action) {
@@ -108,7 +110,7 @@ class DmCallViewModel(
         // 통화 상태 — RtcCallController가 소유하고 여기엔 미러만 담긴다
         val call: RtcCallController.State = RtcCallController.State()
     ) {
-        // PEERS는 본인 포함 전체 목록 — 나뿐이면 상대가 아직 통화에 없다
+        // PEERS는 본인 포함 전체 목록 — 나뿐이면 아직 아무도 통화에 없다
         val isAloneInCall: Boolean get() = call.isInCall && call.peers.size <= 1
     }
 

@@ -24,7 +24,7 @@ import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** DM 수신 통화 배너 — 셸 위 오버레이로 뜨는 수락/거절 카드(웹 헤더 배너 미러) */
+/** 수신 통화 배너(DM·그룹 방) — 셸 위 오버레이로 뜨는 수락/거절 카드(웹 헤더 배너 미러) */
 @Composable
 fun IncomingCallBanner(
     call: IncomingCallViewModel.IncomingCall,
@@ -42,7 +42,8 @@ fun IncomingCallBanner(
             SgAvatar(name = call.callerName)
             Spacer(Modifier.width(12.dp))
             Text(
-                "${call.callerName}님의 통화",
+                // 그룹 방이면 어느 방의 통화인지 함께 — DM은 발신자 이름만(기존 문구)
+                call.roomName?.let { "$it — ${call.callerName}님의 통화" } ?: "${call.callerName}님의 통화",
                 style = SgTheme.typography.bodyMedium,
                 color = sg.ink,
                 fontWeight = FontWeight.Bold,

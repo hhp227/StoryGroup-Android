@@ -110,8 +110,17 @@ private fun PersonalSocketEventResponse.toDomain(): PersonalEvent? = when (type)
         ?.let { PersonalEvent(PersonalEventType.NOTIFICATION, notification = it) }
     "CHAT_MESSAGE" -> chatRoomId
         ?.let { PersonalEvent(PersonalEventType.CHAT_MESSAGE, chatRoomId = it, messageId = messageId, senderId = senderId) }
-    // DM 벨울림(휘발) — 발신자 필드명이 서버 CallInviteEvent 계약(fromUserId/fromUserName)이라 별도 매핑
+    // 통화 벨울림(휘발, DM·그룹 방) — 발신자 필드명이 서버 CallInviteEvent 계약(fromUserId/fromUserName)이라 별도 매핑
     "CALL_INVITE" -> chatRoomId
-        ?.let { PersonalEvent(PersonalEventType.CALL_INVITE, chatRoomId = it, senderId = fromUserId, senderName = fromUserName) }
+        ?.let {
+            PersonalEvent(
+                PersonalEventType.CALL_INVITE,
+                chatRoomId = it,
+                senderId = fromUserId,
+                senderName = fromUserName,
+                groupId = groupId,
+                roomName = roomName
+            )
+        }
     else -> null
 }

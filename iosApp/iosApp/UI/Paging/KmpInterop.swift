@@ -54,7 +54,6 @@ extension GetNotificationsPagingDataUseCase {
         AppNotificationPagingPublisher(adapter: pagingFlow())
     }
 }
-
 // Kotlin의 Flow<PagingData<Group>> 대응 퍼블리셔 — PostPagingPublisher의 Group 타입 대응
 struct GroupPagingPublisher: Publisher {
     typealias Output = PagingData<Group>

@@ -37,20 +37,20 @@ import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 @Composable
-private fun dmCallViewModel(chatRoomId: Long, ring: Boolean): DmCallViewModel {
+private fun callViewModel(chatRoomId: Long, ring: Boolean): CallViewModel {
     val container = LocalAppContainer.current
     // 플랫폼 미디어 팩토리 — Android는 applicationContext 캡처라 VM 보관이 안전, Desktop은 null 생성
     val rtcMediaSessionFactory = rememberRtcMediaSessionFactory()
 
-    return viewModel(key = "dm-call-$chatRoomId") {
-        DmCallViewModel(
+    return viewModel(key = "call-$chatRoomId") {
+        CallViewModel(
             chatRoomId = chatRoomId,
             ring = ring,
             observeRtcCallEventsUseCase = container.observeRtcCallEventsUseCase,
             observeRtcSignalsUseCase = container.observeRtcSignalsUseCase,
             sendRtcSignalUseCase = container.sendRtcSignalUseCase,
             getIceServersUseCase = container.getIceServersUseCase,
-            sendDmCallInviteUseCase = container.sendDmCallInviteUseCase,
+            sendCallInviteUseCase = container.sendCallInviteUseCase,
             rtcMediaSessionFactory = rtcMediaSessionFactory,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
@@ -58,25 +58,25 @@ private fun dmCallViewModel(chatRoomId: Long, ring: Boolean): DmCallViewModel {
 }
 
 /**
- * DM 1:1 통화 — 진입 즉시 권한을 물어 통화에 입장한다(발신=벨울림 포함, 수신=배너 수락으로 진입).
- * 그리드/토글은 회의 상세와 공용(ui/rtc/RtcCallUi) — 1:1이라도 "2명짜리 메시"로 같은 코드 경로(웹 D1).
- * iosApp DmCallView.swift와 1:1 미러
+ * 방 통화 — DM 1:1과 그룹 방 공용(페이스톡 미러). 진입 즉시 권한을 물어 통화에 입장한다
+ * (발신=벨울림 포함, 수신=배너 수락으로 진입). 그리드/토글은 ui/rtc/RtcCallUi 공용 —
+ * 1:1이라도 "2명짜리 메시"로 같은 코드 경로(웹 D1). iosApp CallView.swift와 1:1 미러
  */
 @Composable
-fun DmCallScreen(
+fun CallScreen(
     chatRoomId: Long,
     title: String,
     ring: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     // 라우트(백스택 엔트리) 스코프 — pop되면 구독(=통화)도 함께 정리된다
-    viewModel: DmCallViewModel = dmCallViewModel(chatRoomId, ring)
+    viewModel: CallViewModel = callViewModel(chatRoomId, ring)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
     val requestJoin = rememberRtcPermissionsRequester { granted ->
-        onAction(DmCallViewModel.Action.Join(withMedia = granted))
+        onAction(CallViewModel.Action.Join(withMedia = granted))
     }
 
     // 진입 즉시 참가 — 이미 통화 중(재진입/회전)이면 VM 가드가 무시한다
@@ -86,7 +86,7 @@ fun DmCallScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                DmCallViewModel.Event.Ended -> onBack()
+                CallViewModel.Event.Ended -> onBack()
             }
         }
     }
@@ -95,7 +95,7 @@ fun DmCallScreen(
             title = title,
             navigationIcon = {
                 // 뒤로가기도 끊기와 동일 — 통화를 정리하고 나간다
-                IconButton(onClick = { onAction(DmCallViewModel.Action.HangUp) }) {
+                IconButton(onClick = { onAction(CallViewModel.Action.HangUp) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }
@@ -109,7 +109,7 @@ fun DmCallScreen(
                     !uiState.call.isInCall -> "연결 중…"
                     !uiState.call.isConnected -> "재연결 중…"
                     uiState.isAloneInCall && uiState.isRinging -> "응답을 기다리는 중…"
-                    uiState.isAloneInCall -> "상대가 아직 통화에 없습니다."
+                    uiState.isAloneInCall -> "아직 다른 참여자가 없습니다."
                     else -> "통화 중"
                 },
                 style = SgTheme.typography.bodyMedium,
@@ -136,17 +136,17 @@ fun DmCallScreen(
                     icon = if (uiState.call.micOn) Icons.Default.Mic else Icons.Default.MicOff,
                     contentDescription = if (uiState.call.micOn) "마이크 끄기" else "마이크 켜기",
                     active = uiState.call.micOn,
-                    onClick = { onAction(DmCallViewModel.Action.ToggleMic) }
+                    onClick = { onAction(CallViewModel.Action.ToggleMic) }
                 )
                 RtcCallToggleButton(
                     icon = if (uiState.call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff,
                     contentDescription = if (uiState.call.camOn) "카메라 끄기" else "카메라 켜기",
                     active = uiState.call.camOn,
-                    onClick = { onAction(DmCallViewModel.Action.ToggleCam) }
+                    onClick = { onAction(CallViewModel.Action.ToggleCam) }
                 )
             }
             IconButton(
-                onClick = { onAction(DmCallViewModel.Action.HangUp) },
+                onClick = { onAction(CallViewModel.Action.HangUp) },
                 modifier = Modifier.background(sg.rust, CircleShape)
             ) {
                 Icon(Icons.Default.CallEnd, contentDescription = "통화 끊기", tint = sg.onAccent)

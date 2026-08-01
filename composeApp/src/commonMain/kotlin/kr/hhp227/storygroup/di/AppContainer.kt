@@ -5,7 +5,6 @@ import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.ChatRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
-import kr.hhp227.storygroup.shared.data.repository.MeetingRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
@@ -17,7 +16,6 @@ import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
-import kr.hhp227.storygroup.shared.domain.repository.MeetingRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
@@ -28,24 +26,20 @@ import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.CreateMeetingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.EndMeetingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMeetingsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.GetMeetingParticipantsUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.GetMeetingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
@@ -54,8 +48,6 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseC
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.JoinMeetingUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.LeaveMeetingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
@@ -70,7 +62,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.SendDmCallInviteUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
@@ -93,7 +85,6 @@ class AppContainer(
     private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
     private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
     private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
-    private val meetingRepository: MeetingRepository = MeetingRepositoryImpl(apiClient)
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
@@ -136,17 +127,11 @@ class AppContainer(
     val sendChatTypingUseCase = SendChatTypingUseCase(chatRepository)
     val getChatReadPositionsUseCase = GetChatReadPositionsUseCase(chatRepository)
     val openDirectRoomUseCase = OpenDirectRoomUseCase(chatRepository)
-    val createMeetingUseCase = CreateMeetingUseCase(meetingRepository)
-    val getGroupMeetingsPagingDataUseCase = GetGroupMeetingsPagingDataUseCase(meetingRepository)
-    val getMeetingUseCase = GetMeetingUseCase(meetingRepository)
-    val joinMeetingUseCase = JoinMeetingUseCase(meetingRepository)
-    val leaveMeetingUseCase = LeaveMeetingUseCase(meetingRepository)
-    val endMeetingUseCase = EndMeetingUseCase(meetingRepository)
-    val getMeetingParticipantsUseCase = GetMeetingParticipantsUseCase(meetingRepository)
+    val getGroupDefaultChatRoomUseCase = GetGroupDefaultChatRoomUseCase(chatRepository)
     val observeRtcCallEventsUseCase = ObserveRtcCallEventsUseCase(rtcRepository)
     val observeRtcSignalsUseCase = ObserveRtcSignalsUseCase(rtcRepository)
     val sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository)
-    val sendDmCallInviteUseCase = SendDmCallInviteUseCase(rtcRepository)
+    val sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository)
     val getIceServersUseCase = GetIceServersUseCase(rtcRepository)
     val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
 }

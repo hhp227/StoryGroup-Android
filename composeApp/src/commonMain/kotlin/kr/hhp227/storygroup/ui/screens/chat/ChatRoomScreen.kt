@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -164,10 +165,13 @@ fun ChatRoomScreen(
                 }
             },
             actions = {
-                // 1:1 통화는 DM 전용 — 그룹 채팅방은 회의(그룹 상세 진입)가 담당한다(웹 D6 미러)
-                if (groupId == null) {
-                    IconButton(onClick = onStartCall) {
+                // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러). DM=상대 벨울림(웹 D6),
+                // 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
+                IconButton(onClick = onStartCall) {
+                    if (groupId == null) {
                         Icon(Icons.Default.Call, contentDescription = "통화", tint = sg.accent)
+                    } else {
+                        Icon(Icons.Default.Videocam, contentDescription = "화상회의", tint = sg.accent)
                     }
                 }
             }

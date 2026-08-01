@@ -23,5 +23,8 @@ data class PersonalEvent(
     val chatRoomId: Long? = null,
     val messageId: Long? = null,
     val senderId: Long? = null,
-    val senderName: String? = null
+    val senderName: String? = null,
+    // CALL_INVITE 그룹 방 벨울림 전용(페이스톡 미러) — 배너 제목/이동 경로용, DM이면 null
+    val groupId: Long? = null,
+    val roomName: String? = null
 )

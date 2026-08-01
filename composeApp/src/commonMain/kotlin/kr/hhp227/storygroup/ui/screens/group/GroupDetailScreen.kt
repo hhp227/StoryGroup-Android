@@ -25,9 +25,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,6 +89,7 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
             createGroupInviteUseCase = container.createGroupInviteUseCase,
             openDirectRoomUseCase = container.openDirectRoomUseCase,
+            getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
         )
@@ -106,7 +107,6 @@ fun GroupDetailScreen(
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    onOpenMeetings: () -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
@@ -118,7 +118,6 @@ fun GroupDetailScreen(
         onBack = onBack,
         onCreatePost = onCreatePost,
         onOpenChatRoom = onOpenChatRoom,
-        onOpenMeetings = onOpenMeetings,
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
         modifier = modifier
@@ -131,7 +130,6 @@ private fun GroupDetailContent(
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    onOpenMeetings: () -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier
@@ -182,10 +180,16 @@ private fun GroupDetailContent(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
             }
         },
-        // 화상회의 진입 — 상단바 액션(PRD Phase 7, 웹 그룹 회의 탭 미러)
+        // 그룹 채팅방 진입 — 상단바 액션(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
+        // 기본 방 id는 상세 로드에 실려 온다 — 로드 전/실패 시엔 버튼이 숨는다
         actions = {
-            IconButton(onClick = onOpenMeetings) {
-                Icon(Icons.Default.Videocam, contentDescription = "화상회의")
+            uiState.defaultChatRoomId?.let { chatRoomId ->
+                IconButton(onClick = {
+                    // 방 제목은 허브(그룹 방 목록)와 동일하게 그룹명을 쓴다
+                    onOpenChatRoom(chatRoomId, viewModel.groupId, uiState.group?.name.orEmpty())
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "채팅")
+                }
             }
         },
         // 레거시 fragment_group_detail.xml의 fab 미러

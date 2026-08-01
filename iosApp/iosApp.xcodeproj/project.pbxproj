@@ -51,6 +51,9 @@
 		A101002DAABBCCDDEEFF002D /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102DAABBCCDDEEFF002D /* ChatViewModel.swift */; };
 		A101002EAABBCCDDEEFF002E /* ChatRoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102EAABBCCDDEEFF002E /* ChatRoomView.swift */; };
 		A101002FAABBCCDDEEFF002F /* ChatRoomViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102FAABBCCDDEEFF002F /* ChatRoomViewModel.swift */; };
+		A1010030AABBCCDDEEFF0030 /* CallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011030AABBCCDDEEFF0030 /* CallView.swift */; };
+		A1010031AABBCCDDEEFF0031 /* CallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */; };
+		A1010032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -99,6 +102,9 @@
 		A101102DAABBCCDDEEFF002D /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		A101102EAABBCCDDEEFF002E /* ChatRoomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRoomView.swift; sourceTree = "<group>"; };
 		A101102FAABBCCDDEEFF002F /* ChatRoomViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRoomViewModel.swift; sourceTree = "<group>"; };
+		A1011030AABBCCDDEEFF0030 /* CallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallView.swift; sourceTree = "<group>"; };
+		A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViewModel.swift; sourceTree = "<group>"; };
+		A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -182,6 +188,7 @@
 				A1013006AABBCCDDEEFF0006 /* Friend */,
 				A1013007AABBCCDDEEFF0007 /* Group */,
 				A1013008AABBCCDDEEFF0008 /* Home */,
+				A1013013AABBCCDDEEFF0013 /* Call */,
 				A1013009AABBCCDDEEFF0009 /* Notification */,
 				A1013012AABBCCDDEEFF0012 /* Post */,
 				A101300AAABBCCDDEEFF000A /* Profile */,
@@ -242,6 +249,16 @@
 				A101101BAABBCCDDEEFF001B /* HomeViewModel.swift */,
 			);
 			path = Home;
+			sourceTree = "<group>";
+		};
+		A1013013AABBCCDDEEFF0013 /* Call */ = {
+			isa = PBXGroup;
+			children = (
+				A1011030AABBCCDDEEFF0030 /* CallView.swift */,
+				A1011031AABBCCDDEEFF0031 /* CallViewModel.swift */,
+				A1011032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift */,
+			);
+			path = Call;
 			sourceTree = "<group>";
 		};
 		A1013009AABBCCDDEEFF0009 /* Notification */ = {
@@ -478,6 +495,9 @@
 				A101002DAABBCCDDEEFF002D /* ChatViewModel.swift in Sources */,
 				A101002EAABBCCDDEEFF002E /* ChatRoomView.swift in Sources */,
 				A101002FAABBCCDDEEFF002F /* ChatRoomViewModel.swift in Sources */,
+				A1010030AABBCCDDEEFF0030 /* CallView.swift in Sources */,
+				A1010031AABBCCDDEEFF0031 /* CallViewModel.swift in Sources */,
+				A1010032AABBCCDDEEFF0032 /* IncomingCallViewModel.swift in Sources */,
 				A1010015AABBCCDDEEFF0015 /* NotificationsView.swift in Sources */,
 				A101002CAABBCCDDEEFF002C /* NotificationsViewModel.swift in Sources */,
 				A1010016AABBCCDDEEFF0016 /* ProfileView.swift in Sources */,

@@ -21,7 +21,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
- * DM 수신 통화 배너 — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받아 표시한다
+ * 수신 통화 배너(DM·그룹 방) — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받아 표시한다
  * (웹 app-header 알림 훅의 수락/거절 배너 미러). 벨울림은 DB에 남지 않는 휘발 신호라
  * 일정 시간 뒤 자동으로 사라진다(부재중 이력 없음). 수락 시 화면 이동은 셸(SessionContent) 몫.
  * iosApp IncomingCallViewModel.swift와 1:1 미러
@@ -53,7 +53,8 @@ class IncomingCallViewModel(
                 incomingCall = IncomingCall(
                     chatRoomId = chatRoomId,
                     callerId = event.senderId,
-                    callerName = event.senderName ?: "알 수 없음"
+                    callerName = event.senderName ?: "알 수 없음",
+                    roomName = event.roomName
                 )
             )
         }
@@ -84,7 +85,9 @@ class IncomingCallViewModel(
     data class IncomingCall(
         val chatRoomId: Long,
         val callerId: Long?,
-        val callerName: String
+        val callerName: String,
+        // 그룹 방 벨울림이면 방(그룹) 이름 — 배너 제목과 통화 화면 제목에 쓴다. DM이면 null
+        val roomName: String? = null
     )
 
     sealed interface Action {

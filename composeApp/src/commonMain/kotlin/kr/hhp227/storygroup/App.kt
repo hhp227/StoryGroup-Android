@@ -36,13 +36,11 @@ import kr.hhp227.storygroup.ui.rtc.IncomingCallViewModel
 import kr.hhp227.storygroup.ui.screens.auth.LoginScreen
 import kr.hhp227.storygroup.ui.screens.auth.LoginViewModel
 import kr.hhp227.storygroup.ui.screens.auth.RegisterScreen
-import kr.hhp227.storygroup.ui.screens.call.DmCallScreen
+import kr.hhp227.storygroup.ui.screens.call.CallScreen
 import kr.hhp227.storygroup.ui.screens.chat.ChatRoomScreen
 import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
-import kr.hhp227.storygroup.ui.screens.meeting.MeetingDetailScreen
-import kr.hhp227.storygroup.ui.screens.meeting.MeetingsScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
@@ -84,20 +82,13 @@ internal data object CreateGroupRoute
 @Serializable
 internal data object DiscoverGroupsRoute
 
-/** 그룹 화상회의 목록 — 회의 시작과 상세 진입(PRD Phase 7) */
-@Serializable
-internal data class MeetingsRoute(val groupId: Long)
-
-/** 회의 상세 — 참가 기록+실시간 영상 통화(비디오 그리드) */
-@Serializable
-internal data class MeetingDetailRoute(val groupId: Long, val meetingId: Long)
-
 /**
- * DM 1:1 통화 — ring=true는 발신(입장+벨울림), false는 수신 배너 수락으로 진입.
- * title은 상대 이름(채팅방과 동일하게 호출 측이 아는 표시명)
+ * 방 통화 — DM 1:1·그룹 방 공용(페이스톡 미러, 채팅방 세션에 통화가 붙는다).
+ * ring=true는 발신(입장+벨울림 — 그룹 방은 서버가 방 멤버 전원 팬아웃), false는 수신 배너
+ * 수락으로 진입. title은 호출 측이 아는 표시명(DM=상대 이름, 그룹 방=그룹/방 이름)
  */
 @Serializable
-internal data class DmCallRoute(val chatRoomId: Long, val title: String, val ring: Boolean)
+internal data class CallRoute(val chatRoomId: Long, val title: String, val ring: Boolean)
 
 /** 그룹 피드 작성 성공을 이전 백스택 엔트리(그룹 상세)로 알리는 결과 키 — Paging-CRUD 샘플 미러 */
 internal const val POST_CREATED_KEY = "post_created"
@@ -151,7 +142,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
         val navController = rememberNavController()
         // 홈(라운지) 작성 성공 신호 — 셸이 항상 살아있으므로 상태로 내려보낸다(그룹은 savedStateHandle)
         var homeRefreshPending by remember { mutableStateOf(false) }
-        // DM 수신 통화 배너 — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받는다
+        // 수신 통화 배너(DM·그룹 방) — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받는다
         val incomingCallViewModel = sessionViewModel { IncomingCallViewModel(it.observePersonalEventsUseCase) }
         val incomingCallUiState by incomingCallViewModel.uiState.collectAsState()
 
@@ -186,12 +177,10 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             groupId = route.groupId,
                             onBack = { navController.popBackStack() },
                             onCreatePost = { navController.navigate(CreatePostRoute(groupId = route.groupId)) },
-                            // 멤버 스트립 DM — 셸의 채팅 허브와 같은 라우트로 들어간다
+                            // 상단바 채팅 버튼(기본 방)과 멤버 스트립 DM — 셸의 채팅 허브와 같은 라우트로 들어간다
                             onOpenChatRoom = { chatRoomId, groupId, title ->
                                 navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
                             },
-                            // 상단바 액션 — 그룹 화상회의 목록(PRD Phase 7)
-                            onOpenMeetings = { navController.navigate(MeetingsRoute(route.groupId)) },
                             refreshRequested = postCreated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
@@ -208,20 +197,21 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             groupId = route.groupId,
                             title = route.title,
                             onBack = { navController.popBackStack() },
-                            // DM 통화 발신 — 입장+벨울림(그룹 방은 화면이 버튼을 숨긴다)
+                            // 통화 발신 — 입장+벨울림(DM=상대 1명, 그룹 방=방 멤버 팬아웃, 페이스톡 미러).
+                            // 진행 중 통화 합류면 서버가 다시 울리지 않는다
                             onStartCall = {
-                                navController.navigate(DmCallRoute(route.chatRoomId, route.title, ring = true))
+                                navController.navigate(CallRoute(route.chatRoomId, route.title, ring = true))
                             },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )
                     }
                 }
-                composable<DmCallRoute> { backStackEntry ->
-                    val route = backStackEntry.toRoute<DmCallRoute>()
+                composable<CallRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<CallRoute>()
 
                     Surface(color = SgTheme.colors.paper) {
-                        DmCallScreen(
+                        CallScreen(
                             chatRoomId = route.chatRoomId,
                             title = route.title,
                             ring = route.ring,
@@ -258,34 +248,6 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                         )
                     }
                 }
-                composable<MeetingsRoute> { backStackEntry ->
-                    val route = backStackEntry.toRoute<MeetingsRoute>()
-
-                    Surface(color = SgTheme.colors.paper) {
-                        MeetingsScreen(
-                            groupId = route.groupId,
-                            onBack = { navController.popBackStack() },
-                            onOpenMeeting = { meetingId ->
-                                navController.navigate(MeetingDetailRoute(route.groupId, meetingId))
-                            },
-                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
-                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-                        )
-                    }
-                }
-                composable<MeetingDetailRoute> { backStackEntry ->
-                    val route = backStackEntry.toRoute<MeetingDetailRoute>()
-
-                    Surface(color = SgTheme.colors.paper) {
-                        MeetingDetailScreen(
-                            groupId = route.groupId,
-                            meetingId = route.meetingId,
-                            onBack = { navController.popBackStack() },
-                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
-                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-                        )
-                    }
-                }
                 composable<CreatePostRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<CreatePostRoute>()
 
@@ -314,8 +276,9 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                     call = call,
                     onAccept = {
                         incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss)
-                        // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false)
-                        navController.navigate(DmCallRoute(call.chatRoomId, call.callerName, ring = false))
+                        // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false).
+                        // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(채팅방 라우트와 동일 규칙)
+                        navController.navigate(CallRoute(call.chatRoomId, call.roomName ?: call.callerName, ring = false))
                     },
                     onDecline = { incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss) },
                     modifier = Modifier

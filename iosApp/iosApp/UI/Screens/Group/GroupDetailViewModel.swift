@@ -8,6 +8,7 @@ import Shared
 /// 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
 /// 모더레이터(방장/부방장)에겐 승인 대기 가입 신청 인박스가 함께 로드된다(웹 GroupMemberList 미러).
 /// 멤버 스트립에서 타인을 탭하면 1:1 DM을 연다(웹 GroupMemberList의 DM 액션 미러).
+/// 상단바 채팅 버튼용 기본 채팅방 id도 함께 로드한다(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
 final class GroupDetailViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -28,6 +29,8 @@ final class GroupDetailViewModel: MviViewModel {
     private let createGroupInviteUseCase: CreateGroupInviteUseCase
 
     private let openDirectRoomUseCase: OpenDirectRoomUseCase
+
+    private let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -68,10 +71,13 @@ final class GroupDetailViewModel: MviViewModel {
                 let joinRequests = canModerate
                     ? ((try? await getJoinRequestsUseCase.invoke(groupId: groupId)) ?? [])
                     : []
+                // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨고 다음 refresh가 따라잡는다)
+                let defaultChatRoomId = ((try? await getGroupDefaultChatRoomUseCase.invoke(groupId: groupId)) ?? nil)?.int64Value
                 uiState.isLoading = false
                 uiState.group = group
                 uiState.members = members
                 uiState.joinRequests = joinRequests
+                uiState.defaultChatRoomId = defaultChatRoomId
             } catch {
                 uiState.isLoading = false
                 uiState.error = error.kotlinMessage(fallback: "그룹을 불러오지 못했습니다.")
@@ -170,6 +176,7 @@ final class GroupDetailViewModel: MviViewModel {
         rejectJoinRequestUseCase: RejectJoinRequestUseCase,
         createGroupInviteUseCase: CreateGroupInviteUseCase,
         openDirectRoomUseCase: OpenDirectRoomUseCase,
+        getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
     ) {
@@ -181,6 +188,7 @@ final class GroupDetailViewModel: MviViewModel {
         self.rejectJoinRequestUseCase = rejectJoinRequestUseCase
         self.createGroupInviteUseCase = createGroupInviteUseCase
         self.openDirectRoomUseCase = openDirectRoomUseCase
+        self.getGroupDefaultChatRoomUseCase = getGroupDefaultChatRoomUseCase
         uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
@@ -194,6 +202,8 @@ final class GroupDetailViewModel: MviViewModel {
     struct UiState {
         // 로드 전 nil — 화면은 그룹 정보 자리만 비워 두고 커버/피드를 먼저 그린다
         var group: Group? = nil
+        // 상단바 채팅 버튼이 여는 기본 채팅방(가장 먼저 생성된 방) — 로드 전/실패 시 nil이면 버튼이 숨는다
+        var defaultChatRoomId: Int64? = nil
         // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
         var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
         var members: [GroupMember] = []

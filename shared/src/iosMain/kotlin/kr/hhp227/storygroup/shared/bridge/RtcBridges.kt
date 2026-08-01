@@ -27,11 +27,7 @@ class RtcCallEventFlowAdapter internal constructor(
     }
 }
 
-/** 회의 통화 로스터 구독 대응 — Swift callAsFunction이 감싼다 */
-fun ObserveRtcCallEventsUseCase.meetingEventsFlow(meetingId: Long): RtcCallEventFlowAdapter =
-    RtcCallEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.MEETING, meetingId)))
-
-/** DM 통화 로스터 구독 대응 */
+/** 방 통화(DM·그룹 공용, chat-rooms/{id}) 로스터 구독 대응 — Swift callAsFunction이 감싼다 */
 fun ObserveRtcCallEventsUseCase.directEventsFlow(chatRoomId: Long): RtcCallEventFlowAdapter =
     RtcCallEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.DIRECT, chatRoomId)))
 
@@ -47,10 +43,6 @@ class RtcSignalEventFlowAdapter internal constructor(
     }
 }
 
-/** 회의 시그널 채널 구독 대응 */
-fun ObserveRtcSignalsUseCase.meetingEventsFlow(meetingId: Long): RtcSignalEventFlowAdapter =
-    RtcSignalEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.MEETING, meetingId)))
-
-/** DM 시그널 채널 구독 대응 */
+/** 방 통화 시그널 채널 구독 대응 */
 fun ObserveRtcSignalsUseCase.directEventsFlow(chatRoomId: Long): RtcSignalEventFlowAdapter =
     RtcSignalEventFlowAdapter(invoke(RtcRoom(RtcRoomKind.DIRECT, chatRoomId)))
