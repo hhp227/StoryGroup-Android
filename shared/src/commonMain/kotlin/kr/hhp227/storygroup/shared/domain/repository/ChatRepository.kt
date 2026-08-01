@@ -51,6 +51,12 @@ interface ChatRepository {
     suspend fun openDirectRoom(otherUserId: Long): Result<Long>
 
     /**
+     * 그룹 기본 채팅방 id — 그룹 생성 시 자동으로 만들어져 항상 가장 먼저 생성된 방이다
+     * (웹 /groups/[id]/chat의 기본 선택 미러). 방이 하나도 없으면 null.
+     */
+    suspend fun getGroupDefaultChatRoom(groupId: Long): Result<Long?>
+
+    /**
      * 채팅방 실시간 이벤트 구독 — 수집하는 동안 CONNECTED/서버 이벤트/DISCONNECTED를 흘리고
      * 연결 유실 시 5초 간격으로 자동 재연결한다. 화면은 CONNECTED/DISCONNECTED에서 이력을
      * 재조회해 끊김 공백을 메꾼다(웹 refresh-on-reconnect 미러).

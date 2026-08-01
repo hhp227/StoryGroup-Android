@@ -23,6 +23,8 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            // 회의 영상 통화 — 미디어는 플랫폼 네이티브(README 원칙), 시그널링만 shared가 담당
+            implementation(libs.getstream.webrtc)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

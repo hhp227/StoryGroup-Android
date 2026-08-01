@@ -55,6 +55,9 @@ struct MainShellView: View {
     /// 채팅 탭 뱃지·허브·채팅방 진입/이탈 신호가 공유 — Compose sessionChatViewModel 미러
     @StateObject private var chatViewModel: ChatViewModel
 
+    /// 수신 통화 배너(DM·그룹 방) — 개인 큐 CALL_INVITE를 세션 전역에서 받는다(Compose 미러)
+    @StateObject private var incomingCallViewModel: IncomingCallViewModel
+
     @State private var current: SGDestination = .home
 
     @State private var showSettings = false
@@ -68,10 +71,30 @@ struct MainShellView: View {
     /// 채팅방 풀스크린 push — Compose NavHost(ChatRoomRoute) 미러
     @State private var selectedChatRoom: ChatRoomRef? = nil
 
+    /// 수신 통화 수락으로 push할 통화 화면 — Compose CallRoute(ring=false) 미러
+    @State private var acceptedCall: CallRef? = nil
+
     var body: some View {
         navigationRoot
             .sheet(isPresented: $showSettings) {
                 SGSettingsView(theme: theme)
+            }
+            // 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Compose Box 최상단 오버레이 미러)
+            .overlay(alignment: .top) {
+                if let call = incomingCallViewModel.uiState.incomingCall {
+                    SGIncomingCallBanner(
+                        call: call,
+                        onAccept: {
+                            incomingCallViewModel.onAction(.dismiss)
+                            // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false).
+                            // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(Compose와 동일 규칙)
+                            acceptedCall = CallRef(chatRoomId: call.chatRoomId, title: call.roomName ?? call.callerName, ring: false)
+                        },
+                        onDecline: { incomingCallViewModel.onAction(.dismiss) }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                }
             }
     }
 
@@ -84,6 +107,7 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                     .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
                     .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                    .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
             }
         } else {
             NavigationView {
@@ -107,6 +131,14 @@ struct MainShellView: View {
                     .background(
                         NavigationLink(isActive: showChatRoom) {
                             chatRoomDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
+                    .background(
+                        NavigationLink(isActive: showAcceptedCall) {
+                            acceptedCallDestination
                         } label: {
                             EmptyView()
                         }
@@ -186,6 +218,20 @@ struct MainShellView: View {
         )
     }
 
+    @ViewBuilder private var acceptedCallDestination: some View {
+        if let call = acceptedCall {
+            CallView(chatRoomId: call.chatRoomId, title: call.title, ring: call.ring, container: container)
+        }
+    }
+
+    /// pop(백 버튼/스와이프·끊기) 시 acceptedCall을 nil로 되돌리는 브리지
+    private var showAcceptedCall: Binding<Bool> {
+        Binding(
+            get: { acceptedCall != nil },
+            set: { if !$0 { acceptedCall = nil } }
+        )
+    }
+
     init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(getMyProfileUseCase: container.getMyProfileUseCase))
         _notificationsViewModel = StateObject(wrappedValue: NotificationsViewModel(
@@ -198,6 +244,9 @@ struct MainShellView: View {
         _chatViewModel = StateObject(wrappedValue: ChatViewModel(
             getGroupChatRoomsUseCase: container.getGroupChatRoomsUseCase,
             getDirectRoomsUseCase: container.getDirectRoomsUseCase,
+            observePersonalEventsUseCase: container.observePersonalEventsUseCase
+        ))
+        _incomingCallViewModel = StateObject(wrappedValue: IncomingCallViewModel(
             observePersonalEventsUseCase: container.observePersonalEventsUseCase
         ))
         self.container = container

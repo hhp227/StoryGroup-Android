@@ -44,6 +44,12 @@ final class AppContainer {
     let sendChatTypingUseCase: SendChatTypingUseCase
     let getChatReadPositionsUseCase: GetChatReadPositionsUseCase
     let openDirectRoomUseCase: OpenDirectRoomUseCase
+    let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
+    let observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase
+    let observeRtcSignalsUseCase: ObserveRtcSignalsUseCase
+    let sendRtcSignalUseCase: SendRtcSignalUseCase
+    let sendCallInviteUseCase: SendCallInviteUseCase
+    let getIceServersUseCase: GetIceServersUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
@@ -64,6 +70,11 @@ final class AppContainer {
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
         )
         let chatRepository = ChatRepositoryImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
+        )
+        let rtcRepository = RtcRepositoryImpl(
             client: client,
             tokenStorage: tokenStorage,
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
@@ -109,6 +120,12 @@ final class AppContainer {
         sendChatTypingUseCase = SendChatTypingUseCase(chatRepository: chatRepository)
         getChatReadPositionsUseCase = GetChatReadPositionsUseCase(chatRepository: chatRepository)
         openDirectRoomUseCase = OpenDirectRoomUseCase(chatRepository: chatRepository)
+        getGroupDefaultChatRoomUseCase = GetGroupDefaultChatRoomUseCase(chatRepository: chatRepository)
+        observeRtcCallEventsUseCase = ObserveRtcCallEventsUseCase(rtcRepository: rtcRepository)
+        observeRtcSignalsUseCase = ObserveRtcSignalsUseCase(rtcRepository: rtcRepository)
+        sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository: rtcRepository)
+        sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository: rtcRepository)
+        getIceServersUseCase = GetIceServersUseCase(rtcRepository: rtcRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }

@@ -112,6 +112,12 @@ class ChatRepositoryImpl(
             client.post("/api/dm/$otherUserId").body<ChatRoomResponse>().id
         }
 
+    override suspend fun getGroupDefaultChatRoom(groupId: Long): Result<Long?> =
+        runCatching {
+            // 서버가 생성순으로 돌려준다 — 첫 방이 그룹 생성 시 자동으로 만들어진 기본 방
+            client.get("/api/groups/$groupId/chat-rooms").body<List<ChatRoomResponse>>().firstOrNull()?.id
+        }
+
     override fun observeRoomEvents(chatRoomId: Long): Flow<ChatEvent> =
         socket.subscribe("/topic/chat-rooms/$chatRoomId").mapNotNull { event ->
             when (event) {

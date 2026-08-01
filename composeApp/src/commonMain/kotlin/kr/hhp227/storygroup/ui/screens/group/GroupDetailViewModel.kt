@@ -24,6 +24,7 @@ import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
@@ -39,6 +40,7 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
  * 모더레이터(방장/부방장)에겐 승인 대기 가입 신청 인박스가 함께 로드된다(웹 GroupMemberList 미러).
  * 멤버 스트립에서 타인을 탭하면 1:1 DM을 연다(웹 GroupMemberList의 DM 액션 미러).
+ * 상단바 채팅 버튼용 기본 채팅방 id도 함께 로드한다(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
  * iosApp GroupDetailViewModel.swift와 1:1 미러
  */
 class GroupDetailViewModel(
@@ -50,6 +52,7 @@ class GroupDetailViewModel(
     private val rejectJoinRequestUseCase: RejectJoinRequestUseCase,
     private val createGroupInviteUseCase: CreateGroupInviteUseCase,
     private val openDirectRoomUseCase: OpenDirectRoomUseCase,
+    private val getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
@@ -91,10 +94,17 @@ class GroupDetailViewModel(
                 val joinRequests =
                     if (group.canModerate) runCatching { getJoinRequestsUseCase(groupId) }.getOrDefault(emptyList())
                     else emptyList()
-                Triple(group, members, joinRequests)
-            }.onSuccess { (group, members, joinRequests) ->
+                // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨고 다음 Refresh가 따라잡는다)
+                val defaultChatRoomId = runCatching { getGroupDefaultChatRoomUseCase(groupId) }.getOrNull()
+
                 _uiState.update {
-                    it.copy(isLoading = false, group = group, members = members, joinRequests = joinRequests)
+                    it.copy(
+                        isLoading = false,
+                        group = group,
+                        members = members,
+                        joinRequests = joinRequests,
+                        defaultChatRoomId = defaultChatRoomId
+                    )
                 }
             }.onFailure { e ->
                 _uiState.update {
@@ -203,6 +213,8 @@ class GroupDetailViewModel(
         val myUserId: Long? = null,
         // 로드 전 null — 화면은 그룹 정보 자리만 비워 두고 커버/피드를 먼저 그린다
         val group: Group? = null,
+        // 상단바 채팅 버튼이 여는 기본 채팅방(가장 먼저 생성된 방) — 로드 전/실패 시 null이면 버튼이 숨는다
+        val defaultChatRoomId: Long? = null,
         val pagingData: PagingData<Post> = PagingData.empty(),
         val members: List<GroupMember> = emptyList(),
         // 모더레이터에게만 채워진다 — 일반 멤버는 항상 빈 목록이라 인박스가 그려지지 않는다

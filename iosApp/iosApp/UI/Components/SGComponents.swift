@@ -421,3 +421,44 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
         }
     }
 }
+
+/// 수신 통화 배너(DM·그룹 방) — 셸 위 오버레이로 뜨는 수락/거절 카드
+/// (웹 헤더 배너·Compose IncomingCallBanner 미러)
+struct SGIncomingCallBanner: View {
+    let call: IncomingCallViewModel.IncomingCall
+
+    let onAccept: () -> Void
+
+    let onDecline: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        SGCard {
+            HStack(spacing: 12) {
+                SGAvatar(name: call.callerName)
+                Text(
+                    // 그룹 방이면 어느 방의 통화인지 함께 — DM은 발신자 이름만(Compose 미러)
+                    call.roomName.map { "\($0) — \(call.callerName)님의 통화" } ?? "\(call.callerName)님의 통화"
+                )
+                .font(.subheadline.bold())
+                .foregroundColor(colors.ink)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Button("거절", action: onDecline)
+                    .font(.subheadline)
+                    .foregroundColor(colors.inkSoft)
+                Button(action: onAccept) {
+                    Image(systemName: "phone.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(colors.onAccent)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(colors.accent))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+}
