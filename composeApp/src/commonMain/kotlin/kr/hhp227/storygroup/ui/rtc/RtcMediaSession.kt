@@ -9,6 +9,9 @@ import kr.hhp227.storygroup.shared.domain.model.RtcSignalType
 /** 비디오 트랙 핸들 — 플랫폼 구현이 실제 트랙을 감싼다(commonMain은 불투명, RtcVideoView가 소비) */
 interface RtcVideoTrackHandle
 
+/** 화면 캡처 허가 토큰 — Android는 MediaProjection 동의 결과를 감싼다(commonMain은 불투명) */
+interface RtcScreenCaptureGrant
+
 /** 미디어 세션이 밖으로 흘리는 시그널 — VM이 STOMP(/app/rtc/.../signal)로 릴레이한다 */
 data class RtcOutgoingSignal(
     val toUserId: Long,
@@ -51,6 +54,24 @@ interface RtcMediaSession {
 
     fun setCamEnabled(enabled: Boolean)
 
+    /**
+     * 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀. 영상통화라 기본 ON.
+     * 통화 오디오 모드 진입/원복은 start()/dispose() 소관(Desktop은 세션 자체가 없어 자연 no-op).
+     */
+    fun setSpeakerEnabled(enabled: Boolean)
+
+    /** 화면 공유 중 여부 — 시작/중지·시스템 측 캡처 중단까지 반영한다(웹 sharing 미러) */
+    val screenSharing: StateFlow<Boolean>
+
+    /**
+     * 화면 공유 시작 — 각 피어 video sender의 트랙만 교체한다(재협상 없음, 웹 D9 미러).
+     * 카메라 트랙은 stop하지 않고 보관하고, 오디오 전용(video sender 없음)이면 무시한다.
+     */
+    fun startScreenShare(grant: RtcScreenCaptureGrant)
+
+    /** 화면 공유 중지 — 보관해둔 카메라 트랙을 각 sender에 복귀시킨다(웹 D9 미러) */
+    fun stopScreenShare()
+
     /** 세션 폐기 — 캡처/피어/팩토리 전부 해제. 이후 어떤 호출도 하면 안 된다 */
     fun dispose()
 }
@@ -71,3 +92,10 @@ expect fun rememberRtcMediaSessionFactory(): RtcMediaSessionFactory
  */
 @Composable
 expect fun rememberRtcPermissionsRequester(onResult: (granted: Boolean) -> Unit): () -> Unit
+
+/**
+ * 화면 캡처 동의 요청 런처 — 반환 람다를 호출하면 Android는 MediaProjection 시스템 다이얼로그가
+ * 뜨고 결과가 [onResult]로 온다(거부·미지원 플랫폼은 null — 웹 getDisplayMedia 취소 미러).
+ */
+@Composable
+expect fun rememberRtcScreenCaptureRequester(onResult: (grant: RtcScreenCaptureGrant?) -> Unit): () -> Unit
