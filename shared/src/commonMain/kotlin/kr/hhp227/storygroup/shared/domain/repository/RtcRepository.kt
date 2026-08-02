@@ -3,6 +3,7 @@ package kr.hhp227.storygroup.shared.domain.repository
 import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.IceServer
 import kr.hhp227.storygroup.shared.domain.model.RtcCallEvent
+import kr.hhp227.storygroup.shared.domain.model.RtcCallPeer
 import kr.hhp227.storygroup.shared.domain.model.RtcRoom
 import kr.hhp227.storygroup.shared.domain.model.RtcSignalEvent
 import kr.hhp227.storygroup.shared.domain.model.RtcSignalType
@@ -34,11 +35,18 @@ interface RtcRepository {
     suspend fun sendSignal(room: RtcRoom, type: RtcSignalType, toUserId: Long, payload: String)
 
     /**
-     * DM 벨울림(휘발) — 상대의 개인 알림 큐로 CALL_INVITE가 릴레이된다. 그룹 방이면 서버가
-     * 조용히 무시한다. 수락/거절 시그널은 없다 — 건 쪽은 PEERS에 상대가 안 오면 그만(웹 D6 미러).
+     * 통화 벨울림(휘발) — DM은 상대 1명, 그룹 방은 방 멤버 전원의 개인 알림 큐로 CALL_INVITE가
+     * 릴레이된다(페이스톡 미러). 진행 중 통화 합류면 서버가 다시 울리지 않는다.
+     * 수락/거절 시그널은 없다 — 건 쪽은 PEERS에 상대가 안 오면 그만(웹 D6 미러).
      */
     suspend fun sendCallInvite(chatRoomId: Long)
 
     /** ICE 서버 구성 조회 — 실패 시 호출 측이 STUN 폴백을 쓴다(조회 실패가 통화를 막으면 안 된다) */
     suspend fun getIceServers(): Result<List<IceServer>>
+
+    /**
+     * 통화 로스터 스냅숏(REST) — rtc 토픽 구독은 곧 입장이라, 입장 없이 "통화 중 N명"을
+     * 미리 보는 읽기 경로(웹 라이브 카드 미러). 채팅방 라이브 바가 주기 폴링한다.
+     */
+    suspend fun getCallRoster(chatRoomId: Long): Result<List<RtcCallPeer>>
 }

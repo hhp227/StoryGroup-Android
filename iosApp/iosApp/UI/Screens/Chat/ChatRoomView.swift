@@ -61,6 +61,26 @@ struct ChatRoomView: View {
             .map(\.value)
 
         VStack(spacing: 0) {
+            // 통화 진행 중 라이브 바(웹 라이브 카드·카톡 진행 중 배너·Compose 미러) — 참가는
+            // 통화 버튼과 같은 경로다(진행 중 통화 합류는 서버가 다시 울리지 않는다)
+            if !uiState.callRoster.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(colors.accent)
+                    Text("\(uiState.callRoster.map(\.userName).joined(separator: ", "))님이 통화 중이에요")
+                        .font(.caption)
+                        .foregroundColor(colors.ink)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button("참가") { showCall = true }
+                        .font(.caption.bold())
+                        .foregroundColor(colors.accent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(colors.accentSoft)
+            }
             ScrollViewReader { proxy in
                 Group {
                     if uiState.messages.isEmpty && uiState.isLoading {
@@ -308,6 +328,7 @@ struct ChatRoomView: View {
             uploadChatFileUseCase: container.uploadChatFileUseCase,
             sendChatTypingUseCase: container.sendChatTypingUseCase,
             getChatReadPositionsUseCase: container.getChatReadPositionsUseCase,
+            getCallRosterUseCase: container.getCallRosterUseCase,
             observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
