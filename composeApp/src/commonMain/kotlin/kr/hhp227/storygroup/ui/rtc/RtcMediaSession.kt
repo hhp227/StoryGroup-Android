@@ -54,6 +54,9 @@ interface RtcMediaSession {
 
     fun setCamEnabled(enabled: Boolean)
 
+    /** 전/후면 카메라 전환 — 반대편 카메라가 없으면 무시. 전면만 거울(localVideo 핸들 재발행으로 반영) */
+    fun switchCamera()
+
     /**
      * 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀. 영상통화라 기본 ON.
      * 통화 오디오 모드 진입/원복은 start()/dispose() 소관(Desktop은 세션 자체가 없어 자연 no-op).

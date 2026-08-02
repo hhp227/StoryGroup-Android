@@ -133,6 +133,13 @@ class RtcCallController(
         mediaSession?.setCamEnabled(camOn)
     }
 
+    /** 전/후면 카메라 전환 — 전면만 거울인 것은 플랫폼 세션이 localVideo 핸들 재발행으로 반영한다 */
+    fun switchCamera() {
+        // 공유 중엔 잠금 — 로컬 표시가 화면 트랙이라 전환이 보이지 않는다(버튼도 함께 숨김)
+        if (_state.value.sharing) return
+        mediaSession?.switchCamera()
+    }
+
     fun toggleSpeaker() {
         val speakerOn = !_state.value.speakerOn
 

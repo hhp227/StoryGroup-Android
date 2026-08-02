@@ -83,6 +83,13 @@ private struct CallContent: View {
                         systemImage: uiState.call.camOn ? "video.fill" : "video.slash.fill",
                         active: uiState.call.camOn
                     ) { viewModel.onAction(.toggleCam) }
+                    // 카메라 전환(전/후면) — 카메라가 있을 때만. 공유 중엔 로컬이 화면 트랙이라 숨김
+                    if uiState.call.localVideoTrack != nil, !uiState.call.sharing {
+                        toggleButton(
+                            systemImage: "arrow.triangle.2.circlepath.camera",
+                            active: true
+                        ) { viewModel.onAction(.switchCamera) }
+                    }
                     // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
                     toggleButton(
                         systemImage: uiState.call.speakerOn ? "speaker.wave.2.fill" : "speaker.slash.fill",
@@ -153,11 +160,12 @@ private struct CallContent: View {
         let remotePeers = uiState.call.peers.filter { $0.userId != myUserId }
 
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            // 공유 중 내 타일은 camOn과 무관하게 송출 중인 화면을 보여준다 — 화면은 거울 반전 없이(D9)
+            // 공유 중 내 타일은 camOn과 무관하게 송출 중인 화면을 보여준다 — 화면·후면 카메라는
+            // 거울 반전 없이 그대로(D9, 전면만 거울)
             videoTile(
                 label: "나",
                 track: uiState.call.camOn || uiState.call.sharing ? uiState.call.localVideoTrack : nil,
-                mirror: !uiState.call.sharing
+                mirror: uiState.call.frontCamera && !uiState.call.sharing
             )
             ForEach(remotePeers, id: \.userId) { peer in
                 videoTile(label: peer.userName, track: uiState.call.remoteVideoTracks[peer.userId], mirror: false)
