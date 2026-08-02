@@ -57,6 +57,7 @@ final class CallViewModel: MviViewModel {
         case .hangUp: hangUp()
         case .toggleMic: toggleMic()
         case .toggleCam: toggleCam()
+        case .toggleScreenShare: toggleScreenShare()
         }
     }
 
@@ -100,8 +101,21 @@ final class CallViewModel: MviViewModel {
     }
 
     private func toggleCam() {
+        // 공유 중엔 잠금(D9) — 전송 중인 비디오가 카메라가 아니라 화면이다(웹·Compose 미러)
+        if uiState.call.sharing { return }
+
         uiState.call.camOn.toggle()
         mediaSession?.setCamEnabled(uiState.call.camOn)
+    }
+
+    /// 화면 공유 토글 — 시스템 동의 창이 없는 대신 ReplayKit이 시작 시점에 허가를 묻는다
+    /// (Compose는 MediaProjection 동의 토큰이 필요해 Start/Stop 액션이 갈라진 것과 같은 D9 경로)
+    private func toggleScreenShare() {
+        if uiState.call.sharing {
+            mediaSession?.stopScreenShare()
+        } else {
+            mediaSession?.startScreenShare()
+        }
     }
 
     /// ICE 구성 조회(실패 시 STUN 폴백) → 미디어 세션 시작(Compose startMediaSession 미러)
@@ -120,6 +134,7 @@ final class CallViewModel: MviViewModel {
             }
         }
         session.onOutgoingSignal = { [weak self] signal in self?.relaySignal(signal) }
+        session.onScreenSharing = { [weak self] sharing in self?.uiState.call.sharing = sharing }
         session.setMicEnabled(uiState.call.micOn)
         session.setCamEnabled(uiState.call.camOn)
         mediaSession = session
@@ -272,6 +287,8 @@ final class CallViewModel: MviViewModel {
         var isMediaActive = false
         var micOn = true
         var camOn = true
+        // 화면 공유 중 — 공유 중엔 localVideoTrack이 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
+        var sharing = false
         var localVideoTrack: RTCVideoTrack? = nil
         var remoteVideoTracks: [Int64: RTCVideoTrack] = [:]
     }
@@ -293,6 +310,8 @@ final class CallViewModel: MviViewModel {
         case hangUp
         case toggleMic
         case toggleCam
+        /// 화면 공유 토글 — 오디오 전용(video sender 없음)이면 버튼 자체가 숨겨진다(D9)
+        case toggleScreenShare
     }
 
     enum Event {

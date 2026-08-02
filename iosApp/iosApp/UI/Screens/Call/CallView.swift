@@ -83,6 +83,13 @@ private struct CallContent: View {
                         systemImage: uiState.call.camOn ? "video.fill" : "video.slash.fill",
                         active: uiState.call.camOn
                     ) { viewModel.onAction(.toggleCam) }
+                    // 오디오 전용(카메라 실패)이면 video sender가 없어 replaceTrack 불가 — 버튼 숨김(웹 D9)
+                    if uiState.call.localVideoTrack != nil {
+                        toggleButton(
+                            systemImage: uiState.call.sharing ? "rectangle.on.rectangle.slash" : "rectangle.on.rectangle",
+                            active: uiState.call.sharing
+                        ) { viewModel.onAction(.toggleScreenShare) }
+                    }
                 }
                 Button {
                     viewModel.onAction(.hangUp)
@@ -139,7 +146,12 @@ private struct CallContent: View {
         let remotePeers = uiState.call.peers.filter { $0.userId != myUserId }
 
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            videoTile(label: "나", track: uiState.call.camOn ? uiState.call.localVideoTrack : nil, mirror: true)
+            // 공유 중 내 타일은 camOn과 무관하게 송출 중인 화면을 보여준다 — 화면은 거울 반전 없이(D9)
+            videoTile(
+                label: "나",
+                track: uiState.call.camOn || uiState.call.sharing ? uiState.call.localVideoTrack : nil,
+                mirror: !uiState.call.sharing
+            )
             ForEach(remotePeers, id: \.userId) { peer in
                 videoTile(label: peer.userName, track: uiState.call.remoteVideoTracks[peer.userId], mirror: false)
             }

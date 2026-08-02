@@ -1,8 +1,12 @@
 package kr.hhp227.storygroup.ui.rtc
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjection
+import android.media.projection.MediaProjectionManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -34,12 +38,15 @@ import org.webrtc.EglBase
 import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
 import org.webrtc.MediaStream
+import org.webrtc.MediaStreamTrack
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpTransceiver
+import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceTextureHelper
+import org.webrtc.VideoCapturer
 import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
 
@@ -70,6 +77,29 @@ actual fun rememberRtcPermissionsRequester(onResult: (granted: Boolean) -> Unit)
         }
     }
 }
+
+/** 화면 캡처 동의 런처 — MediaProjection 시스템 다이얼로그, 거부하면 null(웹 getDisplayMedia 취소 미러) */
+@Composable
+actual fun rememberRtcScreenCaptureRequester(onResult: (grant: RtcScreenCaptureGrant?) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val currentOnResult by rememberUpdatedState(onResult)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+
+        currentOnResult(
+            if (result.resultCode == Activity.RESULT_OK && data != null) AndroidRtcScreenCaptureGrant(data) else null
+        )
+    }
+
+    return {
+        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+
+        launcher.launch(manager.createScreenCaptureIntent())
+    }
+}
+
+/** MediaProjection 동의 결과 — ScreenCapturerAndroid가 이 Intent로 프로젝션을 연다 */
+internal class AndroidRtcScreenCaptureGrant(val data: Intent) : RtcScreenCaptureGrant
 
 internal class AndroidRtcMediaSessionFactory(private val appContext: Context) : RtcMediaSessionFactory {
     override fun create(iceServers: List<IceServer>): RtcMediaSession = AndroidRtcMediaSession(appContext, iceServers)
@@ -104,6 +134,11 @@ internal class AndroidRtcMediaSession(
     private var localVideoTrack: VideoTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
     private var surfaceHelper: SurfaceTextureHelper? = null
+    // 화면 공유 자원 — 카메라와 별도 파이프라인(카메라는 stop하지 않고 보관, 웹 D9 미러)
+    private var screenCapturer: VideoCapturer? = null
+    private var screenSource: VideoSource? = null
+    private var screenHelper: SurfaceTextureHelper? = null
+    private var screenVideoTrack: VideoTrack? = null
     private var micEnabled = true
     private var camEnabled = true
     private var started = false
@@ -114,6 +149,9 @@ internal class AndroidRtcMediaSession(
 
     private val _remoteVideos = MutableStateFlow<Map<Long, RtcVideoTrackHandle>>(emptyMap())
     override val remoteVideos: StateFlow<Map<Long, RtcVideoTrackHandle>> = _remoteVideos.asStateFlow()
+
+    private val _screenSharing = MutableStateFlow(false)
+    override val screenSharing: StateFlow<Boolean> = _screenSharing.asStateFlow()
 
     // VM이 수집을 시작한 뒤에야 피어가 생기지만, 순간 폭주(ICE 다발)에 대비해 버퍼를 넉넉히 둔다
     private val _outgoingSignals = MutableSharedFlow<RtcOutgoingSignal>(
@@ -186,7 +224,8 @@ internal class AndroidRtcMediaSession(
             handle.pc = pc
             peers[peerId] = handle
             localAudioTrack?.let { pc.addTrack(it) }
-            localVideoTrack?.let { pc.addTrack(it) }
+            // 공유 중 새로 들어온 피어도 화면을 받는다 — 송출 트랙 자체를 바꿔두는 웹 D9 미러
+            (screenVideoTrack ?: localVideoTrack)?.let { pc.addTrack(it) }
             handle
         }
 
@@ -233,6 +272,108 @@ internal class AndroidRtcMediaSession(
         localVideoTrack?.setEnabled(enabled)
     }
 
+    override fun startScreenShare(grant: RtcScreenCaptureGrant) {
+        val data = (grant as? AndroidRtcScreenCaptureGrant)?.data ?: return
+
+        synchronized(lock) {
+            // 오디오 전용이면 video sender가 없어 replaceTrack 불가 — 버튼도 숨겨져 있다(웹 D9)
+            if (disposed || screenVideoTrack != null || localVideoTrack == null) return
+        }
+        // API 29+는 mediaProjection 타입 FGS가 떠 있어야 getMediaProjection이 허용된다 — 서비스 기동 후 캡처
+        ScreenShareService.start(appContext) { beginScreenCapture(data) }
+    }
+
+    override fun stopScreenShare() {
+        var stoppingCapturer: VideoCapturer? = null
+        var disposingSource: VideoSource? = null
+        var disposingHelper: SurfaceTextureHelper? = null
+        var disposingTrack: VideoTrack? = null
+        val camHandle = synchronized(lock) {
+            val track = screenVideoTrack ?: return
+            val camTrack = localVideoTrack
+
+            stoppingCapturer = screenCapturer
+            disposingSource = screenSource
+            disposingHelper = screenHelper
+            disposingTrack = track
+            screenCapturer = null
+            screenSource = null
+            screenHelper = null
+            screenVideoTrack = null
+            // 보관해둔 카메라 트랙을 각 sender에 복귀 — 재협상 없음(웹 stopScreenShare 미러)
+            peers.values.forEach { peer ->
+                peer.pc.senders
+                    .firstOrNull { it.track()?.kind() == MediaStreamTrack.VIDEO_TRACK_KIND }
+                    ?.setTrack(camTrack, false)
+            }
+            camTrack?.let { AndroidRtcVideoTrackHandle(it, eglBase.eglBaseContext, mirror = true) }
+        }
+
+        _localVideo.value = camHandle
+        _screenSharing.value = false
+        // 네이티브 해제는 락 밖에서 — stopCapture가 캡처 스레드 완료를 기다린다
+        runCatching { stoppingCapturer?.stopCapture() }
+        runCatching { stoppingCapturer?.dispose() }
+        runCatching { disposingTrack?.dispose() }
+        runCatching { disposingSource?.dispose() }
+        runCatching { disposingHelper?.dispose() }
+        ScreenShareService.stop(appContext)
+    }
+
+    /** FGS 기동 완료 후 호출 — MediaProjection을 열고 화면 트랙으로 각 피어 sender를 교체한다(D9) */
+    private fun beginScreenCapture(data: Intent) {
+        val handle = synchronized(lock) {
+            if (disposed || screenVideoTrack != null || localVideoTrack == null) {
+                ScreenShareService.stop(appContext)
+                return
+            }
+            val capturer = ScreenCapturerAndroid(data, object : MediaProjection.Callback() {
+                // 시스템 UI(상태바)에서 캡처를 끊은 경우 — 웹 track.onended와 같은 정리 경로
+                override fun onStop() {
+                    stopScreenShare()
+                }
+            })
+            val source = factory.createVideoSource(capturer.isScreencast)
+            val helper = SurfaceTextureHelper.create("SgScreenCapture", eglBase.eglBaseContext)
+
+            capturer.initialize(helper, appContext, source.capturerObserver)
+            // 화면 원본 비율 유지, 긴 변만 캡처 상한으로 축소 — 모바일 인코더 부하 제한
+            val metrics = appContext.resources.displayMetrics
+            val scale = (CAPTURE_WIDTH.toFloat() / maxOf(metrics.widthPixels, metrics.heightPixels)).coerceAtMost(1f)
+            val captureStarted = runCatching {
+                capturer.startCapture(
+                    (metrics.widthPixels * scale).toInt(),
+                    (metrics.heightPixels * scale).toInt(),
+                    SCREEN_CAPTURE_FPS
+                )
+            }.isSuccess
+
+            if (!captureStarted) {
+                runCatching { capturer.dispose() }
+                runCatching { helper.dispose() }
+                runCatching { source.dispose() }
+                ScreenShareService.stop(appContext)
+                return
+            }
+            val track = factory.createVideoTrack("screen0", source)
+
+            screenCapturer = capturer
+            screenSource = source
+            screenHelper = helper
+            screenVideoTrack = track
+            // 전송 중인 video sender의 트랙만 교체 — SDP 재협상 없음, 시그널링 무변경(웹 D9)
+            peers.values.forEach { peer ->
+                peer.pc.senders
+                    .firstOrNull { it.track()?.kind() == MediaStreamTrack.VIDEO_TRACK_KIND }
+                    ?.setTrack(track, false)
+            }
+            AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = false)
+        }
+
+        _localVideo.value = handle
+        _screenSharing.value = true
+    }
+
     override fun dispose() {
         val closing = synchronized(lock) {
             if (disposed) return
@@ -245,10 +386,18 @@ internal class AndroidRtcMediaSession(
 
         _localVideo.value = null
         _remoteVideos.value = emptyMap()
+        _screenSharing.value = false
         closing.forEach {
             runCatching { it.pc.close() }
             runCatching { it.pc.dispose() }
         }
+        // 공유 중에 끊으면 화면 캡처(FGS 포함)도 함께 내린다 — 웹 cleanup의 screenTrack.stop 미러
+        runCatching { screenCapturer?.stopCapture() }
+        runCatching { screenCapturer?.dispose() }
+        runCatching { screenVideoTrack?.dispose() }
+        runCatching { screenSource?.dispose() }
+        runCatching { screenHelper?.dispose() }
+        if (screenCapturer != null) ScreenShareService.stop(appContext)
         runCatching { videoCapturer?.stopCapture() }
         runCatching { videoCapturer?.dispose() }
         runCatching { surfaceHelper?.dispose() }
@@ -422,6 +571,8 @@ internal class AndroidRtcMediaSession(
         const val CAPTURE_WIDTH = 1280
         const val CAPTURE_HEIGHT = 720
         const val CAPTURE_FPS = 30
+        // 화면은 정지 화면이 대부분 — 카메라(30)보다 낮춰 인코더 부하를 아낀다
+        const val SCREEN_CAPTURE_FPS = 15
 
         private var factoryInitialized = false
 

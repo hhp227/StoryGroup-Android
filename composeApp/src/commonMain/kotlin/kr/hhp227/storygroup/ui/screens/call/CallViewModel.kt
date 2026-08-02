@@ -24,6 +24,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 import kr.hhp227.storygroup.ui.rtc.RtcCallController
 import kr.hhp227.storygroup.ui.rtc.RtcMediaSessionFactory
+import kr.hhp227.storygroup.ui.rtc.RtcScreenCaptureGrant
 
 /**
  * 방 통화(DM 1:1·그룹 방 공용, 페이스톡 미러) — 통화 걸기 = rtc 방(chat-rooms/{id}) 입장 +
@@ -70,6 +71,8 @@ class CallViewModel(
             Action.HangUp -> hangUp()
             Action.ToggleMic -> callController.toggleMic()
             Action.ToggleCam -> callController.toggleCam()
+            is Action.StartScreenShare -> callController.startScreenShare(action.grant)
+            Action.StopScreenShare -> callController.stopScreenShare()
         }
     }
 
@@ -120,6 +123,9 @@ class CallViewModel(
         data object HangUp : Action
         data object ToggleMic : Action
         data object ToggleCam : Action
+        /** 화면 공유 시작 — 동의 토큰은 화면의 플랫폼 런처가 만들어 넘긴다(웹 D9 미러) */
+        data class StartScreenShare(val grant: RtcScreenCaptureGrant) : Action
+        data object StopScreenShare : Action
     }
 
     sealed interface Event {

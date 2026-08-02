@@ -15,6 +15,8 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -34,6 +36,7 @@ import kr.hhp227.storygroup.ui.rtc.RtcCallToggleButton
 import kr.hhp227.storygroup.ui.rtc.RtcVideoGrid
 import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
 import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
+import kr.hhp227.storygroup.ui.rtc.rememberRtcScreenCaptureRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 @Composable
@@ -77,6 +80,10 @@ fun CallScreen(
     val sg = SgTheme.colors
     val requestJoin = rememberRtcPermissionsRequester { granted ->
         onAction(CallViewModel.Action.Join(withMedia = granted))
+    }
+    // 화면 캡처 동의(MediaProjection) — 거부(null)는 웹 getDisplayMedia 취소처럼 조용히 무시한다
+    val requestScreenCapture = rememberRtcScreenCaptureRequester { grant ->
+        if (grant != null) onAction(CallViewModel.Action.StartScreenShare(grant))
     }
 
     // 진입 즉시 참가 — 이미 통화 중(재진입/회전)이면 VM 가드가 무시한다
@@ -144,6 +151,18 @@ fun CallScreen(
                     active = uiState.call.camOn,
                     onClick = { onAction(CallViewModel.Action.ToggleCam) }
                 )
+                // 오디오 전용(카메라 실패)이면 video sender가 없어 replaceTrack 불가 — 버튼 숨김(웹 D9)
+                if (uiState.call.localVideo != null) {
+                    RtcCallToggleButton(
+                        icon = if (uiState.call.sharing) Icons.AutoMirrored.Filled.StopScreenShare else Icons.AutoMirrored.Filled.ScreenShare,
+                        contentDescription = if (uiState.call.sharing) "화면 공유 중지" else "화면 공유",
+                        active = uiState.call.sharing,
+                        onClick = {
+                            if (uiState.call.sharing) onAction(CallViewModel.Action.StopScreenShare)
+                            else requestScreenCapture()
+                        }
+                    )
+                }
             }
             IconButton(
                 onClick = { onAction(CallViewModel.Action.HangUp) },
