@@ -51,12 +51,16 @@ final class CallViewModel: MviViewModel {
 
     private var knownPeerIds = Set<Int64>()
 
+    /// 발신 무응답 타이머 — 상대가 한 번이라도 PEERS에 들어오면 해제(중도 이탈에 재시작 없음)
+    private var noAnswerTask: Task<Void, Never>?
+
     func onAction(_ action: Action) {
         switch action {
         case .join(let withMedia): join(withMedia: withMedia)
         case .hangUp: hangUp()
         case .toggleMic: toggleMic()
         case .toggleCam: toggleCam()
+        case .toggleSpeaker: toggleSpeaker()
         case .toggleScreenShare: toggleScreenShare()
         }
     }
@@ -72,13 +76,33 @@ final class CallViewModel: MviViewModel {
             uiState.call.isInCall = true
             uiState.call.isMediaActive = mediaSession != nil
             uiState.isJoining = false
+            // 발신이면 무응답 타이머 — 수락/거절 시그널이 없어(D6) PEERS 합류가 유일한 응답 신호다
+            if ring { startNoAnswerTimer() }
         }
     }
 
     /// 끊기 — 구독 취소가 곧 퇴장. 별도 종료 시그널은 없다(상대 화면엔 PEERS 축소로 반영)
     private func hangUp() {
+        noAnswerTask?.cancel()
         leave()
         event.send(.ended)
+    }
+
+    /// 발신 무응답 자동 종료 — 참가 후 30초 동안 혼자면 "응답 없음" 안내를 잠깐 보여주고 끊는다
+    /// (수신 배너의 30초 자동 소거와 대칭 — 벨울림은 휘발 신호라 이 즈음이면 상대 배너도 사라졌다).
+    private func startNoAnswerTimer() {
+        noAnswerTask?.cancel()
+        noAnswerTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.noAnswerTimeoutNanos)
+            guard let self, !Task.isCancelled else { return }
+
+            self.uiState.isNoAnswer = true
+            // 즉시 pop하면 종료 사유를 알 수 없다 — 안내가 보일 짬을 두고 끊는다
+            try? await Task.sleep(nanoseconds: Self.noAnswerNoticeNanos)
+            if Task.isCancelled { return }
+            self.leave()
+            self.event.send(.ended)
+        }
     }
 
     private func leave() {
@@ -106,6 +130,11 @@ final class CallViewModel: MviViewModel {
 
         uiState.call.camOn.toggle()
         mediaSession?.setCamEnabled(uiState.call.camOn)
+    }
+
+    private func toggleSpeaker() {
+        uiState.call.speakerOn.toggle()
+        mediaSession?.setSpeakerEnabled(uiState.call.speakerOn)
     }
 
     /// 화면 공유 토글 — 시스템 동의 창이 없는 대신 ReplayKit이 시작 시점에 허가를 묻는다
@@ -137,6 +166,7 @@ final class CallViewModel: MviViewModel {
         session.onScreenSharing = { [weak self] sharing in self?.uiState.call.sharing = sharing }
         session.setMicEnabled(uiState.call.micOn)
         session.setCamEnabled(uiState.call.camOn)
+        session.setSpeakerEnabled(uiState.call.speakerOn)
         mediaSession = session
         session.start()
     }
@@ -171,6 +201,13 @@ final class CallViewModel: MviViewModel {
             tearDownMesh()
         case .peers:
             uiState.call.peers = callEvent.peers
+            // 상대가 한 번이라도 PEERS에 들어오면 무응답 타이머 해제 — 중도 이탈엔 재시작하지
+            // 않는다(무응답 전용). 30초 경계에서 뒤늦게 받았으면 안내도 함께 걷는다(Compose 미러)
+            if noAnswerTask != nil, callEvent.peers.contains(where: { $0.userId != uiState.myUserId }) {
+                noAnswerTask?.cancel()
+                noAnswerTask = nil
+                uiState.isNoAnswer = false
+            }
             latestPeerIds = Set(callEvent.peers.map(\.userId).filter { $0 != uiState.myUserId })
             reconcileMesh()
         default:
@@ -274,6 +311,7 @@ final class CallViewModel: MviViewModel {
     deinit {
         callCancellable?.cancel()
         signalCancellable?.cancel()
+        noAnswerTask?.cancel()
         mediaSession?.dispose()
     }
 
@@ -287,6 +325,8 @@ final class CallViewModel: MviViewModel {
         var isMediaActive = false
         var micOn = true
         var camOn = true
+        // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
+        var speakerOn = true
         // 화면 공유 중 — 공유 중엔 localVideoTrack이 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
         var sharing = false
         var localVideoTrack: RTCVideoTrack? = nil
@@ -298,6 +338,8 @@ final class CallViewModel: MviViewModel {
         /// 발신 여부 — 상대가 아직 안 들어왔을 때 "응답 대기" 표시용
         var isRinging = false
         var isJoining = false
+        /// 발신 무응답 — 30초 동안 혼자면 true(안내 표시), 잠시 뒤 ended로 pop된다
+        var isNoAnswer = false
         var call = CallState()
 
         /// PEERS는 본인 포함 전체 목록 — 나뿐이면 아직 아무도 통화에 없다
@@ -310,6 +352,8 @@ final class CallViewModel: MviViewModel {
         case hangUp
         case toggleMic
         case toggleCam
+        /// 스피커폰 토글 — 라우팅은 미디어 세션 소관(웹엔 없는 모바일 전용)
+        case toggleSpeaker
         /// 화면 공유 토글 — 오디오 전용(video sender 없음)이면 버튼 자체가 숨겨진다(D9)
         case toggleScreenShare
     }
@@ -318,4 +362,10 @@ final class CallViewModel: MviViewModel {
         /// 통화 종료 — 화면이 pop한다
         case ended
     }
+
+    /// 수신 배너 ringTimeout(30초)과 대칭 — 이 즈음이면 상대 배너도 이미 사라졌다
+    private static let noAnswerTimeoutNanos: UInt64 = 30_000_000_000
+
+    /// "응답 없음" 안내가 보일 최소 시간
+    private static let noAnswerNoticeNanos: UInt64 = 1_500_000_000
 }

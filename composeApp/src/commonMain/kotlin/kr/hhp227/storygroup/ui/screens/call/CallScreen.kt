@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ScreenShare
 import androidx.compose.material.icons.automirrored.filled.StopScreenShare
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -113,6 +115,8 @@ fun CallScreen(
         ) {
             Text(
                 when {
+                    // 발신 무응답 — 잠깐 보여준 뒤 VM이 Ended로 pop한다
+                    uiState.isNoAnswer -> "응답이 없어 통화를 종료합니다."
                     !uiState.call.isInCall -> "연결 중…"
                     !uiState.call.isConnected -> "재연결 중…"
                     uiState.isAloneInCall && uiState.isRinging -> "응답을 기다리는 중…"
@@ -150,6 +154,13 @@ fun CallScreen(
                     contentDescription = if (uiState.call.camOn) "카메라 끄기" else "카메라 켜기",
                     active = uiState.call.camOn,
                     onClick = { onAction(CallViewModel.Action.ToggleCam) }
+                )
+                // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
+                RtcCallToggleButton(
+                    icon = if (uiState.call.speakerOn) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                    contentDescription = if (uiState.call.speakerOn) "스피커 끄기" else "스피커 켜기",
+                    active = uiState.call.speakerOn,
+                    onClick = { onAction(CallViewModel.Action.ToggleSpeaker) }
                 )
                 // 오디오 전용(카메라 실패)이면 video sender가 없어 replaceTrack 불가 — 버튼 숨김(웹 D9)
                 if (uiState.call.localVideo != null) {

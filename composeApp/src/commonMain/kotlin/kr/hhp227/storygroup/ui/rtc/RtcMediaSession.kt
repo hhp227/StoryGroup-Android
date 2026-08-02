@@ -54,6 +54,12 @@ interface RtcMediaSession {
 
     fun setCamEnabled(enabled: Boolean)
 
+    /**
+     * 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀. 영상통화라 기본 ON.
+     * 통화 오디오 모드 진입/원복은 start()/dispose() 소관(Desktop은 세션 자체가 없어 자연 no-op).
+     */
+    fun setSpeakerEnabled(enabled: Boolean)
+
     /** 화면 공유 중 여부 — 시작/중지·시스템 측 캡처 중단까지 반영한다(웹 sharing 미러) */
     val screenSharing: StateFlow<Boolean>
 

@@ -55,6 +55,8 @@ final class RtcMediaSession {
 
     private var camEnabled = true
 
+    private var speakerEnabled = true
+
     private var started = false
 
     private var disposed = false
@@ -89,6 +91,11 @@ final class RtcMediaSession {
         audioTrack.isEnabled = micEnabled
         localAudioTrack = audioTrack
         lock.unlock()
+
+        // 통화 오디오 세션 진입(페이스톡 성격) — 현재 토글대로 라우팅 후 활성화.
+        // dispose가 반드시 원복한다(Android MODE_IN_COMMUNICATION 진입/원복 미러)
+        applySpeakerRouting()
+        try? AVAudioSession.sharedInstance().setActive(true)
 
         let devices = RTCCameraVideoCapturer.captureDevices()
         guard let device = devices.first(where: { $0.position == .front }) ?? devices.first,
@@ -187,6 +194,29 @@ final class RtcMediaSession {
     func setCamEnabled(_ enabled: Bool) {
         camEnabled = enabled
         localVideoTrack?.isEnabled = enabled
+    }
+
+    /// 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀(영상통화라 기본 ON)
+    func setSpeakerEnabled(_ enabled: Bool) {
+        speakerEnabled = enabled
+        // start() 전이면 기억만 — 세션 진입 시 현재 토글대로 적용된다(Android 미러)
+        if started { applySpeakerRouting() }
+    }
+
+    /// 켬=playAndRecord+videoChat 모드+스피커 오버라이드, 끔=voiceChat 모드(수화구 기본) —
+    /// videoChat은 defaultToSpeaker가 내장이라 끄기는 모드째 voiceChat으로 내린다.
+    /// WebRTC 오디오 유닛이 (재)시작할 때 자체 기본 구성을 다시 적용하므로 그 기본값도
+    /// 같은 모드로 맞춰 연결 시점에 라우팅이 뒤집히지 않게 한다
+    private func applySpeakerRouting() {
+        let audioSession = AVAudioSession.sharedInstance()
+        let mode: AVAudioSession.Mode = speakerEnabled ? .videoChat : .voiceChat
+        let webRtcConfig = RTCAudioSessionConfiguration.webRTC()
+
+        webRtcConfig.category = AVAudioSession.Category.playAndRecord.rawValue
+        webRtcConfig.mode = mode.rawValue
+        RTCAudioSessionConfiguration.setWebRTC(webRtcConfig)
+        try? audioSession.setCategory(.playAndRecord, mode: mode, options: [])
+        try? audioSession.overrideOutputAudioPort(speakerEnabled ? .speaker : .none)
     }
 
     /// 화면 공유 시작 — RPScreenRecorder 인앱 캡처 프레임을 화면 전용 소스로 밀어넣고
@@ -295,6 +325,7 @@ final class RtcMediaSession {
         let stoppingCapturer = capturer
         // 공유 중에 끊으면 화면 캡처도 함께 내린다 — 웹 cleanup의 screenTrack.stop 미러
         let wasSharing = screenVideoTrack != nil
+        let wasStarted = started
 
         capturer = nil
         localVideoTrack = nil
@@ -308,6 +339,12 @@ final class RtcMediaSession {
         closing.forEach { $0.pc?.close() }
         stoppingCapturer?.stopCapture()
         if wasSharing { RPScreenRecorder.shared().stopCapture { _ in } }
+        // 오디오 세션 원복 — 세션에 들어간 적이 있을 때만. 오버라이드를 걷고 비활성화해
+        // 다른 앱 오디오 재개를 알린다(Android 통화 모드 원복 미러)
+        if wasStarted {
+            try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     // MARK: - SDP/ICE (payload 계약은 웹 JSON.stringify·Android JSONObject와 1:1)

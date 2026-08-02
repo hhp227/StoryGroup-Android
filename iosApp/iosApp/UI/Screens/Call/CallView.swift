@@ -83,6 +83,11 @@ private struct CallContent: View {
                         systemImage: uiState.call.camOn ? "video.fill" : "video.slash.fill",
                         active: uiState.call.camOn
                     ) { viewModel.onAction(.toggleCam) }
+                    // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
+                    toggleButton(
+                        systemImage: uiState.call.speakerOn ? "speaker.wave.2.fill" : "speaker.slash.fill",
+                        active: uiState.call.speakerOn
+                    ) { viewModel.onAction(.toggleSpeaker) }
                     // 오디오 전용(카메라 실패)이면 video sender가 없어 replaceTrack 불가 — 버튼 숨김(웹 D9)
                     if uiState.call.localVideoTrack != nil {
                         toggleButton(
@@ -132,6 +137,8 @@ private struct CallContent: View {
     }
 
     private func statusLabel(_ uiState: CallViewModel.UiState) -> String {
+        // 발신 무응답 — 잠깐 보여준 뒤 VM이 ended로 pop한다
+        if uiState.isNoAnswer { return "응답이 없어 통화를 종료합니다." }
         if !uiState.call.isInCall { return "연결 중…" }
         if !uiState.call.isConnected { return "재연결 중…" }
         if uiState.isAloneInCall, uiState.isRinging { return "응답을 기다리는 중…" }

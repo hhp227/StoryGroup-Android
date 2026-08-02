@@ -58,6 +58,8 @@ class RtcCallController(
         val isMediaActive: Boolean = false,
         val micOn: Boolean = true,
         val camOn: Boolean = true,
+        // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 플랫폼 미디어 세션 소관)
+        val speakerOn: Boolean = true,
         // 화면 공유 중 — 공유 중엔 localVideo가 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
         val sharing: Boolean = false,
         val localVideo: RtcVideoTrackHandle? = null,
@@ -131,6 +133,13 @@ class RtcCallController(
         mediaSession?.setCamEnabled(camOn)
     }
 
+    fun toggleSpeaker() {
+        val speakerOn = !_state.value.speakerOn
+
+        _state.update { it.copy(speakerOn = speakerOn) }
+        mediaSession?.setSpeakerEnabled(speakerOn)
+    }
+
     /** 화면 공유 시작 — 동의 토큰은 플랫폼 런처(rememberRtcScreenCaptureRequester)가 만든다 */
     fun startScreenShare(grant: RtcScreenCaptureGrant) {
         mediaSession?.startScreenShare(grant)
@@ -154,6 +163,7 @@ class RtcCallController(
         mediaSession = session
         session.setMicEnabled(_state.value.micOn)
         session.setCamEnabled(_state.value.camOn)
+        session.setSpeakerEnabled(_state.value.speakerOn)
         session.start()
         mediaJob = scope.launch {
             launch {

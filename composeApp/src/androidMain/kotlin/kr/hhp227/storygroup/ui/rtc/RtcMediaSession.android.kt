@@ -5,8 +5,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -141,8 +144,12 @@ internal class AndroidRtcMediaSession(
     private var screenVideoTrack: VideoTrack? = null
     private var micEnabled = true
     private var camEnabled = true
+    private var speakerEnabled = true
     private var started = false
     private var disposed = false
+    // 오디오 라우팅 — 통화 모드 진입 전 모드를 기억해 dispose에서 원복한다
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var previousAudioMode = AudioManager.MODE_NORMAL
 
     private val _localVideo = MutableStateFlow<RtcVideoTrackHandle?>(null)
     override val localVideo: StateFlow<RtcVideoTrackHandle?> = _localVideo.asStateFlow()
@@ -185,6 +192,12 @@ internal class AndroidRtcMediaSession(
         synchronized(lock) {
             if (disposed || started) return
             started = true
+
+            // 통화 오디오 진입(페이스톡 성격) — 스피커/수화구 라우팅은 통화 모드에서만 확실히 먹는다.
+            // dispose가 반드시 원복한다(남기면 앱의 다른 소리까지 통화 경로·볼륨으로 나간다)
+            previousAudioMode = audioManager.mode
+            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+            applySpeakerRouting(speakerEnabled)
 
             val newAudioSource = factory.createAudioSource(MediaConstraints())
 
@@ -270,6 +283,28 @@ internal class AndroidRtcMediaSession(
     override fun setCamEnabled(enabled: Boolean) {
         camEnabled = enabled
         localVideoTrack?.setEnabled(enabled)
+    }
+
+    override fun setSpeakerEnabled(enabled: Boolean) {
+        speakerEnabled = enabled
+        // start() 전이면 기억만 — 통화 모드 진입 시 현재 토글대로 적용된다
+        if (started) applySpeakerRouting(enabled)
+    }
+
+    /** 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) — API 31+는 communication device 지정 */
+    @Suppress("DEPRECATION")
+    private fun applySpeakerRouting(enabled: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (enabled) {
+                audioManager.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                    ?.let(audioManager::setCommunicationDevice)
+            } else {
+                audioManager.clearCommunicationDevice()
+            }
+        } else {
+            audioManager.isSpeakerphoneOn = enabled
+        }
     }
 
     override fun startScreenShare(grant: RtcScreenCaptureGrant) {
@@ -407,6 +442,11 @@ internal class AndroidRtcMediaSession(
         runCatching { audioSource?.dispose() }
         runCatching { factory.dispose() }
         runCatching { eglBase.release() }
+        // 오디오 라우팅 원복 — 통화 모드에 들어간 적이 있을 때만(스피커 강제 해제 후 이전 모드로)
+        if (started) {
+            applySpeakerRouting(false)
+            audioManager.mode = previousAudioMode
+        }
     }
 
     /** offer 생성 → 로컬 SDP 설정 성공 후에만 릴레이(웹이 pc.localDescription을 보내는 것과 동일 시점) */
