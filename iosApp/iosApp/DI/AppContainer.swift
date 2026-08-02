@@ -50,6 +50,7 @@ final class AppContainer {
     let sendRtcSignalUseCase: SendRtcSignalUseCase
     let sendCallInviteUseCase: SendCallInviteUseCase
     let getIceServersUseCase: GetIceServersUseCase
+    let getCallRosterUseCase: GetCallRosterUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
     init() {
@@ -126,6 +127,7 @@ final class AppContainer {
         sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository: rtcRepository)
         sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository: rtcRepository)
         getIceServersUseCase = GetIceServersUseCase(rtcRepository: rtcRepository)
+        getCallRosterUseCase = GetCallRosterUseCase(rtcRepository: rtcRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
     }
 }

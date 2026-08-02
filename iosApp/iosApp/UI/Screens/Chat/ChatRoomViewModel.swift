@@ -16,6 +16,9 @@ final class ChatRoomViewModel: MviViewModel {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// 통화 로스터 폴링 — deinit에서 취소한다(Task는 cancellables에 못 담는다)
+    private var rosterTask: Task<Void, Never>?
+
     private let chatRoomId: Int64
 
     private let groupId: Int64?
@@ -265,6 +268,7 @@ final class ChatRoomViewModel: MviViewModel {
         uploadChatFileUseCase: UploadChatFileUseCase,
         sendChatTypingUseCase: SendChatTypingUseCase,
         getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
+        getCallRosterUseCase: GetCallRosterUseCase,
         observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase
     ) {
@@ -285,6 +289,16 @@ final class ChatRoomViewModel: MviViewModel {
         }
         .sink { [weak self] in self?.handleEvent($0) }
         .store(in: &cancellables)
+        // 통화 진행 중 라이브 바용 로스터 폴링(웹 라이브 카드와 같은 6초 주기) —
+        // 부가 정보라 실패는 조용히 넘어가고, VM 수명 = 화면 수명이라 pop되면 함께 멈춘다
+        rosterTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                if let roster = try? await getCallRosterUseCase.invoke(chatRoomId: chatRoomId) {
+                    self?.uiState.callRoster = roster
+                }
+                try? await Task.sleep(nanoseconds: Self.callRosterPollNanos)
+            }
+        }
     }
 
     struct UiState {
@@ -297,6 +311,8 @@ final class ChatRoomViewModel: MviViewModel {
         /// 마지막으로 읽은 페이지가 꽉 찼으면 더 오래된 메시지가 남아있다고 본다
         var canLoadOlder = false
         var isSending = false
+        /// 이 방에서 통화 중인 사람(6초 폴링 스냅숏) — 비어 있지 않으면 상단 라이브 바가 뜬다
+        var callRoster: [RtcCallPeer] = []
         /// 전송 대기 첨부(메시지당 1개, 전송 시점 업로드) — 실패해도 유지돼 재시도할 수 있다
         var pendingAttachment: PendingAttachment? = nil
         /// 입력 중인 타인(userId→이름) — 신호가 끊기면 4초 뒤 자동 소멸
@@ -342,7 +358,11 @@ final class ChatRoomViewModel: MviViewModel {
 
     private static let typingHideNanos: UInt64 = 4_000_000_000
 
+    /// 웹 라이브 카드(usePolling 6000ms)와 같은 주기 — 라이브 바는 미리보기라 즉시성이 덜 중요하다
+    private static let callRosterPollNanos: UInt64 = 6_000_000_000
+
     deinit {
         typingExpiryTasks.values.forEach { $0.cancel() }
+        rosterTask?.cancel()
     }
 }

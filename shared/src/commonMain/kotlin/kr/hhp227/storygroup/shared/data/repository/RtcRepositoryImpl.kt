@@ -11,6 +11,7 @@ import kr.hhp227.storygroup.shared.data.network.StompSessionEvent
 import kr.hhp227.storygroup.shared.data.network.StompSocket
 import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
 import kr.hhp227.storygroup.shared.data.network.dto.IceServersResponse
+import kr.hhp227.storygroup.shared.data.network.dto.RtcPeerResponse
 import kr.hhp227.storygroup.shared.data.network.dto.RtcSignalEventResponse
 import kr.hhp227.storygroup.shared.data.network.dto.RtcSignalRequest
 import kr.hhp227.storygroup.shared.data.network.dto.RtcTopicEventResponse
@@ -82,6 +83,12 @@ class RtcRepositoryImpl(
             client.get("/api/rtc/ice-servers").body<IceServersResponse>().iceServers.map {
                 IceServer(urls = it.urls, username = it.username, credential = it.credential)
             }
+        }
+
+    override suspend fun getCallRoster(chatRoomId: Long): Result<List<RtcCallPeer>> =
+        runCatching {
+            client.get("/api/rtc/chat-rooms/$chatRoomId/roster").body<List<RtcPeerResponse>>()
+                .map { RtcCallPeer(userId = it.userId, userName = it.userName) }
         }
 }
 

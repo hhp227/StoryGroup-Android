@@ -20,6 +20,8 @@ import kotlin.time.TimeSource
 import kr.hhp227.storygroup.shared.domain.model.ChatEvent
 import kr.hhp227.storygroup.shared.domain.model.ChatEventType
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
+import kr.hhp227.storygroup.shared.domain.model.RtcCallPeer
+import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
@@ -49,6 +51,7 @@ class ChatRoomViewModel(
     private val uploadChatFileUseCase: UploadChatFileUseCase,
     private val sendChatTypingUseCase: SendChatTypingUseCase,
     private val getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
+    private val getCallRosterUseCase: GetCallRosterUseCase,
     observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel(), MviViewModel<ChatRoomViewModel.UiState, ChatRoomViewModel.Action, ChatRoomViewModel.Event> {
@@ -273,6 +276,15 @@ class ChatRoomViewModel(
         observeChatRoomEventsUseCase(chatRoomId)
             .onEach(::handleEvent)
             .launchIn(viewModelScope)
+        // 통화 진행 중 라이브 바용 로스터 폴링(웹 라이브 카드와 같은 6초 주기) —
+        // 부가 정보라 실패는 조용히 넘어가고, VM 수명 = 화면 수명이라 pop되면 함께 멈춘다
+        viewModelScope.launch {
+            while (true) {
+                runCatching { getCallRosterUseCase(chatRoomId) }
+                    .onSuccess { roster -> _uiState.update { it.copy(callRoster = roster) } }
+                delay(CALL_ROSTER_POLL_INTERVAL)
+            }
+        }
     }
 
     data class UiState(
@@ -291,6 +303,8 @@ class ChatRoomViewModel(
         val typists: Map<Long, String> = emptyMap(),
         // 멤버별 마지막 읽음 위치(userId→messageId, 본인 포함) — "읽음 N"은 화면이 파생한다
         val readPositions: Map<Long, Long> = emptyMap(),
+        // 이 방에서 통화 중인 사람(6초 폴링 스냅숏) — 비어 있지 않으면 상단 라이브 바가 뜬다
+        val callRoster: List<RtcCallPeer> = emptyList(),
         // 이력 로드 에러 — 목록이 비었을 때만 화면을 대체한다
         val error: String? = null,
         // 전송/이전 로드 실패 문구 — 목록을 대체하지 않는다(가입 신청 인박스 actionError 패턴)
@@ -329,5 +343,7 @@ class ChatRoomViewModel(
         // 웹 TYPING_SEND_INTERVAL_MS/TYPING_HIDE_MS 미러 — 발신 간격 < 소멸 시간이라 연속 입력 중 깜빡이지 않는다
         private val TYPING_SEND_INTERVAL = 2500.milliseconds
         private val TYPING_HIDE = 4000.milliseconds
+        // 웹 라이브 카드(usePolling 6000ms)와 같은 주기 — 라이브 바는 미리보기라 즉시성이 덜 중요하다
+        private val CALL_ROSTER_POLL_INTERVAL = 6000.milliseconds
     }
 }

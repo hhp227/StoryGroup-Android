@@ -67,7 +67,8 @@ private fun RtcPeerTile(
             .background(sg.linen),
         contentAlignment = Alignment.Center
     ) {
-        if (video != null && (!isMe || state.camOn)) {
+        // 공유 중 내 타일은 camOn과 무관하게 송출 중인 화면을 보여준다(localVideo가 화면 트랙, D9)
+        if (video != null && (!isMe || state.camOn || state.sharing)) {
             RtcVideoView(track = video, modifier = Modifier.fillMaxSize())
         } else {
             SgAvatar(name = peer.userName, size = 48.dp)

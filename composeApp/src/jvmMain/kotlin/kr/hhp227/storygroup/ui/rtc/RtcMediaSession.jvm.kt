@@ -21,3 +21,11 @@ actual fun rememberRtcPermissionsRequester(onResult: (granted: Boolean) -> Unit)
 
     return { currentOnResult(true) }
 }
+
+/** Desktop은 화면 캡처 미지원 — 항상 거부(미디어 세션 자체가 없어 버튼도 보이지 않는다) */
+@Composable
+actual fun rememberRtcScreenCaptureRequester(onResult: (grant: RtcScreenCaptureGrant?) -> Unit): () -> Unit {
+    val currentOnResult by rememberUpdatedState(onResult)
+
+    return { currentOnResult(null) }
+}

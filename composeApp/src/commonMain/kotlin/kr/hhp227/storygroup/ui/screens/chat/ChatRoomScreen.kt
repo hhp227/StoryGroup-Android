@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -176,6 +177,31 @@ fun ChatRoomScreen(
                 }
             }
         )
+        // 통화 진행 중 라이브 바(웹 라이브 카드·카톡 진행 중 배너 미러) — 참가는 통화 버튼과
+        // 같은 경로다(진행 중 통화 합류는 서버가 다시 울리지 않는다)
+        if (uiState.callRoster.isNotEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(sg.accentSoft)
+                    .padding(start = 16.dp, end = 4.dp)
+            ) {
+                Icon(Icons.Default.Videocam, contentDescription = null, tint = sg.accent, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "${uiState.callRoster.joinToString(", ") { it.userName }}님이 통화 중이에요",
+                    style = SgTheme.typography.bodySmall,
+                    color = sg.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onStartCall) {
+                    Text("참가", style = SgTheme.typography.labelLarge, color = sg.accent)
+                }
+            }
+        }
         Box(Modifier.weight(1f)) {
             when {
                 uiState.messages.isEmpty() && uiState.isLoading ->
@@ -294,6 +320,7 @@ private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewMod
             uploadChatFileUseCase = container.uploadChatFileUseCase,
             sendChatTypingUseCase = container.sendChatTypingUseCase,
             getChatReadPositionsUseCase = container.getChatReadPositionsUseCase,
+            getCallRosterUseCase = container.getCallRosterUseCase,
             observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )

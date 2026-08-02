@@ -15,6 +15,10 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.automirrored.filled.StopScreenShare
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -34,6 +38,7 @@ import kr.hhp227.storygroup.ui.rtc.RtcCallToggleButton
 import kr.hhp227.storygroup.ui.rtc.RtcVideoGrid
 import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
 import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
+import kr.hhp227.storygroup.ui.rtc.rememberRtcScreenCaptureRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 @Composable
@@ -78,6 +83,10 @@ fun CallScreen(
     val requestJoin = rememberRtcPermissionsRequester { granted ->
         onAction(CallViewModel.Action.Join(withMedia = granted))
     }
+    // 화면 캡처 동의(MediaProjection) — 거부(null)는 웹 getDisplayMedia 취소처럼 조용히 무시한다
+    val requestScreenCapture = rememberRtcScreenCaptureRequester { grant ->
+        if (grant != null) onAction(CallViewModel.Action.StartScreenShare(grant))
+    }
 
     // 진입 즉시 참가 — 이미 통화 중(재진입/회전)이면 VM 가드가 무시한다
     LaunchedEffect(viewModel) {
@@ -106,6 +115,8 @@ fun CallScreen(
         ) {
             Text(
                 when {
+                    // 발신 무응답 — 잠깐 보여준 뒤 VM이 Ended로 pop한다
+                    uiState.isNoAnswer -> "응답이 없어 통화를 종료합니다."
                     !uiState.call.isInCall -> "연결 중…"
                     !uiState.call.isConnected -> "재연결 중…"
                     uiState.isAloneInCall && uiState.isRinging -> "응답을 기다리는 중…"
@@ -144,6 +155,25 @@ fun CallScreen(
                     active = uiState.call.camOn,
                     onClick = { onAction(CallViewModel.Action.ToggleCam) }
                 )
+                // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
+                RtcCallToggleButton(
+                    icon = if (uiState.call.speakerOn) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                    contentDescription = if (uiState.call.speakerOn) "스피커 끄기" else "스피커 켜기",
+                    active = uiState.call.speakerOn,
+                    onClick = { onAction(CallViewModel.Action.ToggleSpeaker) }
+                )
+                // 오디오 전용(카메라 실패)이면 video sender가 없어 replaceTrack 불가 — 버튼 숨김(웹 D9)
+                if (uiState.call.localVideo != null) {
+                    RtcCallToggleButton(
+                        icon = if (uiState.call.sharing) Icons.AutoMirrored.Filled.StopScreenShare else Icons.AutoMirrored.Filled.ScreenShare,
+                        contentDescription = if (uiState.call.sharing) "화면 공유 중지" else "화면 공유",
+                        active = uiState.call.sharing,
+                        onClick = {
+                            if (uiState.call.sharing) onAction(CallViewModel.Action.StopScreenShare)
+                            else requestScreenCapture()
+                        }
+                    )
+                }
             }
             IconButton(
                 onClick = { onAction(CallViewModel.Action.HangUp) },

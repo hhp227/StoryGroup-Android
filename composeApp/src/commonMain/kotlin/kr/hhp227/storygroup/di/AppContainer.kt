@@ -27,6 +27,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
@@ -132,6 +133,7 @@ class AppContainer(
     val observeRtcSignalsUseCase = ObserveRtcSignalsUseCase(rtcRepository)
     val sendRtcSignalUseCase = SendRtcSignalUseCase(rtcRepository)
     val sendCallInviteUseCase = SendCallInviteUseCase(rtcRepository)
+    val getCallRosterUseCase = GetCallRosterUseCase(rtcRepository)
     val getIceServersUseCase = GetIceServersUseCase(rtcRepository)
     val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
 }

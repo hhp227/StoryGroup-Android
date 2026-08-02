@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import ReplayKit
 import WebRTC
 import Shared
 
@@ -24,6 +25,9 @@ final class RtcMediaSession {
     /// 릴레이할 시그널 — VM이 STOMP(/app/rtc/.../signal)로 보낸다. 메인 큐에서 불린다
     var onOutgoingSignal: ((OutgoingSignal) -> Void)?
 
+    /// 화면 공유 중 여부 — 시작 성공/중지·시작 실패(거부)를 모두 반영한다. 메인 큐에서 불린다
+    var onScreenSharing: ((Bool) -> Void)?
+
     private let lock = NSLock()
 
     private let factory: RTCPeerConnectionFactory
@@ -40,9 +44,18 @@ final class RtcMediaSession {
 
     private var capturer: RTCCameraVideoCapturer?
 
+    // 화면 공유 자원 — 카메라와 별도 파이프라인(카메라는 stop하지 않고 보관, 웹 D9 미러)
+    private var screenSource: RTCVideoSource?
+
+    private var screenCapturer: RTCVideoCapturer?
+
+    private var screenVideoTrack: RTCVideoTrack?
+
     private var micEnabled = true
 
     private var camEnabled = true
+
+    private var speakerEnabled = true
 
     private var started = false
 
@@ -78,6 +91,11 @@ final class RtcMediaSession {
         audioTrack.isEnabled = micEnabled
         localAudioTrack = audioTrack
         lock.unlock()
+
+        // 통화 오디오 세션 진입(페이스톡 성격) — 현재 토글대로 라우팅 후 활성화.
+        // dispose가 반드시 원복한다(Android MODE_IN_COMMUNICATION 진입/원복 미러)
+        applySpeakerRouting()
+        try? AVAudioSession.sharedInstance().setActive(true)
 
         let devices = RTCCameraVideoCapturer.captureDevices()
         guard let device = devices.first(where: { $0.position == .front }) ?? devices.first,
@@ -118,7 +136,8 @@ final class RtcMediaSession {
         handle.pc = pc
         peers[peerId] = handle
         let audioTrack = localAudioTrack
-        let videoTrack = localVideoTrack
+        // 공유 중 새로 들어온 피어도 화면을 받는다 — 송출 트랙 자체를 바꿔두는 웹 D9 미러
+        let videoTrack = screenVideoTrack ?? localVideoTrack
 
         lock.unlock()
         if let audioTrack { pc.add(audioTrack, streamIds: ["stream0"]) }
@@ -177,6 +196,121 @@ final class RtcMediaSession {
         localVideoTrack?.isEnabled = enabled
     }
 
+    /// 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀(영상통화라 기본 ON)
+    func setSpeakerEnabled(_ enabled: Bool) {
+        speakerEnabled = enabled
+        // start() 전이면 기억만 — 세션 진입 시 현재 토글대로 적용된다(Android 미러)
+        if started { applySpeakerRouting() }
+    }
+
+    /// 켬=playAndRecord+videoChat 모드+스피커 오버라이드, 끔=voiceChat 모드(수화구 기본) —
+    /// videoChat은 defaultToSpeaker가 내장이라 끄기는 모드째 voiceChat으로 내린다.
+    /// WebRTC 오디오 유닛이 (재)시작할 때 자체 기본 구성을 다시 적용하므로 그 기본값도
+    /// 같은 모드로 맞춰 연결 시점에 라우팅이 뒤집히지 않게 한다
+    private func applySpeakerRouting() {
+        let audioSession = AVAudioSession.sharedInstance()
+        let mode: AVAudioSession.Mode = speakerEnabled ? .videoChat : .voiceChat
+        let webRtcConfig = RTCAudioSessionConfiguration.webRTC()
+
+        webRtcConfig.category = AVAudioSession.Category.playAndRecord.rawValue
+        webRtcConfig.mode = mode.rawValue
+        RTCAudioSessionConfiguration.setWebRTC(webRtcConfig)
+        try? audioSession.setCategory(.playAndRecord, mode: mode, options: [])
+        try? audioSession.overrideOutputAudioPort(speakerEnabled ? .speaker : .none)
+    }
+
+    /// 화면 공유 시작 — RPScreenRecorder 인앱 캡처 프레임을 화면 전용 소스로 밀어넣고
+    /// 각 피어 video sender의 트랙만 교체한다(SDP 재협상 없음, 웹 D9 replaceTrack 미러).
+    /// 카메라 트랙은 stop하지 않고 보관 → 중지 시 즉시 복귀. 오디오 전용이면 무시(sender 없음).
+    /// 웹 getDisplayMedia와 달리 앱 자기 화면만 캡처된다(시스템 전체는 Broadcast Extension 필요).
+    func startScreenShare() {
+        lock.lock()
+        if disposed || screenVideoTrack != nil || localVideoTrack == nil || !RPScreenRecorder.shared().isAvailable {
+            lock.unlock()
+            return
+        }
+        let source = factory.videoSource(forScreenCast: true)
+        let screenCapturer = RTCVideoCapturer(delegate: source)
+        let track = factory.videoTrack(with: source, trackId: "screen0")
+
+        screenSource = source
+        self.screenCapturer = screenCapturer
+        screenVideoTrack = track
+        lock.unlock()
+
+        let recorder = RPScreenRecorder.shared()
+
+        recorder.isMicrophoneEnabled = false
+        recorder.startCapture(handler: { sampleBuffer, type, error in
+            // source/capturer는 시작 시점 지역 캡처 — 중지 후 도착하는 프레임은 싱크가 없어 무해하다
+            guard type == .video, error == nil,
+                  let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
+            else { return }
+
+            let timeStampNs = Int64(CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer)) * Double(NSEC_PER_SEC))
+            let frame = RTCVideoFrame(buffer: RTCCVPixelBuffer(pixelBuffer: pixelBuffer), rotation: ._0, timeStampNs: timeStampNs)
+
+            source.capturer(screenCapturer, didCapture: frame)
+        }, completionHandler: { [weak self] error in
+            guard let self else { return }
+
+            if error != nil {
+                // 사용자 거부/시작 실패 — 웹 공유 선택창 취소 미러(에러 아님), 자원과 sender만 되돌린다
+                self.lock.lock()
+                self.screenSource = nil
+                self.screenCapturer = nil
+                self.screenVideoTrack = nil
+                let handles = Array(self.peers.values)
+                let camTrack = self.localVideoTrack
+
+                self.lock.unlock()
+                handles.forEach { handle in
+                    handle.pc?.senders.first { $0.track?.kind == "video" }?.track = camTrack
+                }
+                return
+            }
+            self.lock.lock()
+            let stillSharing = self.screenVideoTrack === track
+            let handles = Array(self.peers.values)
+
+            self.lock.unlock()
+            guard stillSharing else { return }
+
+            // 전송 중인 video sender의 트랙만 교체 — 시그널링 무변경(웹 replaceTrack, D9)
+            handles.forEach { handle in
+                handle.pc?.senders.first { $0.track?.kind == "video" }?.track = track
+            }
+            DispatchQueue.main.async { [weak self] in
+                self?.onLocalVideoTrack?(track)
+                self?.onScreenSharing?(true)
+            }
+        })
+    }
+
+    /// 화면 공유 중지 — 보관해둔 카메라 트랙을 각 sender와 미리보기에 복귀(웹 stopScreenShare 미러)
+    func stopScreenShare() {
+        lock.lock()
+        guard screenVideoTrack != nil else {
+            lock.unlock()
+            return
+        }
+        let camTrack = localVideoTrack
+        let handles = Array(peers.values)
+
+        screenSource = nil
+        screenCapturer = nil
+        screenVideoTrack = nil
+        lock.unlock()
+        RPScreenRecorder.shared().stopCapture { _ in }
+        handles.forEach { handle in
+            handle.pc?.senders.first { $0.track?.kind == "video" }?.track = camTrack
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.onLocalVideoTrack?(camTrack)
+            self?.onScreenSharing?(false)
+        }
+    }
+
     /// 세션 폐기 — 캡처/피어 전부 해제. 이후 어떤 호출도 하면 안 된다
     func dispose() {
         lock.lock()
@@ -189,15 +323,28 @@ final class RtcMediaSession {
 
         peers.removeAll()
         let stoppingCapturer = capturer
+        // 공유 중에 끊으면 화면 캡처도 함께 내린다 — 웹 cleanup의 screenTrack.stop 미러
+        let wasSharing = screenVideoTrack != nil
+        let wasStarted = started
 
         capturer = nil
         localVideoTrack = nil
         localAudioTrack = nil
         videoSource = nil
+        screenSource = nil
+        screenCapturer = nil
+        screenVideoTrack = nil
         lock.unlock()
         DispatchQueue.main.async { [weak self] in self?.onLocalVideoTrack?(nil) }
         closing.forEach { $0.pc?.close() }
         stoppingCapturer?.stopCapture()
+        if wasSharing { RPScreenRecorder.shared().stopCapture { _ in } }
+        // 오디오 세션 원복 — 세션에 들어간 적이 있을 때만. 오버라이드를 걷고 비활성화해
+        // 다른 앱 오디오 재개를 알린다(Android 통화 모드 원복 미러)
+        if wasStarted {
+            try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     // MARK: - SDP/ICE (payload 계약은 웹 JSON.stringify·Android JSONObject와 1:1)
