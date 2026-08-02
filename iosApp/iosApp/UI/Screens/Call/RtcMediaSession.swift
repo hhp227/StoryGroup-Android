@@ -28,6 +28,9 @@ final class RtcMediaSession {
     /// 화면 공유 중 여부 — 시작 성공/중지·시작 실패(거부)를 모두 반영한다. 메인 큐에서 불린다
     var onScreenSharing: ((Bool) -> Void)?
 
+    /// 전/후면 전환 결과(전면=true) — 뷰가 로컬 미리보기 거울에 쓴다. 메인 큐에서 불린다
+    var onCameraFacing: ((Bool) -> Void)?
+
     private let lock = NSLock()
 
     private let factory: RTCPeerConnectionFactory
@@ -54,6 +57,9 @@ final class RtcMediaSession {
     private var micEnabled = true
 
     private var camEnabled = true
+
+    // 현재 카메라가 전면인지 — onCameraFacing으로 뷰 거울에 반영한다(전면만 거울)
+    private var frontCamera = true
 
     private var speakerEnabled = true
 
@@ -102,6 +108,7 @@ final class RtcMediaSession {
               let format = Self.selectFormat(for: device)
         else { return }
         let fps = Self.selectFps(for: format)
+        let isFront = device.position == .front
         let source = factory.videoSource()
         let cameraCapturer = RTCCameraVideoCapturer(delegate: source)
         let track = factory.videoTrack(with: source, trackId: "video0")
@@ -111,9 +118,14 @@ final class RtcMediaSession {
         videoSource = source
         capturer = cameraCapturer
         localVideoTrack = track
+        frontCamera = isFront
         lock.unlock()
         cameraCapturer.startCapture(with: device, format: format, fps: fps)
-        DispatchQueue.main.async { [weak self] in self?.onLocalVideoTrack?(track) }
+        DispatchQueue.main.async { [weak self] in
+            self?.onLocalVideoTrack?(track)
+            // 전면이 없는 기기(후면 시작)면 처음부터 거울 없이 그린다(Android 미러)
+            self?.onCameraFacing?(isFront)
+        }
     }
 
     /// 피어 연결 생성 — initiator면 offer를 만들어 흘린다. 이미 있으면 무시(Android 미러)
@@ -194,6 +206,27 @@ final class RtcMediaSession {
     func setCamEnabled(_ enabled: Bool) {
         camEnabled = enabled
         localVideoTrack?.isEnabled = enabled
+    }
+
+    /// 전/후면 카메라 전환 — 반대편 카메라가 없으면 무시(시뮬레이터 등). 이미 도는 캡처러에
+    /// startCapture를 다시 부르면 세션 입력이 교체된다(Android switchCamera 미러).
+    /// 거울 반전은 뷰가 onCameraFacing(전면 여부)로 반영한다 — 상대에게는 원본이 그대로 간다
+    func switchCamera() {
+        lock.lock()
+        let cameraCapturer = capturer
+        let targetPosition: AVCaptureDevice.Position = frontCamera ? .back : .front
+
+        lock.unlock()
+        guard let cameraCapturer,
+              let device = RTCCameraVideoCapturer.captureDevices().first(where: { $0.position == targetPosition }),
+              let format = Self.selectFormat(for: device)
+        else { return }
+
+        cameraCapturer.startCapture(with: device, format: format, fps: Self.selectFps(for: format))
+        lock.lock()
+        frontCamera = targetPosition == .front
+        lock.unlock()
+        DispatchQueue.main.async { [weak self] in self?.onCameraFacing?(targetPosition == .front) }
     }
 
     /// 스피커폰 라우팅 — 켬=본체 스피커 강제, 끔=기본 경로(수화구·이어폰) 복귀(영상통화라 기본 ON)

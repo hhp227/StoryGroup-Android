@@ -77,6 +77,7 @@ class CallViewModel(
             Action.HangUp -> hangUp()
             Action.ToggleMic -> callController.toggleMic()
             Action.ToggleCam -> callController.toggleCam()
+            Action.SwitchCamera -> callController.switchCamera()
             Action.ToggleSpeaker -> callController.toggleSpeaker()
             is Action.StartScreenShare -> callController.startScreenShare(action.grant)
             Action.StopScreenShare -> callController.stopScreenShare()
@@ -160,6 +161,8 @@ class CallViewModel(
         data object HangUp : Action
         data object ToggleMic : Action
         data object ToggleCam : Action
+        /** 전/후면 카메라 전환 — 카메라가 있을 때만 버튼이 보인다(공유 중엔 숨김) */
+        data object SwitchCamera : Action
         /** 스피커폰 토글 — 라우팅은 플랫폼 미디어 세션 소관(웹엔 없는 모바일 전용) */
         data object ToggleSpeaker : Action
         /** 화면 공유 시작 — 동의 토큰은 화면의 플랫폼 런처가 만들어 넘긴다(웹 D9 미러) */

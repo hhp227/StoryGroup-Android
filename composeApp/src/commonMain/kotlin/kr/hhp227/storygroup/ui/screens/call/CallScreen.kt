@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Videocam
@@ -155,6 +156,15 @@ fun CallScreen(
                     active = uiState.call.camOn,
                     onClick = { onAction(CallViewModel.Action.ToggleCam) }
                 )
+                // 카메라 전환(전/후면) — 카메라가 있을 때만. 공유 중엔 로컬이 화면 트랙이라 숨김
+                if (uiState.call.localVideo != null && !uiState.call.sharing) {
+                    RtcCallToggleButton(
+                        icon = Icons.Default.Cameraswitch,
+                        contentDescription = "카메라 전환",
+                        active = true,
+                        onClick = { onAction(CallViewModel.Action.SwitchCamera) }
+                    )
+                }
                 // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
                 RtcCallToggleButton(
                     icon = if (uiState.call.speakerOn) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,

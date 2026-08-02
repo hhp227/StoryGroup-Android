@@ -60,6 +60,7 @@ final class CallViewModel: MviViewModel {
         case .hangUp: hangUp()
         case .toggleMic: toggleMic()
         case .toggleCam: toggleCam()
+        case .switchCamera: switchCamera()
         case .toggleSpeaker: toggleSpeaker()
         case .toggleScreenShare: toggleScreenShare()
         }
@@ -132,6 +133,13 @@ final class CallViewModel: MviViewModel {
         mediaSession?.setCamEnabled(uiState.call.camOn)
     }
 
+    private func switchCamera() {
+        // 공유 중엔 잠금 — 로컬 표시가 화면 트랙이라 전환이 보이지 않는다(버튼도 함께 숨김)
+        if uiState.call.sharing { return }
+
+        mediaSession?.switchCamera()
+    }
+
     private func toggleSpeaker() {
         uiState.call.speakerOn.toggle()
         mediaSession?.setSpeakerEnabled(uiState.call.speakerOn)
@@ -164,6 +172,7 @@ final class CallViewModel: MviViewModel {
         }
         session.onOutgoingSignal = { [weak self] signal in self?.relaySignal(signal) }
         session.onScreenSharing = { [weak self] sharing in self?.uiState.call.sharing = sharing }
+        session.onCameraFacing = { [weak self] front in self?.uiState.call.frontCamera = front }
         session.setMicEnabled(uiState.call.micOn)
         session.setCamEnabled(uiState.call.camOn)
         session.setSpeakerEnabled(uiState.call.speakerOn)
@@ -325,6 +334,8 @@ final class CallViewModel: MviViewModel {
         var isMediaActive = false
         var micOn = true
         var camOn = true
+        // 전면 카메라 여부 — 로컬 미리보기 거울용(Compose는 핸들에 mirror가 실려 별도 필드 없음)
+        var frontCamera = true
         // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
         var speakerOn = true
         // 화면 공유 중 — 공유 중엔 localVideoTrack이 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
@@ -352,6 +363,8 @@ final class CallViewModel: MviViewModel {
         case hangUp
         case toggleMic
         case toggleCam
+        /// 전/후면 카메라 전환 — 카메라가 있을 때만 버튼이 보인다(공유 중엔 숨김)
+        case switchCamera
         /// 스피커폰 토글 — 라우팅은 미디어 세션 소관(웹엔 없는 모바일 전용)
         case toggleSpeaker
         /// 화면 공유 토글 — 오디오 전용(video sender 없음)이면 버튼 자체가 숨겨진다(D9)

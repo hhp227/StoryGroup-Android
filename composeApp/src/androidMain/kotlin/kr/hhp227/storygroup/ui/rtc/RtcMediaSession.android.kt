@@ -144,6 +144,8 @@ internal class AndroidRtcMediaSession(
     private var screenVideoTrack: VideoTrack? = null
     private var micEnabled = true
     private var camEnabled = true
+    // 현재 카메라가 전면인지 — 로컬 미리보기 거울과 공유 복귀 핸들에 쓴다(전면만 거울)
+    private var frontCamera = true
     private var speakerEnabled = true
     private var started = false
     private var disposed = false
@@ -219,7 +221,7 @@ internal class AndroidRtcMediaSession(
                 val track = factory.createVideoTrack("video0", newVideoSource).apply { setEnabled(camEnabled) }
 
                 localVideoTrack = track
-                _localVideo.value = AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = true)
+                _localVideo.value = AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = frontCamera)
             } else {
                 runCatching { capturer.dispose() }
                 runCatching { helper.dispose() }
@@ -285,6 +287,27 @@ internal class AndroidRtcMediaSession(
         localVideoTrack?.setEnabled(enabled)
     }
 
+    override fun switchCamera() {
+        val capturer = synchronized(lock) { if (disposed) null else videoCapturer } ?: return
+
+        // 결과(전/후면)는 libwebrtc가 콜백 스레드로 알려준다 — 전면만 거울로 핸들을 재발행하면
+        // 렌더러(key(handle))가 새 거울 설정으로 다시 붙는다. 상대에게는 원본이 그대로 간다
+        capturer.switchCamera(object : CameraVideoCapturer.CameraSwitchHandler {
+            override fun onCameraSwitchDone(isFrontCamera: Boolean) {
+                val handle = synchronized(lock) {
+                    frontCamera = isFrontCamera
+                    // 공유 중엔 localVideo가 화면 트랙 — 복귀(stopScreenShare) 때 거울이 반영된다
+                    if (disposed || screenVideoTrack != null) null
+                    else localVideoTrack?.let { AndroidRtcVideoTrackHandle(it, eglBase.eglBaseContext, mirror = isFrontCamera) }
+                }
+
+                handle?.let { _localVideo.value = it }
+            }
+
+            override fun onCameraSwitchError(errorDescription: String?) = Unit
+        })
+    }
+
     override fun setSpeakerEnabled(enabled: Boolean) {
         speakerEnabled = enabled
         // start() 전이면 기억만 — 통화 모드 진입 시 현재 토글대로 적용된다
@@ -341,7 +364,7 @@ internal class AndroidRtcMediaSession(
                     .firstOrNull { it.track()?.kind() == MediaStreamTrack.VIDEO_TRACK_KIND }
                     ?.setTrack(camTrack, false)
             }
-            camTrack?.let { AndroidRtcVideoTrackHandle(it, eglBase.eglBaseContext, mirror = true) }
+            camTrack?.let { AndroidRtcVideoTrackHandle(it, eglBase.eglBaseContext, mirror = frontCamera) }
         }
 
         _localVideo.value = camHandle
@@ -556,6 +579,8 @@ internal class AndroidRtcMediaSession(
         val deviceNames = enumerator.deviceNames
         val deviceName = deviceNames.firstOrNull(enumerator::isFrontFacing) ?: deviceNames.firstOrNull() ?: return null
 
+        // 전면이 없는 기기(후면 시작)면 처음부터 거울 없이 그린다
+        frontCamera = enumerator.isFrontFacing(deviceName)
         return enumerator.createCapturer(deviceName, null)
     }
 
