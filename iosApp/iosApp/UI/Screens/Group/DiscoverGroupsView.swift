@@ -2,8 +2,8 @@ import SwiftUI
 import Paging
 import Shared
 
-/// 그룹 찾기 시트 — Compose DiscoverGroupsScreen 미러(검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청).
-/// CreatePostView와 동일하게 GroupsView가 소유한 시트로 표시(단일 진입점이라 로컬 시트가 자연스러움).
+/// 그룹 찾기 — Compose DiscoverGroupsScreen 미러(검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청).
+/// GroupsView가 풀스크린 push로 표시(Compose NavHost DiscoverGroupsRoute 미러) — 내비바는 루트 스택 몫.
 /// 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct DiscoverGroupsView: View {
     @StateObject private var viewModel: DiscoverGroupsViewModel
@@ -11,20 +11,10 @@ struct DiscoverGroupsView: View {
     /// 갱신용 — 그룹 탭과 같은 인스턴스(GroupsView가 소유). onAction 호출만 하므로 관찰 불필요
     private let groupsViewModel: GroupsViewModel
 
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
-        NavigationView {
-            DiscoverGroupsContent(viewModel: viewModel, onJoined: { groupsViewModel.onAction(.refresh) })
-                .navigationTitle("그룹 찾기")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("닫기") { dismiss() }
-                    }
-                }
-        }
-        .navigationViewStyle(.stack)
+        DiscoverGroupsContent(viewModel: viewModel, onJoined: { groupsViewModel.onAction(.refresh) })
+            .navigationTitle("그룹 찾기")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     init(container: AppContainer, groupsViewModel: GroupsViewModel) {

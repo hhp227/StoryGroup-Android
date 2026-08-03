@@ -9,7 +9,7 @@ import Shared
 struct HomeView: View {
     @StateObject private var homeViewModel: HomeViewModel
 
-    /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
+    /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
     var body: some View {
@@ -34,7 +34,7 @@ private struct HomeContent: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 라운지 글쓰기 시트 — Compose CreatePostRoute(groupId=null) 미러(그룹 상세와 동일하게 화면 소유)
+    /// 라운지 글쓰기 풀스크린 push — Compose CreatePostRoute(groupId=null) 미러(그룹 상세와 동일하게 화면 소유)
     @State private var showCreatePost = false
 
     /// 첫 레이아웃 시점 헤더의 global minY — 스크롤 오프셋은 이 기준의 상대값으로 계산한다.
@@ -47,7 +47,23 @@ private struct HomeContent: View {
     /// topInset(상태바+내비바)+이 값으로 만들므로 노출 높이끼리 맞추려면 170이 아니라 114여야 한다.
     private let headerHeight: CGFloat = 114
 
+    /// 글쓰기를 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
+        if #available(iOS 16.0, *) {
+            core.navigationDestination(isPresented: $showCreatePost) { createPostDestination }
+        } else {
+            core.background(
+                NavigationLink(isActive: $showCreatePost) {
+                    createPostDestination
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
+        }
+    }
+
+    private var core: some View {
         GeometryReader { outer in
             ScrollView {
                 VStack(spacing: 12) {
@@ -70,18 +86,19 @@ private struct HomeContent: View {
         .overlay(alignment: .bottomTrailing) {
             SGFab(action: { showCreatePost = true }).padding(16)
         }
-        .sheet(isPresented: $showCreatePost) {
-            // 성공 시 라운지 피드를 첫 페이지부터 다시 읽는다 — Compose HomeScreen refreshRequested 미러
-            CreatePostView(container: container, groupId: nil) {
-                viewModel.onAction(.refresh)
-            }
-        }
         // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
         // 같은 스트림이 새 세대(첫 페이지, 라운지 재해석 포함)를 방출한다
         .onReceive(viewModel.event) { event in
             switch event {
             case .refresh: lazyPagingItems.refresh()
             }
+        }
+    }
+
+    private var createPostDestination: some View {
+        // 성공 시 라운지 피드를 첫 페이지부터 다시 읽는다 — Compose HomeScreen refreshRequested 미러
+        CreatePostView(container: container, groupId: nil) {
+            viewModel.onAction(.refresh)
         }
     }
 

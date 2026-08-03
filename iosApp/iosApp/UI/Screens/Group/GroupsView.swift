@@ -12,7 +12,7 @@ struct GroupsView: View {
 
     let onOpenGroup: (Group) -> Void
 
-    /// 화면이 자기 시트를 만들 때 쓴다 — 그룹 만들기/찾기 시트가 이 인스턴스를 그대로 전달받아 갱신한다
+    /// 화면이 자기 push 목적지를 만들 때 쓴다 — 그룹 만들기/찾기 화면이 이 인스턴스를 그대로 전달받아 갱신한다
     private let container: AppContainer
 
     var body: some View {
@@ -38,12 +38,40 @@ private struct GroupsContent: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 그룹 만들기/찾기 — CreatePostView와 동일하게 GroupsView가 소유한 시트(단일 진입점)
+    /// 그룹 만들기/찾기 풀스크린 push — Compose NavHost(CreateGroupRoute·DiscoverGroupsRoute) 미러.
+    /// 진입점(GroupsView)이 상태를 소유하는 건 종전 시트와 동일 — 표시 방식만 플랫폼 간 통일
     @State private var showCreateGroup = false
 
     @State private var showDiscoverGroups = false
 
+    /// 만들기/찾기를 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
+        if #available(iOS 16.0, *) {
+            core
+                .navigationDestination(isPresented: $showCreateGroup) { createGroupDestination }
+                .navigationDestination(isPresented: $showDiscoverGroups) { discoverGroupsDestination }
+        } else {
+            core
+                .background(
+                    NavigationLink(isActive: $showCreateGroup) {
+                        createGroupDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showDiscoverGroups) {
+                        discoverGroupsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+        }
+    }
+
+    private var core: some View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack(spacing: 8) {
@@ -68,12 +96,14 @@ private struct GroupsContent: View {
             case .refresh: lazyPagingItems.refresh()
             }
         }
-        .sheet(isPresented: $showCreateGroup) {
-            CreateGroupView(container: container, groupsViewModel: viewModel)
-        }
-        .sheet(isPresented: $showDiscoverGroups) {
-            DiscoverGroupsView(container: container, groupsViewModel: viewModel)
-        }
+    }
+
+    private var createGroupDestination: some View {
+        CreateGroupView(container: container, groupsViewModel: viewModel)
+    }
+
+    private var discoverGroupsDestination: some View {
+        DiscoverGroupsView(container: container, groupsViewModel: viewModel)
     }
 
     /// 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose GroupsContent 미러).

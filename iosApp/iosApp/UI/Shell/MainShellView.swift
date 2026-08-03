@@ -60,6 +60,7 @@ struct MainShellView: View {
 
     @State private var current: SGDestination = .home
 
+    /// 앱 설정 풀스크린 push — Compose 셸 위 풀스크린 오버레이(AppSettingsScreen) 미러
     @State private var showSettings = false
 
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
@@ -76,9 +77,6 @@ struct MainShellView: View {
 
     var body: some View {
         navigationRoot
-            .sheet(isPresented: $showSettings) {
-                SGSettingsView(theme: theme)
-            }
             // 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Compose Box 최상단 오버레이 미러)
             .overlay(alignment: .top) {
                 if let call = incomingCallViewModel.uiState.incomingCall {
@@ -108,6 +106,7 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
                     .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
                     .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
+                    .navigationDestination(isPresented: $showSettings) { settingsDestination }
             }
         } else {
             NavigationView {
@@ -139,6 +138,14 @@ struct MainShellView: View {
                     .background(
                         NavigationLink(isActive: showAcceptedCall) {
                             acceptedCallDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
+                    .background(
+                        NavigationLink(isActive: $showSettings) {
+                            settingsDestination
                         } label: {
                             EmptyView()
                         }
@@ -200,6 +207,10 @@ struct MainShellView: View {
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다
     private var accountSettingsDestination: some View {
         AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    private var settingsDestination: some View {
+        SGSettingsView(theme: theme)
     }
 
     /// pop(백 버튼/스와이프) 시 selectedGroupId를 nil로 되돌리는 브리지

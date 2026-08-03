@@ -12,7 +12,7 @@ import class Shared.Group
 struct GroupDetailView: View {
     @StateObject private var viewModel: GroupDetailViewModel
 
-    /// 글쓰기 시트(CreatePostView)의 VM 생성에 쓰인다
+    /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
     /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
@@ -63,7 +63,7 @@ private struct GroupDetailContent: View {
     /// 내비바 아래 노출 커버 높이 — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
     private let headerHeight: CGFloat = 114
 
-    /// 그룹 글쓰기 시트 — Compose CreatePostRoute(groupId) 미러
+    /// 그룹 글쓰기 풀스크린 push — Compose CreatePostRoute(groupId) 미러
     @State private var showCreatePost = false
 
     /// 모더레이터 초대코드 다이얼로그 — Compose GroupDetailScreen showInviteDialog 미러
@@ -75,19 +75,30 @@ private struct GroupDetailContent: View {
     /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 스트립 DM 공용)
     @State private var pushedChatRoom: ChatRoomRef?
 
-    /// 상세 안에서 채팅방을 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
+    /// 상세 안에서 채팅방·글쓰기를 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
-            core.navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+            core
+                .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                .navigationDestination(isPresented: $showCreatePost) { createPostDestination }
         } else {
-            core.background(
-                NavigationLink(isActive: showChatRoom) {
-                    chatRoomDestination
-                } label: {
-                    EmptyView()
-                }
-                .hidden()
-            )
+            core
+                .background(
+                    NavigationLink(isActive: showChatRoom) {
+                        chatRoomDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showCreatePost) {
+                        createPostDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
         }
     }
 
@@ -163,12 +174,6 @@ private struct GroupDetailContent: View {
                         Image(systemName: "bubble.left.fill")
                     }
                 }
-            }
-        }
-        .sheet(isPresented: $showCreatePost) {
-            // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
-            CreatePostView(container: container, groupId: viewModel.groupId) {
-                viewModel.onAction(.refreshFeed)
             }
         }
         // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
@@ -443,6 +448,13 @@ private struct GroupDetailContent: View {
                 container: container,
                 chatViewModel: chatViewModel
             )
+        }
+    }
+
+    private var createPostDestination: some View {
+        // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
+        CreatePostView(container: container, groupId: viewModel.groupId) {
+            viewModel.onAction(.refreshFeed)
         }
     }
 
