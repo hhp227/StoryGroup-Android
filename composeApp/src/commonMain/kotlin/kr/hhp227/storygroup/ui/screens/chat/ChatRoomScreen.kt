@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
@@ -48,8 +50,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -87,6 +92,10 @@ fun ChatRoomScreen(
     val sg = SgTheme.colors
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
+    // + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
+    var showAttachments by rememberSaveable { mutableStateOf(false) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     // 허브(세션 VM)에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
     val hubViewModel = sessionChatViewModel()
 
@@ -147,9 +156,25 @@ fun ChatRoomScreen(
     // 키보드가 올라와 리스트가 줄어드는 동안, 맨 아래 근처를 보고 있었다면 최신 메시지가 가려지지
     // 않게 바닥에 앵커시킨다(새 메시지 따라가기와 같은 규칙 — 과거 메시지를 읽는 중이면 그대로 둔다)
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    var prevImeBottom by remember { mutableStateOf(0) }
 
     LaunchedEffect(imeBottom) {
+        // 입력창 포커스로 키보드가 "올라올 때"만 첨부 패널을 닫는다(카톡 미러) — 값이 커질 때로
+        // 판정해야 한다: 단순 >0 판정이면 +로 패널을 열며 키보드가 내려가는 동안의 잔여 inset에
+        // 걸려 패널이 뜨자마자 닫힌다
+        if (imeBottom > prevImeBottom) showAttachments = false
+        prevImeBottom = imeBottom
         if (imeBottom > 0 && uiState.messages.isNotEmpty()) {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            if (lastVisible >= listState.layoutInfo.totalItemsCount - 3) {
+                listState.scrollToItem(lastDisplayIndex())
+            }
+        }
+    }
+    // 패널이 열려 리스트가 줄어들 때도 키보드와 같은 규칙으로 바닥에 앵커시킨다
+    LaunchedEffect(showAttachments) {
+        if (showAttachments && uiState.messages.isNotEmpty()) {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             if (lastVisible >= listState.layoutInfo.totalItemsCount - 3) {
@@ -298,10 +323,27 @@ fun ChatRoomScreen(
             },
             isSending = uiState.isSending,
             hasPendingAttachment = uiState.pendingAttachment != null,
-            onPickImage = pickImage,
-            onPickFile = pickFile,
+            attachmentsOpen = showAttachments,
+            onToggleAttachments = {
+                if (showAttachments) {
+                    showAttachments = false
+                } else {
+                    // 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러)
+                    focusManager.clearFocus()
+                    keyboard?.hide()
+                    showAttachments = true
+                }
+            },
             onSend = { onAction(ChatRoomViewModel.Action.Send(input)) }
         )
+        if (showAttachments) {
+            AttachmentPanel(
+                isDm = groupId == null,
+                onPickImage = { showAttachments = false; pickImage() },
+                onPickFile = { showAttachments = false; pickFile() },
+                onStartCall = { showAttachments = false; onStartCall() }
+            )
+        }
     }
 }
 
@@ -350,6 +392,10 @@ private fun MessageRow(
                 Spacer(Modifier.width(32.dp))
             }
             Spacer(Modifier.width(8.dp))
+        }
+        // "읽음 N"은 버블 안쪽 옆·바닥 정렬 — 우측(내) 버블은 좌측에, 좌측(타인) 버블은 우측에
+        if (isMine && readCount > 0) {
+            ReadCountLabel(readCount, Modifier.align(Alignment.Bottom).padding(end = 4.dp))
         }
         Column(
             modifier = Modifier.widthIn(max = 280.dp),
@@ -409,17 +455,22 @@ private fun MessageRow(
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
-            // 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러)
-            if (readCount > 0) {
-                Text(
-                    if (readCount > 1) "읽음 $readCount" else "읽음",
-                    style = SgTheme.typography.labelSmall,
-                    color = sg.accent,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
+        }
+        if (!isMine && readCount > 0) {
+            ReadCountLabel(readCount, Modifier.align(Alignment.Bottom).padding(start = 4.dp))
         }
     }
+}
+
+/** 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러) */
+@Composable
+private fun ReadCountLabel(readCount: Int, modifier: Modifier = Modifier) {
+    Text(
+        if (readCount > 1) "읽음 $readCount" else "읽음",
+        style = SgTheme.typography.labelSmall,
+        color = SgTheme.colors.accent,
+        modifier = modifier
+    )
 }
 
 /** 전송 대기 첨부 칩(웹 pending chip 미러) — 취소하면 업로드 없이 그냥 버려진다 */
@@ -468,8 +519,8 @@ private fun MessageInputBar(
     onValueChange: (String) -> Unit,
     isSending: Boolean,
     hasPendingAttachment: Boolean,
-    onPickImage: () -> Unit,
-    onPickFile: () -> Unit,
+    attachmentsOpen: Boolean,
+    onToggleAttachments: () -> Unit,
     onSend: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -481,11 +532,13 @@ private fun MessageInputBar(
         modifier = modifier.fillMaxWidth().background(sg.linen).padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPickImage, enabled = !isSending) {
-            Icon(Icons.Default.Image, contentDescription = "사진 첨부", tint = sg.inkSoft)
-        }
-        IconButton(onClick = onPickFile, enabled = !isSending) {
-            Icon(Icons.Default.AttachFile, contentDescription = "파일 첨부", tint = sg.inkSoft)
+        // 첨부 진입점은 +로 모은다(카톡 미러) — 패널이 열려 있으면 닫기(×)로 바뀐다
+        IconButton(onClick = onToggleAttachments, enabled = !isSending) {
+            Icon(
+                if (attachmentsOpen) Icons.Default.Close else Icons.Default.Add,
+                contentDescription = if (attachmentsOpen) "첨부 닫기" else "첨부",
+                tint = sg.inkSoft
+            )
         }
         SgTextField(
             value = value,
@@ -505,5 +558,46 @@ private fun MessageInputBar(
                 )
             }
         }
+    }
+}
+
+/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 사진/파일/페이스톡을 고른다 */
+@Composable
+private fun AttachmentPanel(
+    isDm: Boolean,
+    onPickImage: () -> Unit,
+    onPickFile: () -> Unit,
+    onStartCall: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().background(SgTheme.colors.linen).padding(vertical = 24.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage)
+        AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile)
+        // 통화 발신과 같은 경로(페이스톡 미러) — 아이콘은 상단바 통화 버튼과 동일 분기
+        AttachmentPanelItem(if (isDm) Icons.Default.Call else Icons.Default.Videocam, "페이스톡", onStartCall)
+    }
+}
+
+@Composable
+private fun AttachmentPanelItem(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(56.dp).clip(CircleShape).background(sg.paper)
+        ) {
+            Icon(icon, contentDescription = label, tint = sg.accent)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = SgTheme.typography.labelSmall, color = sg.inkSoft)
     }
 }

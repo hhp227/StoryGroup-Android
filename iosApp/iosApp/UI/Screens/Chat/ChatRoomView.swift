@@ -31,6 +31,9 @@ struct ChatRoomView: View {
 
     @State private var showFilePicker = false
 
+    /// + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
+    @State private var showAttachments = false
+
     @Environment(\.sgColors) private var colors
 
     /// 통화 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
@@ -199,6 +202,9 @@ struct ChatRoomView: View {
                 pendingAttachmentChip(pending)
             }
             inputBar(isSending: uiState.isSending, hasPendingAttachment: uiState.pendingAttachment != nil)
+            if showAttachments {
+                attachmentPanel
+            }
         }
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
@@ -225,6 +231,12 @@ struct ChatRoomView: View {
             if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 viewModel.onAction(.typing)
             }
+        }
+        // 입력창 포커스로 키보드가 다시 올라오면 첨부 패널은 닫는다(카톡 미러)
+        .onReceive(
+            NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
+        ) { _ in
+            showAttachments = false
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker { data, fileName, contentType in
@@ -282,14 +294,9 @@ struct ChatRoomView: View {
             && !isSending
 
         return HStack(spacing: 8) {
-            Button(action: { showImagePicker = true }) {
-                Image(systemName: "photo")
-                    .font(.system(size: 20))
-                    .foregroundColor(colors.inkSoft)
-            }
-            .disabled(isSending)
-            Button(action: { showFilePicker = true }) {
-                Image(systemName: "paperclip")
+            // 첨부 진입점은 +로 모은다(카톡 미러) — 패널이 열려 있으면 닫기(×)로 바뀐다
+            Button(action: toggleAttachments) {
+                Image(systemName: showAttachments ? "xmark" : "plus")
                     .font(.system(size: 20))
                     .foregroundColor(colors.inkSoft)
             }
@@ -309,6 +316,63 @@ struct ChatRoomView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(colors.linen)
+    }
+
+    /// + 토글 — 열 때는 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러, Compose 1:1)
+    private func toggleAttachments() {
+        if showAttachments {
+            showAttachments = false
+        } else {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+            )
+            showAttachments = true
+        }
+    }
+
+    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 사진/파일/페이스톡을 고른다
+    private var attachmentPanel: some View {
+        HStack {
+            Spacer()
+            attachmentPanelItem(systemImage: "photo", label: "사진") {
+                showAttachments = false
+                showImagePicker = true
+            }
+            Spacer()
+            attachmentPanelItem(systemImage: "paperclip", label: "파일") {
+                showAttachments = false
+                showFilePicker = true
+            }
+            Spacer()
+            // 통화 발신과 같은 경로(페이스톡 미러) — 아이콘은 상단바 통화 버튼과 동일 분기
+            attachmentPanelItem(systemImage: groupId == nil ? "phone.fill" : "video.fill", label: "페이스톡") {
+                showAttachments = false
+                showCall = true
+            }
+            Spacer()
+        }
+        .padding(.vertical, 24)
+        .background(colors.linen)
+    }
+
+    private func attachmentPanelItem(
+        systemImage: String,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle().fill(colors.paper).frame(width: 56, height: 56)
+                    Image(systemName: systemImage)
+                        .font(.system(size: 22))
+                        .foregroundColor(colors.accent)
+                }
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(colors.inkSoft)
+            }
+        }
     }
 
     /// 웹 formatFileSize 미러 — 1KB 미만 B, 1MB 미만 반올림 KB, 이상은 소수 1자리 MB
@@ -365,31 +429,34 @@ private struct MessageRow: View {
                     Spacer().frame(width: 32)
                 }
             }
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                if !isMine && showAuthor {
-                    Text(message.authorName)
-                        .font(.caption.bold())
-                        .foregroundColor(colors.inkSoft)
+            // "읽음 N"은 버블 안쪽 옆·바닥 정렬 — 우측(내) 버블은 좌측에, 좌측(타인) 버블은 우측에
+            HStack(alignment: .bottom, spacing: 4) {
+                if isMine && readCount > 0 {
+                    readCountLabel
                 }
-                if let attachment = message.attachment {
-                    attachmentContent(attachment)
+                VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
+                    if !isMine && showAuthor {
+                        Text(message.authorName)
+                            .font(.caption.bold())
+                            .foregroundColor(colors.inkSoft)
+                    }
+                    if let attachment = message.attachment {
+                        attachmentContent(attachment)
+                    }
+                    if !message.text.isEmpty {
+                        Text(message.text)
+                            .font(.subheadline)
+                            .foregroundColor(isMine ? colors.onAccent : colors.ink)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(isMine ? colors.accent : colors.linen)
+                            )
+                    }
                 }
-                if !message.text.isEmpty {
-                    Text(message.text)
-                        .font(.subheadline)
-                        .foregroundColor(isMine ? colors.onAccent : colors.ink)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(isMine ? colors.accent : colors.linen)
-                        )
-                }
-                // 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러)
-                if readCount > 0 {
-                    Text(readCount > 1 ? "읽음 \(readCount)" : "읽음")
-                        .font(.caption2)
-                        .foregroundColor(colors.accent)
+                if !isMine && readCount > 0 {
+                    readCountLabel
                 }
             }
             if !isMine {
@@ -397,6 +464,13 @@ private struct MessageRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
+    }
+
+    /// 내 메시지의 "읽음 N" — 1명이면 숫자 없이 "읽음"(웹 미러)
+    private var readCountLabel: some View {
+        Text(readCount > 1 ? "읽음 \(readCount)" : "읽음")
+            .font(.caption2)
+            .foregroundColor(colors.accent)
     }
 
     @ViewBuilder private func attachmentContent(_ attachment: ChatAttachment) -> some View {
