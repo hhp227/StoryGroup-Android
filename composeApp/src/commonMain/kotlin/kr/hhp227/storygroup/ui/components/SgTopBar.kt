@@ -25,11 +25,23 @@ fun SgTopBar(
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    SgTopBar(navigationIcon = navigationIcon, actions = actions) {
+        Text(title, fontWeight = FontWeight.Bold, color = SgTheme.colors.ink)
+    }
+}
+
+/** 제목 슬롯 오버로드 — 제목 자리에 임의 콘텐츠(검색 입력폼 등)를 넣을 때 사용 */
+@Composable
+fun SgTopBar(
+    navigationIcon: (@Composable () -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    title: @Composable () -> Unit
+) {
     val sg = SgTheme.colors
 
     Column(Modifier.background(sg.linen).windowInsetsPadding(WindowInsets.statusBars)) {
         TopAppBar(
-            title = { Text(title, fontWeight = FontWeight.Bold, color = sg.ink) },
+            title = title,
             navigationIcon = navigationIcon,
             actions = actions,
             backgroundColor = sg.linen,

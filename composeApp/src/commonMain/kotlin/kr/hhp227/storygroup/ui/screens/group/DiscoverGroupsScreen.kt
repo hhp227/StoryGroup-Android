@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
@@ -38,8 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -81,6 +86,7 @@ private fun discoverGroupsViewModel(): DiscoverGroupsViewModel {
 
 /**
  * 그룹 찾기 — 검색+정렬(최신/인기), 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 GroupDetailDialog 미러).
+ * 검색 입력폼은 상단바 제목 자리에 둔다 — iOS .searchable(내비바 검색 필드)과 표시 위치 통일.
  * Paging 소유 화면이라 GroupsScreen과 동일한 Screen/Content 2계층. NavHost 풀스크린 목적지라 상단바는
  * 화면이 소유하고, VM은 백스택 엔트리 스코프(방문마다 새로 검색 — 세션 스코프 아님).
  * iosApp DiscoverGroupsView.swift와 1:1 미러
@@ -132,25 +138,42 @@ private fun DiscoverGroupsContent(
     }
     Column(modifier.fillMaxSize().background(sg.paper)) {
         SgTopBar(
-            title = "그룹 찾기",
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
-            }
-        )
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SgTextField(
-                    value = queryText,
-                    onValueChange = { queryText = it },
-                    label = "그룹 검색",
-                    modifier = Modifier.weight(1f)
-                )
+            },
+            actions = {
                 IconButton(onClick = { onAction(DiscoverGroupsViewModel.Action.Search(queryText)) }) {
                     Icon(Icons.Default.Search, contentDescription = "검색", tint = sg.accent)
                 }
             }
+        ) {
+            // 검색 입력폼을 제목 자리에 — iOS .searchable(내비바 검색 필드) 미러.
+            // 실행은 IME 검색/우측 아이콘(제출 기반), 비우면 즉시 전체 목록 복귀(VM이 중복 검색은 걸러낸다)
+            BasicTextField(
+                value = queryText,
+                onValueChange = {
+                    queryText = it
+                    if (it.isEmpty()) onAction(DiscoverGroupsViewModel.Action.Search(""))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = SgTheme.typography.bodyLarge.copy(color = sg.ink),
+                singleLine = true,
+                cursorBrush = SolidColor(sg.accent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onAction(DiscoverGroupsViewModel.Action.Search(queryText)) }),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (queryText.isEmpty()) {
+                            Text("그룹 검색", style = SgTheme.typography.bodyLarge, color = sg.inkFaint)
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+        }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SortToggleButton(
                     label = "최신순",
