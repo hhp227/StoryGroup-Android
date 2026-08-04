@@ -25,6 +25,7 @@ final class AppContainer {
     let joinGroupUseCase: JoinGroupUseCase
     let joinGroupByCodeUseCase: JoinGroupByCodeUseCase
     let cancelJoinRequestUseCase: CancelJoinRequestUseCase
+    let getMyJoinRequestedGroupsUseCase: GetMyJoinRequestedGroupsUseCase
     let getJoinRequestsUseCase: GetJoinRequestsUseCase
     let approveJoinRequestUseCase: ApproveJoinRequestUseCase
     let rejectJoinRequestUseCase: RejectJoinRequestUseCase
@@ -102,6 +103,7 @@ final class AppContainer {
         joinGroupUseCase = JoinGroupUseCase(groupRepository: groupRepository)
         joinGroupByCodeUseCase = JoinGroupByCodeUseCase(groupRepository: groupRepository)
         cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository: groupRepository)
+        getMyJoinRequestedGroupsUseCase = GetMyJoinRequestedGroupsUseCase(groupRepository: groupRepository)
         getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository: groupRepository)
         approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository: groupRepository)
         rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository: groupRepository)

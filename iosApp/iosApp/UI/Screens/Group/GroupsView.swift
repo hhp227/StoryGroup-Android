@@ -20,7 +20,11 @@ struct GroupsView: View {
     }
 
     init(container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
-        _viewModel = StateObject(wrappedValue: GroupsViewModel(getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase))
+        _viewModel = StateObject(wrappedValue: GroupsViewModel(
+            getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase,
+            getMyJoinRequestedGroupsUseCase: container.getMyJoinRequestedGroupsUseCase,
+            cancelJoinRequestUseCase: container.cancelJoinRequestUseCase
+        ))
         self.container = container
         self.onOpenGroup = onOpenGroup
     }
@@ -78,6 +82,10 @@ private struct GroupsContent: View {
                     groupActionButton("그룹 만들기") { showCreateGroup = true }
                     groupActionButton("그룹 찾기") { showDiscoverGroups = true }
                 }
+                // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(Compose PendingGroupsSection 미러)
+                if !viewModel.uiState.pendingGroups.isEmpty {
+                    pendingGroupsSection
+                }
                 content
             }
             .padding(16)
@@ -127,8 +135,10 @@ private struct GroupsContent: View {
                 .padding(.vertical, 48)
         } else {
             // 웹 /groups 내 그룹 탭(auto-fill minmax(160px,1fr) CSS 그리드) 미러 — 그룹 찾기(목록)와 달리
-            // 내 그룹은 그리드로 보여준다(Compose LazyVerticalGrid 미러)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 152), spacing: 12)], spacing: 16) {
+            // 내 그룹은 그리드로 보여준다(Compose LazyVerticalGrid 미러).
+            // alignment .top — GridItem 기본값(center)은 소개 줄수가 다른 옆 카드에 맞춰 세로 가운데로 밀려
+            // 커버 상단이 어긋난다(Compose LazyVerticalGrid는 행 내 상단 정렬)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 152), spacing: 12, alignment: .top)], spacing: 16) {
                 ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { group in
                     if let group {
                         Button(action: { onOpenGroup(group) }) {
@@ -143,6 +153,66 @@ private struct GroupsContent: View {
                 isLoadingMore: appendState is LoadState.Loading,
                 onRetry: { lazyPagingItems.retry() }
             )
+        }
+    }
+
+    /// 가입 신청중(PENDING) 그룹 섹션 — 승인 대기 목록 + 신청 취소(Compose PendingGroupsSection 미러)
+    private var pendingGroupsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("가입 신청중")
+                .font(.subheadline.bold())
+                .foregroundColor(colors.ink)
+            if let error = viewModel.uiState.pendingError {
+                Text(error).font(.caption).foregroundColor(colors.rust)
+            }
+            ForEach(viewModel.uiState.pendingGroups, id: \.id) { group in
+                pendingGroupRow(group)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 신청중 그룹 한 줄 — 커버/이름 + 신청중 배지 + 신청 취소(동시에 하나만 처리)
+    private func pendingGroupRow(_ group: DiscoverGroup) -> some View {
+        HStack(spacing: 8) {
+            ZStack {
+                if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            groupCoverGradient(groupId: group.id, colors: colors)
+                        }
+                    }
+                } else {
+                    groupCoverGradient(groupId: group.id, colors: colors)
+                    Text(String(group.name.prefix(1)))
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous))
+            Text(group.name)
+                .font(.subheadline.bold())
+                .foregroundColor(colors.ink)
+                .lineLimit(1)
+            Spacer()
+            Text("신청중")
+                .font(.caption2.weight(.medium))
+                .foregroundColor(colors.accent2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(colors.accent2Soft)
+                .cornerRadius(colors.radiusButton ?? 12)
+            if viewModel.uiState.cancelingGroupId == group.id {
+                ProgressView().padding(.horizontal, 12)
+            } else {
+                Button("신청 취소") { viewModel.onAction(.cancelRequest(groupId: group.id)) }
+                    .font(.subheadline)
+                    .foregroundColor(colors.rust)
+                    .disabled(viewModel.uiState.cancelingGroupId != nil)
+            }
         }
     }
 

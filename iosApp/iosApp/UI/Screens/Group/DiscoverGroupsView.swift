@@ -4,6 +4,7 @@ import Shared
 
 /// 그룹 찾기 — Compose DiscoverGroupsScreen 미러(검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청).
 /// GroupsView가 풀스크린 push로 표시(Compose NavHost DiscoverGroupsRoute 미러) — 내비바는 루트 스택 몫.
+/// 검색은 내비바 검색 필드(.searchable) — Compose 상단바 검색 입력폼과 표시 위치 통일.
 /// 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct DiscoverGroupsView: View {
     @StateObject private var viewModel: DiscoverGroupsViewModel
@@ -12,9 +13,13 @@ struct DiscoverGroupsView: View {
     private let groupsViewModel: GroupsViewModel
 
     var body: some View {
-        DiscoverGroupsContent(viewModel: viewModel, onJoined: { groupsViewModel.onAction(.refresh) })
-            .navigationTitle("그룹 찾기")
-            .navigationBarTitleDisplayMode(.inline)
+        DiscoverGroupsContent(
+            viewModel: viewModel,
+            onJoined: { groupsViewModel.onAction(.refresh) },
+            onMembershipChanged: { groupsViewModel.onAction(.refreshPending) }
+        )
+        .navigationTitle("그룹 찾기")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     init(container: AppContainer, groupsViewModel: GroupsViewModel) {
@@ -33,6 +38,8 @@ private struct DiscoverGroupsContent: View {
 
     let onJoined: () -> Void
 
+    let onMembershipChanged: () -> Void
+
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<DiscoverGroup>
 
@@ -47,14 +54,6 @@ private struct DiscoverGroupsContent: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    SGTextField(label: "그룹 검색", text: $queryText)
-                    Button(action: { viewModel.onAction(.search(query: queryText)) }) {
-                        Image(systemName: "magnifyingglass").foregroundColor(colors.accent)
-                    }
-                    .padding(.top, 18)
-                }
-                .onSubmit { viewModel.onAction(.search(query: queryText)) }
                 HStack(spacing: 8) {
                     sortButton("최신순", isSelected: viewModel.uiState.sort == .recent) {
                         viewModel.onAction(.changeSort(sort: .recent))
@@ -84,12 +83,18 @@ private struct DiscoverGroupsContent: View {
             }
         }
         .background(colors.paper)
+        // 검색은 내비바 검색 필드 — Compose 상단바 검색 입력폼 미러.
+        // 실행은 제출 기반, 비우면(취소 포함) 즉시 전체 목록 복귀(VM이 중복 검색은 걸러낸다)
+        .searchable(text: $queryText, placement: .navigationBarDrawer(displayMode: .always), prompt: "그룹 검색")
+        .onSubmit(of: .search) { viewModel.onAction(.search(query: queryText)) }
+        .onChange(of: queryText) { if $0.isEmpty { viewModel.onAction(.search(query: "")) } }
         .onReceive(viewModel.event) { event in
             switch event {
             case .joined: onJoined()
             case .joinedByCode:
                 showJoinByCode = false
                 onJoined()
+            case .membershipChanged: onMembershipChanged()
             }
         }
         .overlay {
@@ -173,11 +178,16 @@ private struct DiscoverGroupsContent: View {
         .buttonStyle(.plain)
     }
 
-    init(viewModel: DiscoverGroupsViewModel, onJoined: @escaping () -> Void) {
+    init(
+        viewModel: DiscoverGroupsViewModel,
+        onJoined: @escaping () -> Void,
+        onMembershipChanged: @escaping () -> Void
+    ) {
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.onJoined = onJoined
+        self.onMembershipChanged = onMembershipChanged
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

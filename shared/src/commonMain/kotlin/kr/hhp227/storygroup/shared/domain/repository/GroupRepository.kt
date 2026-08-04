@@ -42,6 +42,9 @@ interface GroupRepository {
     /** 가입 신청 취소 — DELETE /api/groups/{id}/join */
     suspend fun cancelJoinRequest(groupId: Long): Result<Unit>
 
+    /** 내가 가입 신청중(PENDING)인 그룹 목록 — GET /api/groups/join-requests/mine, 탐색 응답 재사용(membership=PENDING) */
+    suspend fun getMyJoinRequestedGroups(): Result<List<DiscoverGroup>>
+
     /** 승인 대기 가입 신청 목록(모더레이터 전용) — GET /api/groups/{id}/join-requests */
     suspend fun getJoinRequests(groupId: Long): Result<List<GroupJoinRequest>>
 
