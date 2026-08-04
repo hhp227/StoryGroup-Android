@@ -178,11 +178,16 @@ private struct DiscoverGroupsContent: View {
         .buttonStyle(.plain)
     }
 
-    init(viewModel: DiscoverGroupsViewModel, onJoined: @escaping () -> Void) {
+    init(
+        viewModel: DiscoverGroupsViewModel,
+        onJoined: @escaping () -> Void,
+        onMembershipChanged: @escaping () -> Void
+    ) {
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.onJoined = onJoined
+        self.onMembershipChanged = onMembershipChanged
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }
