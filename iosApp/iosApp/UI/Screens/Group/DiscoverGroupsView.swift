@@ -13,9 +13,13 @@ struct DiscoverGroupsView: View {
     private let groupsViewModel: GroupsViewModel
 
     var body: some View {
-        DiscoverGroupsContent(viewModel: viewModel, onJoined: { groupsViewModel.onAction(.refresh) })
-            .navigationTitle("그룹 찾기")
-            .navigationBarTitleDisplayMode(.inline)
+        DiscoverGroupsContent(
+            viewModel: viewModel,
+            onJoined: { groupsViewModel.onAction(.refresh) },
+            onMembershipChanged: { groupsViewModel.onAction(.refreshPending) }
+        )
+        .navigationTitle("그룹 찾기")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     init(container: AppContainer, groupsViewModel: GroupsViewModel) {
@@ -33,6 +37,8 @@ private struct DiscoverGroupsContent: View {
     @ObservedObject var viewModel: DiscoverGroupsViewModel
 
     let onJoined: () -> Void
+
+    let onMembershipChanged: () -> Void
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<DiscoverGroup>
@@ -88,6 +94,7 @@ private struct DiscoverGroupsContent: View {
             case .joinedByCode:
                 showJoinByCode = false
                 onJoined()
+            case .membershipChanged: onMembershipChanged()
             }
         }
         .overlay {

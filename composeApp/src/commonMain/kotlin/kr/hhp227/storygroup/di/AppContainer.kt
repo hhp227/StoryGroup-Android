@@ -43,6 +43,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetMyJoinRequestedGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
@@ -109,6 +110,7 @@ class AppContainer(
     val joinGroupUseCase = JoinGroupUseCase(groupRepository)
     val joinGroupByCodeUseCase = JoinGroupByCodeUseCase(groupRepository)
     val cancelJoinRequestUseCase = CancelJoinRequestUseCase(groupRepository)
+    val getMyJoinRequestedGroupsUseCase = GetMyJoinRequestedGroupsUseCase(groupRepository)
     val getJoinRequestsUseCase = GetJoinRequestsUseCase(groupRepository)
     val approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository)
     val rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository)

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -44,6 +46,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
+import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.ui.components.SgBellAction
@@ -67,7 +70,9 @@ fun GroupsScreen(
     onOpenDiscoverGroups: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
-    viewModel: GroupsViewModel = sessionViewModel { GroupsViewModel(it.getMyGroupsPagingDataUseCase) }
+    viewModel: GroupsViewModel = sessionViewModel {
+        GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
+    }
 ) {
     GroupsContent(
         viewModel = viewModel,
@@ -95,6 +100,8 @@ private fun GroupsContent(
         viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
+    // 가입 신청중 섹션 등 페이징 외 상태 — 페이징 스트림(collectAsLazyPagingItems)과 별도로 구독한다
+    val uiState by viewModel.uiState.collectAsState()
     val sg = SgTheme.colors
     // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
@@ -140,6 +147,17 @@ private fun GroupsContent(
             ) {
                 item(key = "actions", span = { GridItemSpan(maxLineSpan) }) {
                     GroupActionsRow(onOpenCreateGroup = onOpenCreateGroup, onOpenDiscoverGroups = onOpenDiscoverGroups)
+                }
+                // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(iosApp pendingSection 미러)
+                if (uiState.pendingGroups.isNotEmpty()) {
+                    item(key = "pending-groups", span = { GridItemSpan(maxLineSpan) }) {
+                        PendingGroupsSection(
+                            groups = uiState.pendingGroups,
+                            cancelingGroupId = uiState.cancelingGroupId,
+                            error = uiState.pendingError,
+                            onCancel = { viewModel.onAction(GroupsViewModel.Action.CancelRequest(it)) }
+                        )
+                    }
                 }
                 val appendState = lazyPagingItems.loadState.append
 
@@ -225,6 +243,95 @@ private fun GroupActionsRow(onOpenCreateGroup: () -> Unit, onOpenDiscoverGroups:
             colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.accent)
         ) {
             Text("그룹 찾기", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** 가입 신청중(PENDING) 그룹 섹션 — 승인 대기 목록 + 신청 취소. 비어 있으면 화면이 섹션을 숨긴다 */
+@Composable
+private fun PendingGroupsSection(
+    groups: List<DiscoverGroup>,
+    cancelingGroupId: Long?,
+    error: String?,
+    onCancel: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("가입 신청중", style = SgTheme.typography.titleSmall, color = sg.ink, fontWeight = FontWeight.Bold)
+        if (error != null) {
+            Text(error, style = SgTheme.typography.bodySmall, color = sg.rust)
+        }
+        groups.forEach { group ->
+            PendingGroupRow(
+                group = group,
+                isCanceling = cancelingGroupId == group.id,
+                cancelEnabled = cancelingGroupId == null,
+                onCancel = { onCancel(group.id) }
+            )
+        }
+    }
+}
+
+/** 신청중 그룹 한 줄 — 커버/이름 + 신청중 배지 + 신청 취소(동시에 하나만 처리) */
+@Composable
+private fun PendingGroupRow(
+    group: DiscoverGroup,
+    isCanceling: Boolean,
+    cancelEnabled: Boolean,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(SgTheme.shapes.button)
+                .let { if (group.image == null) it.background(groupCoverBrush(group.id, sg)) else it },
+            contentAlignment = Alignment.Center
+        ) {
+            if (group.image != null) {
+                AsyncImage(
+                    model = group.image,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(group.name.take(1), style = SgTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            group.name,
+            style = SgTheme.typography.titleSmall,
+            color = sg.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "신청중",
+            style = SgTheme.typography.labelSmall,
+            color = sg.accent2,
+            modifier = Modifier
+                .background(sg.accent2Soft, SgTheme.shapes.button)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+        if (isCanceling) {
+            CircularProgressIndicator(
+                color = sg.accent,
+                strokeWidth = 2.dp,
+                modifier = Modifier.padding(horizontal = 12.dp).size(16.dp)
+            )
+        } else {
+            TextButton(onClick = onCancel, enabled = cancelEnabled) {
+                Text("신청 취소", color = sg.rust)
+            }
         }
     }
 }

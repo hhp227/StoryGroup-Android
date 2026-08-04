@@ -74,7 +74,9 @@ fun CreateGroupScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CreateGroupViewModel = createGroupViewModel(),
-    groupsViewModel: GroupsViewModel = sessionViewModel { GroupsViewModel(it.getMyGroupsPagingDataUseCase) }
+    groupsViewModel: GroupsViewModel = sessionViewModel {
+        GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

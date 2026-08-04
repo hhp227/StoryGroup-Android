@@ -104,6 +104,11 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
             Unit
         }
 
+    override suspend fun getMyJoinRequestedGroups(): Result<List<DiscoverGroup>> =
+        runCatching {
+            client.get("/api/groups/join-requests/mine").body<List<DiscoverGroupResponse>>().map { it.toDomain() }
+        }
+
     override suspend fun getJoinRequests(groupId: Long): Result<List<GroupJoinRequest>> =
         runCatching {
             client.get("/api/groups/$groupId/join-requests").body<List<JoinRequestResponse>>().map { it.toDomain() }
