@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -67,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
 import kr.hhp227.storygroup.ui.components.SgAvatar
@@ -165,21 +167,38 @@ fun ChatRoomScreen(
     }
     // 키보드가 올라와 리스트가 줄어드는 동안, 맨 아래 근처를 보고 있었다면 최신 메시지가 가려지지
     // 않게 바닥에 앵커시킨다(새 메시지 따라가기와 같은 규칙 — 과거 메시지를 읽는 중이면 그대로 둔다)
-    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    val density = LocalDensity.current
+    val imeBottom = WindowInsets.ime.getBottom(density)
+    val navBottom = WindowInsets.navigationBars.getBottom(density)
     var prevImeBottom by remember { mutableStateOf(0) }
+    // 관측한 키보드 높이(내비바 제외) — 첨부·이모지 패널을 키보드 자리에 같은 높이로 띄운다(카톡 미러)
+    var keyboardHeightPx by rememberSaveable { mutableStateOf(0) }
+    // 패널이 열릴 때 고정한 기준 높이 — 렌더는 여기서 키보드 인셋을 뺀 나머지만 그린다(아래 panelHeight)
+    var panelBasePx by rememberSaveable { mutableStateOf(0) }
 
     LaunchedEffect(imeBottom) {
-        // 입력창 포커스로 키보드가 "올라올 때"만 첨부 패널을 닫는다(카톡 미러) — 값이 커질 때로
-        // 판정해야 한다: 단순 >0 판정이면 +로 패널을 열며 키보드가 내려가는 동안의 잔여 inset에
-        // 걸려 패널이 뜨자마자 닫힌다
-        if (imeBottom > prevImeBottom) showAttachments = false
+        val effectiveIme = (imeBottom - navBottom).coerceAtLeast(0)
+        val rising = imeBottom > prevImeBottom
+
         prevImeBottom = imeBottom
+        // 열림 애니메이션 동안 커지는 값만 기록 — 마지막 최대치가 실제 키보드 높이다
+        if (effectiveIme > keyboardHeightPx) keyboardHeightPx = effectiveIme
+        // 입력창 포커스로 키보드가 올라올 때: 패널을 즉시 접으면 그 높이가 한 번에 빠져 레이아웃이
+        // 튄다 — 남은 높이 렌더(panelHeight)로 하단 점유를 유지하다가 다 덮인 뒤에 접는다(카톡 미러).
+        // 올라올 때로 판정해야 +로 패널을 열며 키보드가 내려가는 동안의 잔여 inset에 걸리지 않는다
+        if (showAttachments && rising && effectiveIme >= panelBasePx) showAttachments = false
         if (imeBottom > 0 && uiState.messages.isNotEmpty()) {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             if (lastVisible >= listState.layoutInfo.totalItemsCount - 3) {
                 listState.scrollToItem(lastDisplayIndex())
             }
+        }
+        // 키보드가 패널 기준 높이보다 낮게 안착하는 변칙(높이가 다른 키보드로 전환 등) 대비 —
+        // 이 효과는 인셋이 변할 때마다 재시작되므로, delay가 끝났다면 키보드가 뜬 채 안착한 것이다
+        if (showAttachments && effectiveIme > 0) {
+            delay(150)
+            showAttachments = false
         }
     }
     // 패널이 열려 리스트가 줄어들 때도 키보드와 같은 규칙으로 바닥에 앵커시킨다
@@ -338,7 +357,10 @@ fun ChatRoomScreen(
                 if (showAttachments) {
                     showAttachments = false
                 } else {
-                    // 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러) — 항상 첨부 목록부터
+                    // 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러) — 항상 첨부 목록부터.
+                    // 기준 높이를 지금 고정 — 내려가는 키보드 인셋만큼 줄여 그리므로
+                    // 키보드가 걷히는 만큼 패널이 자연스럽게 드러난다
+                    panelBasePx = if (keyboardHeightPx > 0) keyboardHeightPx else with(density) { 280.dp.roundToPx() }
                     focusManager.clearFocus()
                     keyboard?.hide()
                     showEmojiPicker = false
@@ -348,6 +370,12 @@ fun ChatRoomScreen(
             onSend = { onAction(ChatRoomViewModel.Action.Send(input)) }
         )
         if (showAttachments) {
+            // 키보드 인셋만큼 줄여 그린다 — 하단 점유 총합(패널+ime 패딩)이 일정해 레이아웃이 튀지
+            // 않고, 올라올 땐 키보드가 패널을 덮으며 내려갈 땐 걷히며 패널이 드러난다(카톡 미러)
+            val panelHeight = with(density) {
+                (panelBasePx - (imeBottom - navBottom).coerceAtLeast(0)).coerceAtLeast(0).toDp()
+            }
+
             if (showEmojiPicker) {
                 // 이모지 선택 — 입력창에 덧붙이고 패널은 유지(연속 선택).
                 // TextField 밖에서 넣는 입력이라 타이핑 신호는 직접 낸다
@@ -355,14 +383,16 @@ fun ChatRoomScreen(
                     onPick = { emoji ->
                         input += emoji
                         onAction(ChatRoomViewModel.Action.Typing)
-                    }
+                    },
+                    modifier = Modifier.height(panelHeight)
                 )
             } else {
                 AttachmentPanel(
                     onPickEmoji = { showEmojiPicker = true },
                     onPickImage = { showAttachments = false; pickImage() },
                     onPickFile = { showAttachments = false; pickFile() },
-                    onStartCall = { video -> showAttachments = false; onStartCall(video) }
+                    onStartCall = { video -> showAttachments = false; onStartCall(video) },
+                    modifier = Modifier.height(panelHeight)
                 )
             }
         }
@@ -584,7 +614,7 @@ private fun MessageInputBar(
     }
 }
 
-/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 이모지/사진/파일/보이스톡/페이스톡을 고른다 */
+/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 같은 높이로 나타나는 4열 그리드(5번째부터 다음 줄) */
 @Composable
 private fun AttachmentPanel(
     onPickEmoji: () -> Unit,
@@ -593,17 +623,19 @@ private fun AttachmentPanel(
     onStartCall: (video: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth().background(SgTheme.colors.linen).padding(vertical = 24.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = modifier.fillMaxWidth().background(SgTheme.colors.linen),
+        contentPadding = PaddingValues(vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // 패널이 이모지 페이지로 전환된다(닫히지 않음) — 선택은 입력창에 덧붙는다
-        AttachmentPanelItem(Icons.Default.EmojiEmotions, "이모지", onPickEmoji)
-        AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage)
-        AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile)
+        item { AttachmentPanelItem(Icons.Default.EmojiEmotions, "이모지", onPickEmoji, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile, Modifier.fillMaxWidth()) }
         // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
-        AttachmentPanelItem(Icons.Default.Call, "보이스톡", { onStartCall(false) })
-        AttachmentPanelItem(Icons.Default.Videocam, "페이스톡", { onStartCall(true) })
+        item { AttachmentPanelItem(Icons.Default.Call, "보이스톡", { onStartCall(false) }, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.Videocam, "페이스톡", { onStartCall(true) }, Modifier.fillMaxWidth()) }
     }
 }
 
@@ -612,7 +644,7 @@ private fun AttachmentPanel(
 private fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(8),
-        modifier = modifier.fillMaxWidth().height(220.dp).background(SgTheme.colors.linen),
+        modifier = modifier.fillMaxWidth().background(SgTheme.colors.linen),
         contentPadding = PaddingValues(12.dp)
     ) {
         items(CHAT_EMOJIS) { emoji ->

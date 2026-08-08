@@ -40,6 +40,9 @@ struct ChatRoomView: View {
     /// 첨부 패널 안의 이모지 페이지(카톡 미러) — 패널을 새로 열면 첨부 목록으로 되돌아온다
     @State private var showEmojiPicker = false
 
+    /// 관측한 키보드 높이(하단 안전영역 제외) — 첨부·이모지 패널을 키보드 자리에 같은 높이로 띄운다(카톡 미러)
+    @State private var keyboardHeight: CGFloat = 0
+
     @Environment(\.sgColors) private var colors
 
     /// 통화 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
@@ -251,8 +254,19 @@ struct ChatRoomView: View {
         // 입력창 포커스로 키보드가 다시 올라오면 첨부 패널은 닫는다(카톡 미러)
         .onReceive(
             NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)
-        ) { _ in
-            showAttachments = false
+        ) { notification in
+            // 키보드 높이(안전영역 제외)를 기억 — 다음에 패널을 열면 같은 높이로 띄운다
+            if let frame = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
+                keyboardHeight = frame.height - bottomSafeInset
+            }
+            // 패널 제거를 키보드 상승과 같은 시간으로 애니메이션 — 즉시 지우면 패널 높이가
+            // 한 번에 꺼져 레이아웃이 튄다(카톡 미러)
+            let duration = notification
+                .userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double
+
+            withAnimation(.easeOut(duration: duration ?? 0.25)) {
+                showAttachments = false
+            }
         }
         .sheet(isPresented: $showImagePicker) {
             ImagePicker { data, fileName, contentType in
@@ -342,46 +356,56 @@ struct ChatRoomView: View {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
             )
-            // 항상 첨부 목록부터 — 이모지 페이지는 패널 안에서 전환된다
+            // 항상 첨부 목록부터 — 이모지 페이지는 패널 안에서 전환된다.
+            // 키보드가 내려가는 동안 패널이 같은 리듬으로 나타나게 애니메이션(카톡 미러)
             showEmojiPicker = false
-            showAttachments = true
+            withAnimation(.easeOut(duration: 0.25)) {
+                showAttachments = true
+            }
         }
     }
 
-    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 이모지/사진/파일/보이스톡/페이스톡을 고른다
+    /// 첨부·이모지 패널 높이 — 키보드를 본 적 없으면 기본 높이(Compose 미러)
+    private var panelHeight: CGFloat {
+        keyboardHeight > 0 ? keyboardHeight : 280
+    }
+
+    private var bottomSafeInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) —
+    /// 키보드 자리에 같은 높이로 나타나는 4열 그리드(5번째부터 다음 줄)
     private var attachmentPanel: some View {
-        HStack {
-            Spacer()
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 24) {
             // 패널이 이모지 페이지로 전환된다(닫히지 않음) — 선택은 입력창에 덧붙는다
             attachmentPanelItem(systemImage: "face.smiling", label: "이모지") {
                 showEmojiPicker = true
             }
-            Spacer()
             attachmentPanelItem(systemImage: "photo", label: "사진") {
                 showAttachments = false
                 showImagePicker = true
             }
-            Spacer()
             attachmentPanelItem(systemImage: "paperclip", label: "파일") {
                 showAttachments = false
                 showFilePicker = true
             }
-            Spacer()
             // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
             attachmentPanelItem(systemImage: "phone.fill", label: "보이스톡") {
                 showAttachments = false
                 callVideo = false
                 showCall = true
             }
-            Spacer()
             attachmentPanelItem(systemImage: "video.fill", label: "페이스톡") {
                 showAttachments = false
                 callVideo = true
                 showCall = true
             }
-            Spacer()
         }
         .padding(.vertical, 24)
+        .frame(maxWidth: .infinity, minHeight: panelHeight, maxHeight: panelHeight, alignment: .top)
         .background(colors.linen)
     }
 
@@ -400,7 +424,7 @@ struct ChatRoomView: View {
             }
             .padding(12)
         }
-        .frame(height: 220)
+        .frame(height: panelHeight)
         .background(colors.linen)
     }
 
