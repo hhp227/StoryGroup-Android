@@ -530,10 +530,12 @@ private fun MessageInputBar(
 
     Row(
         modifier = modifier.fillMaxWidth().background(sg.linen).padding(horizontal = 8.dp, vertical = 6.dp),
+        // iOS HStack(spacing: 8) 미러 — 버튼은 기본 48dp 박스 대신 아이콘에 딱 붙는 크기로
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 첨부 진입점은 +로 모은다(카톡 미러) — 패널이 열려 있으면 닫기(×)로 바뀐다
-        IconButton(onClick = onToggleAttachments, enabled = !isSending) {
+        IconButton(onClick = onToggleAttachments, enabled = !isSending, modifier = Modifier.size(28.dp)) {
             Icon(
                 if (attachmentsOpen) Icons.Default.Close else Icons.Default.Add,
                 contentDescription = if (attachmentsOpen) "첨부 닫기" else "첨부",
@@ -546,8 +548,7 @@ private fun MessageInputBar(
             label = if (hasPendingAttachment) "메시지 (선택)" else null,
             modifier = Modifier.weight(1f)
         )
-        Spacer(Modifier.width(8.dp))
-        IconButton(onClick = onSend, enabled = canSend) {
+        IconButton(onClick = onSend, enabled = canSend, modifier = Modifier.size(28.dp)) {
             if (isSending) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = sg.accent)
             } else {
