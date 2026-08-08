@@ -83,7 +83,8 @@ fun ChatRoomScreen(
     groupId: Long?,
     title: String,
     onBack: () -> Unit,
-    onStartCall: () -> Unit,
+    // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
+    onStartCall: (video: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
 ) {
@@ -193,7 +194,7 @@ fun ChatRoomScreen(
             actions = {
                 // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러). DM=상대 벨울림(웹 D6),
                 // 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
-                IconButton(onClick = onStartCall) {
+                IconButton(onClick = { onStartCall(true) }) {
                     if (groupId == null) {
                         Icon(Icons.Default.Call, contentDescription = "통화", tint = sg.accent)
                     } else {
@@ -222,7 +223,7 @@ fun ChatRoomScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                TextButton(onClick = onStartCall) {
+                TextButton(onClick = { onStartCall(true) }) {
                     Text("참가", style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
@@ -338,10 +339,9 @@ fun ChatRoomScreen(
         )
         if (showAttachments) {
             AttachmentPanel(
-                isDm = groupId == null,
                 onPickImage = { showAttachments = false; pickImage() },
                 onPickFile = { showAttachments = false; pickFile() },
-                onStartCall = { showAttachments = false; onStartCall() }
+                onStartCall = { video -> showAttachments = false; onStartCall(video) }
             )
         }
     }
@@ -543,7 +543,7 @@ private fun MessageInputBar(
         SgTextField(
             value = value,
             onValueChange = onValueChange,
-            label = if (hasPendingAttachment) "메시지 (선택)" else "메시지 입력",
+            label = if (hasPendingAttachment) "메시지 (선택)" else null,
             modifier = Modifier.weight(1f)
         )
         Spacer(Modifier.width(8.dp))
@@ -561,13 +561,12 @@ private fun MessageInputBar(
     }
 }
 
-/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 사진/파일/페이스톡을 고른다 */
+/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 사진/파일/보이스톡/페이스톡을 고른다 */
 @Composable
 private fun AttachmentPanel(
-    isDm: Boolean,
     onPickImage: () -> Unit,
     onPickFile: () -> Unit,
-    onStartCall: () -> Unit,
+    onStartCall: (video: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -576,8 +575,9 @@ private fun AttachmentPanel(
     ) {
         AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage)
         AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile)
-        // 통화 발신과 같은 경로(페이스톡 미러) — 아이콘은 상단바 통화 버튼과 동일 분기
-        AttachmentPanelItem(if (isDm) Icons.Default.Call else Icons.Default.Videocam, "페이스톡", onStartCall)
+        // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
+        AttachmentPanelItem(Icons.Default.Call, "보이스톡", { onStartCall(false) })
+        AttachmentPanelItem(Icons.Default.Videocam, "페이스톡", { onStartCall(true) })
     }
 }
 

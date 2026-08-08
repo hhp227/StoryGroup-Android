@@ -17,12 +17,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 공용 입력 필드 — 웹 .field 미러(라벨 위 배치 + linen 입력창) */
+/** 공용 입력 필드 — 웹 .field 미러(라벨 위 배치 + linen 입력창). label이 null이면 입력창만 그린다 */
 @Composable
 fun SgTextField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
+    label: String? = null,
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
@@ -34,13 +34,15 @@ fun SgTextField(
     val sg = SgTheme.colors
 
     Column(modifier) {
-        Text(
-            label,
-            style = SgTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = sg.inkSoft
-        )
-        Spacer(Modifier.height(6.dp))
+        if (label != null) {
+            Text(
+                label,
+                style = SgTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = sg.inkSoft
+            )
+            Spacer(Modifier.height(6.dp))
+        }
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,

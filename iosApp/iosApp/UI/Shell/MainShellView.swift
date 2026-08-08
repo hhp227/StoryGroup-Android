@@ -231,7 +231,7 @@ struct MainShellView: View {
 
     @ViewBuilder private var acceptedCallDestination: some View {
         if let call = acceptedCall {
-            CallView(chatRoomId: call.chatRoomId, title: call.title, ring: call.ring, container: container)
+            CallView(chatRoomId: call.chatRoomId, title: call.title, ring: call.ring, video: call.video, container: container)
         }
     }
 

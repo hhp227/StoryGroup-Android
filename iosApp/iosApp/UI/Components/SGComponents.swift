@@ -80,7 +80,8 @@ struct SGCard<Content: View>: View {
 
 /// 웹 .field 미러(라벨 위 배치 + linen 입력창) — Compose SgTextField 미러
 struct SGTextField: View {
-    let label: String
+    // 라벨이 nil이면 입력창만 그린다 — Compose SgTextField 미러
+    var label: String? = nil
 
     @Binding var text: String
 
@@ -94,9 +95,11 @@ struct SGTextField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.caption.bold())
-                .foregroundColor(colors.inkSoft)
+            if let label = label {
+                Text(label)
+                    .font(.caption.bold())
+                    .foregroundColor(colors.inkSoft)
+            }
             Group {
                 if isSecure {
                     SecureField("", text: $text)

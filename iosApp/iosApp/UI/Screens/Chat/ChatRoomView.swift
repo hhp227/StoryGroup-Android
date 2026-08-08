@@ -25,6 +25,9 @@ struct ChatRoomView: View {
     /// 통화 화면 push — Compose CallRoute(ring=true) 미러(발신=입장+벨울림)
     @State private var showCall = false
 
+    /// false면 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바·참가는 페이스톡
+    @State private var callVideo = true
+
     @State private var input = ""
 
     @State private var showImagePicker = false
@@ -53,7 +56,7 @@ struct ChatRoomView: View {
     }
 
     private var callDestination: some View {
-        CallView(chatRoomId: chatRoomId, title: title, ring: true, container: container)
+        CallView(chatRoomId: chatRoomId, title: title, ring: true, video: callVideo, container: container)
     }
 
     @ViewBuilder private var core: some View {
@@ -76,7 +79,10 @@ struct ChatRoomView: View {
                         .foregroundColor(colors.ink)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("참가") { showCall = true }
+                    Button("참가") {
+                        callVideo = true
+                        showCall = true
+                    }
                         .font(.caption.bold())
                         .foregroundColor(colors.accent)
                 }
@@ -213,7 +219,10 @@ struct ChatRoomView: View {
         // DM=상대 벨울림(웹 D6), 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showCall = true }) {
+                Button(action: {
+                    callVideo = true
+                    showCall = true
+                }) {
                     Image(systemName: groupId == nil ? "phone.fill" : "video.fill")
                 }
             }
@@ -301,7 +310,7 @@ struct ChatRoomView: View {
                     .foregroundColor(colors.inkSoft)
             }
             .disabled(isSending)
-            SGTextField(label: hasPendingAttachment ? "메시지 (선택)" : "메시지 입력", text: $input)
+            SGTextField(label: hasPendingAttachment ? "메시지 (선택)" : nil, text: $input)
             Button(action: { viewModel.onAction(.send(text: input)) }) {
                 if isSending {
                     ProgressView()
@@ -330,7 +339,7 @@ struct ChatRoomView: View {
         }
     }
 
-    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 사진/파일/페이스톡을 고른다
+    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 사진/파일/보이스톡/페이스톡을 고른다
     private var attachmentPanel: some View {
         HStack {
             Spacer()
@@ -344,9 +353,16 @@ struct ChatRoomView: View {
                 showFilePicker = true
             }
             Spacer()
-            // 통화 발신과 같은 경로(페이스톡 미러) — 아이콘은 상단바 통화 버튼과 동일 분기
-            attachmentPanelItem(systemImage: groupId == nil ? "phone.fill" : "video.fill", label: "페이스톡") {
+            // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
+            attachmentPanelItem(systemImage: "phone.fill", label: "보이스톡") {
                 showAttachments = false
+                callVideo = false
+                showCall = true
+            }
+            Spacer()
+            attachmentPanelItem(systemImage: "video.fill", label: "페이스톡") {
+                showAttachments = false
+                callVideo = true
                 showCall = true
             }
             Spacer()

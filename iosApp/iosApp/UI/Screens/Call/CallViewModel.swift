@@ -299,6 +299,7 @@ final class CallViewModel: MviViewModel {
     init(
         chatRoomId: Int64,
         ring: Bool,
+        video: Bool,
         observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase,
         observeRtcSignalsUseCase: ObserveRtcSignalsUseCase,
         sendRtcSignalUseCase: SendRtcSignalUseCase,
@@ -314,6 +315,9 @@ final class CallViewModel: MviViewModel {
         self.sendCallInviteUseCase = sendCallInviteUseCase
         self.getIceServersUseCase = getIceServersUseCase
         uiState = UiState(myUserId: getCurrentUserIdUseCase.invoke()?.int64Value, isRinging: ring)
+        // 보이스톡(video=false)은 카메라·스피커폰 OFF로 시작 — 이후엔 토글 소관(Compose 미러)
+        uiState.call.camOn = video
+        uiState.call.speakerOn = video
     }
 
     // 화면 이탈(pop) — 구독을 닫아 통화에서 나가고 네이티브 미디어를 해제한다
@@ -336,7 +340,7 @@ final class CallViewModel: MviViewModel {
         var camOn = true
         // 전면 카메라 여부 — 로컬 미리보기 거울용(Compose는 핸들에 mirror가 실려 별도 필드 없음)
         var frontCamera = true
-        // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
+        // 스피커폰 출력 — 페이스톡은 기본 ON, 보이스톡은 수화구(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
         var speakerOn = true
         // 화면 공유 중 — 공유 중엔 localVideoTrack이 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
         var sharing = false

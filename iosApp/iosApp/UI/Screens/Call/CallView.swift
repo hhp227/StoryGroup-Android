@@ -3,12 +3,14 @@ import SwiftUI
 import WebRTC
 import Shared
 
-/// 통화 push 대상 — Compose CallRoute(chatRoomId, title, ring) 미러(ChatRoomRef와 같은 규칙).
+/// 통화 push 대상 — Compose CallRoute(chatRoomId, title, ring, video) 미러(ChatRoomRef와 같은 규칙).
 /// ring=true는 발신(입장+벨울림), false는 수신 배너 수락으로 진입(벨울림 없음).
 struct CallRef: Equatable {
     let chatRoomId: Int64
     let title: String
     let ring: Bool
+    // false면 보이스톡(카메라 OFF·수화구 시작) — CALL_INVITE에 통화 종류가 없어 수신(배너 수락)은 항상 기본값
+    var video: Bool = true
 }
 
 /// 방 통화 — DM 1:1과 그룹 방 공용(페이스톡 미러)·composeApp CallScreen 미러.
@@ -23,10 +25,11 @@ struct CallView: View {
         CallContent(viewModel: viewModel, title: title)
     }
 
-    init(chatRoomId: Int64, title: String, ring: Bool, container: AppContainer) {
+    init(chatRoomId: Int64, title: String, ring: Bool, video: Bool, container: AppContainer) {
         _viewModel = StateObject(wrappedValue: CallViewModel(
             chatRoomId: chatRoomId,
             ring: ring,
+            video: video,
             observeRtcCallEventsUseCase: container.observeRtcCallEventsUseCase,
             observeRtcSignalsUseCase: container.observeRtcSignalsUseCase,
             sendRtcSignalUseCase: container.sendRtcSignalUseCase,

@@ -88,7 +88,13 @@ internal data object DiscoverGroupsRoute
  * 수락으로 진입. title은 호출 측이 아는 표시명(DM=상대 이름, 그룹 방=그룹/방 이름)
  */
 @Serializable
-internal data class CallRoute(val chatRoomId: Long, val title: String, val ring: Boolean)
+internal data class CallRoute(
+    val chatRoomId: Long,
+    val title: String,
+    val ring: Boolean,
+    // false면 보이스톡(카메라 OFF·수화구 시작) — CALL_INVITE에 통화 종류가 없어 수신(배너 수락)은 항상 기본값
+    val video: Boolean = true
+)
 
 /** 그룹 피드 작성 성공을 이전 백스택 엔트리(그룹 상세)로 알리는 결과 키 — Paging-CRUD 샘플 미러 */
 internal const val POST_CREATED_KEY = "post_created"
@@ -197,10 +203,10 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             groupId = route.groupId,
                             title = route.title,
                             onBack = { navController.popBackStack() },
-                            // 통화 발신 — 입장+벨울림(DM=상대 1명, 그룹 방=방 멤버 팬아웃, 페이스톡 미러).
+                            // 통화 발신 — 입장+벨울림(DM=상대 1명, 그룹 방=방 멤버 팬아웃, 보이스톡·페이스톡 미러).
                             // 진행 중 통화 합류면 서버가 다시 울리지 않는다
-                            onStartCall = {
-                                navController.navigate(CallRoute(route.chatRoomId, route.title, ring = true))
+                            onStartCall = { video ->
+                                navController.navigate(CallRoute(route.chatRoomId, route.title, ring = true, video = video))
                             },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
@@ -215,6 +221,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             chatRoomId = route.chatRoomId,
                             title = route.title,
                             ring = route.ring,
+                            video = route.video,
                             onBack = { navController.popBackStack() },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)

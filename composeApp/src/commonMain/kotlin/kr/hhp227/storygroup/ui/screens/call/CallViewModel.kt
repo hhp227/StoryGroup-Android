@@ -40,6 +40,8 @@ import kr.hhp227.storygroup.ui.rtc.RtcScreenCaptureGrant
 class CallViewModel(
     val chatRoomId: Long,
     private val ring: Boolean,
+    // false면 보이스톡 — 카메라 OFF·수화구로 시작(초기 상태만 갈리고 이후 경로는 페이스톡과 동일)
+    video: Boolean,
     observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase,
     observeRtcSignalsUseCase: ObserveRtcSignalsUseCase,
     sendRtcSignalUseCase: SendRtcSignalUseCase,
@@ -63,6 +65,7 @@ class CallViewModel(
         sendRtcSignalUseCase = sendRtcSignalUseCase,
         getIceServersUseCase = getIceServersUseCase,
         mediaSessionFactory = rtcMediaSessionFactory,
+        video = video,
         // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다).
         // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다
         onFirstSignalConnected = { if (ring) sendCallInviteUseCase(chatRoomId) }
