@@ -54,7 +54,8 @@ class IncomingCallViewModel(
                     chatRoomId = chatRoomId,
                     callerId = event.senderId,
                     callerName = event.senderName ?: "알 수 없음",
-                    roomName = event.roomName
+                    roomName = event.roomName,
+                    video = event.video
                 )
             )
         }
@@ -87,7 +88,9 @@ class IncomingCallViewModel(
         val callerId: Long?,
         val callerName: String,
         // 그룹 방 벨울림이면 방(그룹) 이름 — 배너 제목과 통화 화면 제목에 쓴다. DM이면 null
-        val roomName: String? = null
+        val roomName: String? = null,
+        // false면 보이스톡 — 배너 문구와 수락 시 카메라 OFF 입장에 쓴다
+        val video: Boolean = true
     )
 
     sealed interface Action {

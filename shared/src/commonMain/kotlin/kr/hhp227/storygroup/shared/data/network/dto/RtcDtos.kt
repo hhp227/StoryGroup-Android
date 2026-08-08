@@ -31,6 +31,12 @@ data class RtcSignalRequest(
     val payload: String
 )
 
+/** 클라 → /app/rtc/chat-rooms/{id}/invite SEND 바디 — 서버 CallInviteRequest 1:1(false=보이스톡) */
+@Serializable
+data class CallInviteRequest(
+    val video: Boolean
+)
+
 /**
  * STOMP /user/queue/rtc 수신 봉투 — 서버 RtcSignalEvent 1:1(type은 OFFER|ANSWER|ICE).
  * 개인 큐 하나가 모든 rtc 방의 신호를 나르므로 수신 측이 roomKey로 걸러야 한다.

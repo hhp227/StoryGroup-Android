@@ -119,7 +119,9 @@ private fun PersonalSocketEventResponse.toDomain(): PersonalEvent? = when (type)
                 senderId = fromUserId,
                 senderName = fromUserName,
                 groupId = groupId,
-                roomName = roomName
+                roomName = roomName,
+                // 구서버(필드 없음)는 페이스톡 간주 — 서버 CallInviteEvent 기본값과 동일
+                video = video ?: true
             )
         }
     else -> null

@@ -26,5 +26,7 @@ data class PersonalEvent(
     val senderName: String? = null,
     // CALL_INVITE 그룹 방 벨울림 전용(페이스톡 미러) — 배너 제목/이동 경로용, DM이면 null
     val groupId: Long? = null,
-    val roomName: String? = null
+    val roomName: String? = null,
+    // CALL_INVITE 전용 — false면 보이스톡(수신 측이 배너 표시·카메라 OFF 입장을 결정한다)
+    val video: Boolean = true
 )

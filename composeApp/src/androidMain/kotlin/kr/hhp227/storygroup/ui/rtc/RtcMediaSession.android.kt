@@ -137,6 +137,8 @@ internal class AndroidRtcMediaSession(
     private var localVideoTrack: VideoTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
     private var surfaceHelper: SurfaceTextureHelper? = null
+    // 카메라 캡처가 실제로 도는지 — 보이스톡(camEnabled=false 시작)은 캡처러만 만들어 두고 열지 않는다
+    private var captureRunning = false
     // 화면 공유 자원 — 카메라와 별도 파이프라인(카메라는 stop하지 않고 보관, 웹 D9 미러)
     private var screenCapturer: VideoCapturer? = null
     private var screenSource: VideoSource? = null
@@ -212,16 +214,23 @@ internal class AndroidRtcMediaSession(
             val helper = SurfaceTextureHelper.create("SgRtcCapture", eglBase.eglBaseContext)
 
             capturer.initialize(helper, appContext, newVideoSource.capturerObserver)
-            val captureStarted = runCatching { capturer.startCapture(CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS) }.isSuccess
+            // 보이스톡(camEnabled=false) 시작이면 카메라를 아직 열지 않는다 — 켤 때 lazy 시작
+            // (setCamEnabled). 트랙·sender는 미리 만들어 두므로 켤 때 재협상이 필요 없다
+            val captureStarted = !camEnabled ||
+                runCatching { capturer.startCapture(CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS) }.isSuccess
 
             if (captureStarted) {
                 videoSource = newVideoSource
                 surfaceHelper = helper
                 videoCapturer = capturer
+                captureRunning = camEnabled
                 val track = factory.createVideoTrack("video0", newVideoSource).apply { setEnabled(camEnabled) }
 
                 localVideoTrack = track
-                _localVideo.value = AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = frontCamera)
+                // 카메라가 실제로 도는 동안만 로컬 핸들 발행 — 보이스톡에선 전환/공유 버튼이 숨는다
+                if (captureRunning) {
+                    _localVideo.value = AndroidRtcVideoTrackHandle(track, eglBase.eglBaseContext, mirror = frontCamera)
+                }
             } else {
                 runCatching { capturer.dispose() }
                 runCatching { helper.dispose() }
@@ -283,8 +292,28 @@ internal class AndroidRtcMediaSession(
     }
 
     override fun setCamEnabled(enabled: Boolean) {
-        camEnabled = enabled
-        localVideoTrack?.setEnabled(enabled)
+        var handle: AndroidRtcVideoTrackHandle? = null
+
+        synchronized(lock) {
+            camEnabled = enabled
+            localVideoTrack?.setEnabled(enabled)
+            // 보이스톡 → 페이스톡 전환: 시작 때 열지 않은 카메라를 이때 연다 —
+            // sender에는 트랙이 이미 실려 있어 재협상 없이 프레임만 흐르기 시작한다
+            val capturer = videoCapturer
+
+            if (enabled && !captureRunning && !disposed && capturer != null) {
+                if (runCatching { capturer.startCapture(CAPTURE_WIDTH, CAPTURE_HEIGHT, CAPTURE_FPS) }.isSuccess) {
+                    captureRunning = true
+                    // 공유 중이면 로컬 표시는 화면 트랙 유지 — 복귀(stopScreenShare) 때 카메라 핸들이 실린다
+                    if (screenVideoTrack == null) {
+                        handle = localVideoTrack?.let {
+                            AndroidRtcVideoTrackHandle(it, eglBase.eglBaseContext, mirror = frontCamera)
+                        }
+                    }
+                }
+            }
+        }
+        handle?.let { _localVideo.value = it }
     }
 
     override fun switchCamera() {

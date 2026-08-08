@@ -41,9 +41,12 @@ fun IncomingCallBanner(
         ) {
             SgAvatar(name = call.callerName)
             Spacer(Modifier.width(12.dp))
+            // 보이스톡이면 문구로 구분 — 수락 시 카메라 OFF 입장과 짝을 이룬다
+            val kind = if (call.video) "통화" else "보이스톡"
+
             Text(
                 // 그룹 방이면 어느 방의 통화인지 함께 — DM은 발신자 이름만(기존 문구)
-                call.roomName?.let { "$it — ${call.callerName}님의 통화" } ?: "${call.callerName}님의 통화",
+                call.roomName?.let { "$it — ${call.callerName}님의 $kind" } ?: "${call.callerName}님의 $kind",
                 style = SgTheme.typography.bodyMedium,
                 color = sg.ink,
                 fontWeight = FontWeight.Bold,

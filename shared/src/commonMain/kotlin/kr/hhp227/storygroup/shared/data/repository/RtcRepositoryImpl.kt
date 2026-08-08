@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import kr.hhp227.storygroup.shared.data.network.StompSessionEvent
 import kr.hhp227.storygroup.shared.data.network.StompSocket
 import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
+import kr.hhp227.storygroup.shared.data.network.dto.CallInviteRequest
 import kr.hhp227.storygroup.shared.data.network.dto.IceServersResponse
 import kr.hhp227.storygroup.shared.data.network.dto.RtcPeerResponse
 import kr.hhp227.storygroup.shared.data.network.dto.RtcSignalEventResponse
@@ -74,8 +75,8 @@ class RtcRepositoryImpl(
         signalSocket.trySend("/app/rtc/${room.roomKey}/signal", body)
     }
 
-    override suspend fun sendCallInvite(chatRoomId: Long) {
-        signalSocket.trySend("/app/rtc/chat-rooms/$chatRoomId/invite")
+    override suspend fun sendCallInvite(chatRoomId: Long, video: Boolean) {
+        signalSocket.trySend("/app/rtc/chat-rooms/$chatRoomId/invite", json.encodeToString(CallInviteRequest(video = video)))
     }
 
     override suspend fun getIceServers(): Result<List<IceServer>> =

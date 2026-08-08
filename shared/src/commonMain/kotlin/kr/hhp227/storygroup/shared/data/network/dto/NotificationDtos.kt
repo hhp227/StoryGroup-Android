@@ -36,5 +36,7 @@ data class PersonalSocketEventResponse(
     val fromUserName: String? = null,
     // CALL_INVITE 그룹 방 벨울림 전용(페이스톡 전환) — DM이면 null
     val groupId: Long? = null,
-    val roomName: String? = null
+    val roomName: String? = null,
+    // CALL_INVITE 전용 — false면 보이스톡. 구서버는 필드가 없어 null(페이스톡 간주)
+    val video: Boolean? = null
 )

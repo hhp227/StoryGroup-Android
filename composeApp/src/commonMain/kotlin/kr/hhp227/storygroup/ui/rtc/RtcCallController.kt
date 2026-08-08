@@ -42,6 +42,8 @@ class RtcCallController(
     private val sendRtcSignalUseCase: SendRtcSignalUseCase,
     private val getIceServersUseCase: GetIceServersUseCase,
     private val mediaSessionFactory: RtcMediaSessionFactory,
+    /** false면 보이스톡 — 카메라 OFF·수화구(스피커폰 OFF)로 시작한다. 통화 중 카메라를 켜면 페이스톡 전환 */
+    private val video: Boolean = true,
     /** 로스터 토픽 연결/재연결 — 회의 VM이 REST 재조회(공백 메꿈)를 거는 지점 */
     private val onTopicConnected: (reconnected: Boolean) -> Unit = {},
     private val onTopicDisconnected: () -> Unit = {},
@@ -58,7 +60,7 @@ class RtcCallController(
         val isMediaActive: Boolean = false,
         val micOn: Boolean = true,
         val camOn: Boolean = true,
-        // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 플랫폼 미디어 세션 소관)
+        // 스피커폰 출력 — 페이스톡은 기본 ON, 보이스톡은 수화구(웹엔 없는 모바일 전용, 라우팅은 플랫폼 미디어 세션 소관)
         val speakerOn: Boolean = true,
         // 화면 공유 중 — 공유 중엔 localVideo가 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
         val sharing: Boolean = false,
@@ -66,7 +68,8 @@ class RtcCallController(
         val remoteVideos: Map<Long, RtcVideoTrackHandle> = emptyMap()
     )
 
-    private val _state = MutableStateFlow(State())
+    // 보이스톡(video=false)은 카메라·스피커폰 OFF로 시작 — 이후엔 토글 소관
+    private val _state = MutableStateFlow(State(camOn = video, speakerOn = video))
     val state: StateFlow<State> = _state.asStateFlow()
 
     private var callJob: Job? = null

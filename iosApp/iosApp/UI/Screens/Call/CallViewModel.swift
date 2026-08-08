@@ -23,6 +23,9 @@ final class CallViewModel: MviViewModel {
 
     private let ring: Bool
 
+    /// false면 보이스톡 — 시작 상태(카메라·스피커 OFF)와 벨울림 페이로드에 실린다
+    private let video: Bool
+
     private let observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase
 
     private let observeRtcSignalsUseCase: ObserveRtcSignalsUseCase
@@ -231,13 +234,15 @@ final class CallViewModel: MviViewModel {
             if !hasSignalConnectedOnce {
                 hasSignalConnectedOnce = true
                 // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다).
-                // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다
+                // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다.
+                // video를 실어 수신 측이 보이스톡/페이스톡을 구분한다
                 if ring {
                     let sendCallInviteUseCase = sendCallInviteUseCase
                     let chatRoomId = chatRoomId
+                    let video = video
 
                     Task { @MainActor in
-                        try? await sendCallInviteUseCase.invoke(chatRoomId: chatRoomId)
+                        try? await sendCallInviteUseCase.invoke(chatRoomId: chatRoomId, video: video)
                     }
                 }
             }
@@ -299,6 +304,7 @@ final class CallViewModel: MviViewModel {
     init(
         chatRoomId: Int64,
         ring: Bool,
+        video: Bool,
         observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase,
         observeRtcSignalsUseCase: ObserveRtcSignalsUseCase,
         sendRtcSignalUseCase: SendRtcSignalUseCase,
@@ -308,12 +314,16 @@ final class CallViewModel: MviViewModel {
     ) {
         self.chatRoomId = chatRoomId
         self.ring = ring
+        self.video = video
         self.observeRtcCallEventsUseCase = observeRtcCallEventsUseCase
         self.observeRtcSignalsUseCase = observeRtcSignalsUseCase
         self.sendRtcSignalUseCase = sendRtcSignalUseCase
         self.sendCallInviteUseCase = sendCallInviteUseCase
         self.getIceServersUseCase = getIceServersUseCase
         uiState = UiState(myUserId: getCurrentUserIdUseCase.invoke()?.int64Value, isRinging: ring)
+        // 보이스톡(video=false)은 카메라·스피커폰 OFF로 시작 — 이후엔 토글 소관(Compose 미러)
+        uiState.call.camOn = video
+        uiState.call.speakerOn = video
     }
 
     // 화면 이탈(pop) — 구독을 닫아 통화에서 나가고 네이티브 미디어를 해제한다
@@ -336,7 +346,7 @@ final class CallViewModel: MviViewModel {
         var camOn = true
         // 전면 카메라 여부 — 로컬 미리보기 거울용(Compose는 핸들에 mirror가 실려 별도 필드 없음)
         var frontCamera = true
-        // 스피커폰 출력 — 영상통화라 기본 ON(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
+        // 스피커폰 출력 — 페이스톡은 기본 ON, 보이스톡은 수화구(웹엔 없는 모바일 전용, 라우팅은 미디어 세션 소관)
         var speakerOn = true
         // 화면 공유 중 — 공유 중엔 localVideoTrack이 화면 트랙이고 카메라 토글은 잠긴다(웹 D9)
         var sharing = false
