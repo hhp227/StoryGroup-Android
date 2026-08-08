@@ -37,6 +37,9 @@ struct ChatRoomView: View {
     /// + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
     @State private var showAttachments = false
 
+    /// 첨부 패널 안의 이모지 페이지(카톡 미러) — 패널을 새로 열면 첨부 목록으로 되돌아온다
+    @State private var showEmojiPicker = false
+
     @Environment(\.sgColors) private var colors
 
     /// 통화 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
@@ -209,7 +212,11 @@ struct ChatRoomView: View {
             }
             inputBar(isSending: uiState.isSending, hasPendingAttachment: uiState.pendingAttachment != nil)
             if showAttachments {
-                attachmentPanel
+                if showEmojiPicker {
+                    emojiPanel
+                } else {
+                    attachmentPanel
+                }
             }
         }
         .background(colors.paper.ignoresSafeArea())
@@ -335,13 +342,20 @@ struct ChatRoomView: View {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
             )
+            // 항상 첨부 목록부터 — 이모지 페이지는 패널 안에서 전환된다
+            showEmojiPicker = false
             showAttachments = true
         }
     }
 
-    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 사진/파일/보이스톡/페이스톡을 고른다
+    /// + 버튼으로 여는 첨부 패널(카톡 미러, Compose AttachmentPanel 1:1) — 이모지/사진/파일/보이스톡/페이스톡을 고른다
     private var attachmentPanel: some View {
         HStack {
+            Spacer()
+            // 패널이 이모지 페이지로 전환된다(닫히지 않음) — 선택은 입력창에 덧붙는다
+            attachmentPanelItem(systemImage: "face.smiling", label: "이모지") {
+                showEmojiPicker = true
+            }
             Spacer()
             attachmentPanelItem(systemImage: "photo", label: "사진") {
                 showAttachments = false
@@ -370,6 +384,36 @@ struct ChatRoomView: View {
         .padding(.vertical, 24)
         .background(colors.linen)
     }
+
+    /// 이모지 페이지(카톡 미러, Compose EmojiPanel 1:1) — 선택할 때마다 입력창에 덧붙는다(패널 유지).
+    /// 타이핑 신호는 input onChange가 함께 처리한다
+    private var emojiPanel: some View {
+        ScrollView {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8)) {
+                ForEach(Self.chatEmojis, id: \.self) { emoji in
+                    Button(action: { input += emoji }) {
+                        Text(emoji)
+                            .font(.system(size: 24))
+                            .padding(.vertical, 8)
+                    }
+                }
+            }
+            .padding(12)
+        }
+        .frame(height: 220)
+        .background(colors.linen)
+    }
+
+    /// 이모지 팔레트 — composeApp CHAT_EMOJIS와 1:1 동일 목록(웹엔 없는 모바일 전용)
+    private static let chatEmojis = [
+        "😀", "😂", "🤣", "😊", "😍", "😘", "😎", "🤔",
+        "😅", "😭", "😢", "😡", "😱", "🥳", "😴", "🤗",
+        "👍", "👎", "👏", "🙏", "💪", "🤝", "✌️", "👌",
+        "❤️", "💕", "💖", "💔", "🔥", "⭐", "✨", "🎉",
+        "🎂", "🎁", "🌸", "🌈", "☀️", "🌙", "☕", "🍺",
+        "🍕", "🍗", "🍜", "🍰", "⚽", "🏀", "🎮", "🎵",
+        "🚗", "✈️", "🏠", "💻", "📱", "💤", "💯", "🆗"
+    ]
 
     private func attachmentPanelItem(
         systemImage: String,

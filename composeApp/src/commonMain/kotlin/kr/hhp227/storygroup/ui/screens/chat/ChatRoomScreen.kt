@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.ui.screens.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +39,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
@@ -56,8 +61,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
@@ -95,6 +102,8 @@ fun ChatRoomScreen(
     var input by rememberSaveable { mutableStateOf("") }
     // + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
     var showAttachments by rememberSaveable { mutableStateOf(false) }
+    // 첨부 패널 안의 이모지 페이지(카톡 미러) — 패널을 새로 열면 첨부 목록으로 되돌아온다
+    var showEmojiPicker by rememberSaveable { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     // 허브(세션 VM)에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
@@ -329,20 +338,33 @@ fun ChatRoomScreen(
                 if (showAttachments) {
                     showAttachments = false
                 } else {
-                    // 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러)
+                    // 키보드를 내리고 그 자리에 패널을 띄운다(카톡 미러) — 항상 첨부 목록부터
                     focusManager.clearFocus()
                     keyboard?.hide()
+                    showEmojiPicker = false
                     showAttachments = true
                 }
             },
             onSend = { onAction(ChatRoomViewModel.Action.Send(input)) }
         )
         if (showAttachments) {
-            AttachmentPanel(
-                onPickImage = { showAttachments = false; pickImage() },
-                onPickFile = { showAttachments = false; pickFile() },
-                onStartCall = { video -> showAttachments = false; onStartCall(video) }
-            )
+            if (showEmojiPicker) {
+                // 이모지 선택 — 입력창에 덧붙이고 패널은 유지(연속 선택).
+                // TextField 밖에서 넣는 입력이라 타이핑 신호는 직접 낸다
+                EmojiPanel(
+                    onPick = { emoji ->
+                        input += emoji
+                        onAction(ChatRoomViewModel.Action.Typing)
+                    }
+                )
+            } else {
+                AttachmentPanel(
+                    onPickEmoji = { showEmojiPicker = true },
+                    onPickImage = { showAttachments = false; pickImage() },
+                    onPickFile = { showAttachments = false; pickFile() },
+                    onStartCall = { video -> showAttachments = false; onStartCall(video) }
+                )
+            }
         }
     }
 }
@@ -562,9 +584,10 @@ private fun MessageInputBar(
     }
 }
 
-/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 사진/파일/보이스톡/페이스톡을 고른다 */
+/** + 버튼으로 여는 첨부 패널(카톡 미러) — 키보드 자리에 나타나 이모지/사진/파일/보이스톡/페이스톡을 고른다 */
 @Composable
 private fun AttachmentPanel(
+    onPickEmoji: () -> Unit,
     onPickImage: () -> Unit,
     onPickFile: () -> Unit,
     onStartCall: (video: Boolean) -> Unit,
@@ -574,6 +597,8 @@ private fun AttachmentPanel(
         modifier = modifier.fillMaxWidth().background(SgTheme.colors.linen).padding(vertical = 24.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        // 패널이 이모지 페이지로 전환된다(닫히지 않음) — 선택은 입력창에 덧붙는다
+        AttachmentPanelItem(Icons.Default.EmojiEmotions, "이모지", onPickEmoji)
         AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage)
         AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile)
         // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
@@ -581,6 +606,36 @@ private fun AttachmentPanel(
         AttachmentPanelItem(Icons.Default.Videocam, "페이스톡", { onStartCall(true) })
     }
 }
+
+/** 이모지 페이지(카톡 미러) — 첨부 패널의 이모지 항목이 연다. 선택할 때마다 입력창에 덧붙는다(패널 유지) */
+@Composable
+private fun EmojiPanel(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(8),
+        modifier = modifier.fillMaxWidth().height(220.dp).background(SgTheme.colors.linen),
+        contentPadding = PaddingValues(12.dp)
+    ) {
+        items(CHAT_EMOJIS) { emoji ->
+            Text(
+                emoji,
+                fontSize = 24.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.clickable { onPick(emoji) }.padding(vertical = 8.dp)
+            )
+        }
+    }
+}
+
+// 이모지 팔레트 — iosApp ChatRoomView.chatEmojis와 1:1 동일 목록(웹엔 없는 모바일 전용)
+private val CHAT_EMOJIS = listOf(
+    "😀", "😂", "🤣", "😊", "😍", "😘", "😎", "🤔",
+    "😅", "😭", "😢", "😡", "😱", "🥳", "😴", "🤗",
+    "👍", "👎", "👏", "🙏", "💪", "🤝", "✌️", "👌",
+    "❤️", "💕", "💖", "💔", "🔥", "⭐", "✨", "🎉",
+    "🎂", "🎁", "🌸", "🌈", "☀️", "🌙", "☕", "🍺",
+    "🍕", "🍗", "🍜", "🍰", "⚽", "🏀", "🎮", "🎵",
+    "🚗", "✈️", "🏠", "💻", "📱", "💤", "💯", "🆗"
+)
 
 @Composable
 private fun AttachmentPanelItem(
