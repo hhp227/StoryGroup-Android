@@ -38,8 +38,9 @@ interface RtcRepository {
      * 통화 벨울림(휘발) — DM은 상대 1명, 그룹 방은 방 멤버 전원의 개인 알림 큐로 CALL_INVITE가
      * 릴레이된다(페이스톡 미러). 진행 중 통화 합류면 서버가 다시 울리지 않는다.
      * 수락/거절 시그널은 없다 — 건 쪽은 PEERS에 상대가 안 오면 그만(웹 D6 미러).
+     * video=false는 보이스톡 — 수신 측 배너 표시·카메라 OFF 입장에 쓰인다.
      */
-    suspend fun sendCallInvite(chatRoomId: Long)
+    suspend fun sendCallInvite(chatRoomId: Long, video: Boolean)
 
     /** ICE 서버 구성 조회 — 실패 시 호출 측이 STUN 폴백을 쓴다(조회 실패가 통화를 막으면 안 된다) */
     suspend fun getIceServers(): Result<List<IceServer>>

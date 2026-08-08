@@ -58,6 +58,9 @@ final class RtcMediaSession {
 
     private var camEnabled = true
 
+    /// 카메라 캡처가 실제로 도는지 — 보이스톡(camEnabled=false 시작)은 캡처러만 만들어 두고 열지 않는다
+    private var captureRunning = false
+
     // 현재 카메라가 전면인지 — onCameraFacing으로 뷰 거울에 반영한다(전면만 거울)
     private var frontCamera = true
 
@@ -119,9 +122,17 @@ final class RtcMediaSession {
         capturer = cameraCapturer
         localVideoTrack = track
         frontCamera = isFront
+        captureRunning = camEnabled
+        let camOn = camEnabled
+
         lock.unlock()
+        // 보이스톡(camEnabled=false) 시작이면 카메라를 아직 열지 않는다 — 켤 때 lazy 시작(setCamEnabled).
+        // 트랙·sender는 미리 만들어 두므로 켤 때 재협상이 필요 없다(Android 미러)
+        guard camOn else { return }
+
         cameraCapturer.startCapture(with: device, format: format, fps: fps)
         DispatchQueue.main.async { [weak self] in
+            // 카메라가 실제로 도는 동안만 로컬 트랙 발행 — 보이스톡에선 전환/공유 버튼이 숨는다
             self?.onLocalVideoTrack?(track)
             // 전면이 없는 기기(후면 시작)면 처음부터 거울 없이 그린다(Android 미러)
             self?.onCameraFacing?(isFront)
@@ -206,6 +217,34 @@ final class RtcMediaSession {
     func setCamEnabled(_ enabled: Bool) {
         camEnabled = enabled
         localVideoTrack?.isEnabled = enabled
+        // 보이스톡 → 페이스톡 전환: 시작 때 열지 않은 카메라를 이때 연다 —
+        // sender에는 트랙이 이미 실려 있어 재협상 없이 프레임만 흐르기 시작한다(Android 미러)
+        lock.lock()
+        guard enabled, !captureRunning, !disposed,
+              let cameraCapturer = capturer, let track = localVideoTrack
+        else {
+            lock.unlock()
+            return
+        }
+        let sharing = screenVideoTrack != nil
+
+        lock.unlock()
+        let devices = RTCCameraVideoCapturer.captureDevices()
+        guard let device = devices.first(where: { $0.position == .front }) ?? devices.first,
+              let format = Self.selectFormat(for: device)
+        else { return }
+        let isFront = device.position == .front
+
+        cameraCapturer.startCapture(with: device, format: format, fps: Self.selectFps(for: format))
+        lock.lock()
+        captureRunning = true
+        frontCamera = isFront
+        lock.unlock()
+        DispatchQueue.main.async { [weak self] in
+            // 공유 중이면 로컬 표시는 화면 트랙 유지 — 복귀(stopScreenShare) 때 카메라 트랙이 실린다
+            if !sharing { self?.onLocalVideoTrack?(track) }
+            self?.onCameraFacing?(isFront)
+        }
     }
 
     /// 전/후면 카메라 전환 — 반대편 카메라가 없으면 무시(시뮬레이터 등). 이미 도는 캡처러에

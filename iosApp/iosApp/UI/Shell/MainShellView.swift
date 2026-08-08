@@ -85,8 +85,14 @@ struct MainShellView: View {
                         onAccept: {
                             incomingCallViewModel.onAction(.dismiss)
                             // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false).
-                            // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(Compose와 동일 규칙)
-                            acceptedCall = CallRef(chatRoomId: call.chatRoomId, title: call.roomName ?? call.callerName, ring: false)
+                            // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(Compose와 동일 규칙).
+                            // 보이스톡이면 수신 측도 카메라 OFF로 입장한다(발신 모드 미러)
+                            acceptedCall = CallRef(
+                                chatRoomId: call.chatRoomId,
+                                title: call.roomName ?? call.callerName,
+                                ring: false,
+                                video: call.video
+                            )
                         },
                         onDecline: { incomingCallViewModel.onAction(.dismiss) }
                     )

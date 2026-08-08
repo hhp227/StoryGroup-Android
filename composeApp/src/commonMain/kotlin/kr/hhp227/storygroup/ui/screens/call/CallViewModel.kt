@@ -67,8 +67,9 @@ class CallViewModel(
         mediaSessionFactory = rtcMediaSessionFactory,
         video = video,
         // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다).
-        // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다
-        onFirstSignalConnected = { if (ring) sendCallInviteUseCase(chatRoomId) }
+        // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다.
+        // video를 실어 수신 측이 보이스톡/페이스톡을 구분한다
+        onFirstSignalConnected = { if (ring) sendCallInviteUseCase(chatRoomId, video) }
     )
 
     // 발신 무응답 타이머 — 상대가 한 번이라도 PEERS에 들어오면 해제(중도 이탈에 재시작 없음)

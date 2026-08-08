@@ -284,8 +284,11 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                     onAccept = {
                         incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss)
                         // 수락 = 통화 화면 진입(구독=입장) — 벨울림은 다시 보내지 않는다(ring=false).
-                        // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(채팅방 라우트와 동일 규칙)
-                        navController.navigate(CallRoute(call.chatRoomId, call.roomName ?: call.callerName, ring = false))
+                        // 제목은 그룹 방이면 방(그룹) 이름, DM이면 발신자 이름(채팅방 라우트와 동일 규칙).
+                        // 보이스톡이면 수신 측도 카메라 OFF로 입장한다(발신 모드 미러)
+                        navController.navigate(
+                            CallRoute(call.chatRoomId, call.roomName ?: call.callerName, ring = false, video = call.video)
+                        )
                     },
                     onDecline = { incomingCallViewModel.onAction(IncomingCallViewModel.Action.Dismiss) },
                     modifier = Modifier

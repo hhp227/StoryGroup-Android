@@ -440,9 +440,12 @@ struct SGIncomingCallBanner: View {
         SGCard {
             HStack(spacing: 12) {
                 SGAvatar(name: call.callerName)
+                // 보이스톡이면 문구로 구분 — 수락 시 카메라 OFF 입장과 짝을 이룬다(Compose 미러)
+                let kind = call.video ? "통화" : "보이스톡"
+
                 Text(
                     // 그룹 방이면 어느 방의 통화인지 함께 — DM은 발신자 이름만(Compose 미러)
-                    call.roomName.map { "\($0) — \(call.callerName)님의 통화" } ?? "\(call.callerName)님의 통화"
+                    call.roomName.map { "\($0) — \(call.callerName)님의 \(kind)" } ?? "\(call.callerName)님의 \(kind)"
                 )
                 .font(.subheadline.bold())
                 .foregroundColor(colors.ink)

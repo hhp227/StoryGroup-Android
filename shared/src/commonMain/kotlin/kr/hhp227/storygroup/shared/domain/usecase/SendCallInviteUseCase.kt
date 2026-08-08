@@ -11,8 +11,9 @@ import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 class SendCallInviteUseCase(
     private val rtcRepository: RtcRepository
 ) {
+    /** video=false는 보이스톡 — 수신 측 배너 표시·카메라 OFF 입장에 쓰인다 */
     @Throws(Exception::class)
-    suspend operator fun invoke(chatRoomId: Long) {
-        rtcRepository.sendCallInvite(chatRoomId)
+    suspend operator fun invoke(chatRoomId: Long, video: Boolean) {
+        rtcRepository.sendCallInvite(chatRoomId, video)
     }
 }

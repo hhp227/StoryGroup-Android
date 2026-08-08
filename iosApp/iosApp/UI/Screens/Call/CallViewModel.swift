@@ -23,6 +23,9 @@ final class CallViewModel: MviViewModel {
 
     private let ring: Bool
 
+    /// false면 보이스톡 — 시작 상태(카메라·스피커 OFF)와 벨울림 페이로드에 실린다
+    private let video: Bool
+
     private let observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase
 
     private let observeRtcSignalsUseCase: ObserveRtcSignalsUseCase
@@ -231,13 +234,15 @@ final class CallViewModel: MviViewModel {
             if !hasSignalConnectedOnce {
                 hasSignalConnectedOnce = true
                 // 발신이면 벨울림 — 시그널 세션이 살아있는 최초 연결 시점에 1회(재연결 때 다시 울리지 않는다).
-                // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다
+                // 그룹 방은 서버가 방 멤버 전원에게 팬아웃하고, 진행 중 통화 합류면 서버 게이트가 걸러준다.
+                // video를 실어 수신 측이 보이스톡/페이스톡을 구분한다
                 if ring {
                     let sendCallInviteUseCase = sendCallInviteUseCase
                     let chatRoomId = chatRoomId
+                    let video = video
 
                     Task { @MainActor in
-                        try? await sendCallInviteUseCase.invoke(chatRoomId: chatRoomId)
+                        try? await sendCallInviteUseCase.invoke(chatRoomId: chatRoomId, video: video)
                     }
                 }
             }
@@ -309,6 +314,7 @@ final class CallViewModel: MviViewModel {
     ) {
         self.chatRoomId = chatRoomId
         self.ring = ring
+        self.video = video
         self.observeRtcCallEventsUseCase = observeRtcCallEventsUseCase
         self.observeRtcSignalsUseCase = observeRtcSignalsUseCase
         self.sendRtcSignalUseCase = sendRtcSignalUseCase
