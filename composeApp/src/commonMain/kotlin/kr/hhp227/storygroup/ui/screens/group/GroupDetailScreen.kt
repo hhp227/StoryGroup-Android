@@ -90,6 +90,7 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             createGroupInviteUseCase = container.createGroupInviteUseCase,
             openDirectRoomUseCase = container.openDirectRoomUseCase,
             getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
+            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase = container.observePostUpdatesUseCase
@@ -301,10 +302,10 @@ private fun GroupDetailContent(
                 }
             }
         }
-        if (uiState.members.isNotEmpty()) {
+        if (uiState.visibleMembers.isNotEmpty()) {
             item(key = "members") {
                 MemberStrip(
-                    members = uiState.members,
+                    members = uiState.visibleMembers,
                     myUserId = uiState.myUserId,
                     onMemberClick = { dmTargetMember = it },
                     modifier = Modifier.padding(horizontal = 16.dp)

@@ -25,22 +25,8 @@ struct PostDetailView: View {
     /// 더보기 메뉴에서 고른 "수정" — 메뉴 안에서는 NavigationLink가 동작하지 않아 상태로 push한다
     @State private var showEdit = false
 
-    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
-        self.onDeleted = onDeleted
-        self.container = container
-        self.groupId = groupId
-        self.postId = postId
-        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
-            groupId: groupId,
-            postId: postId,
-            getPostDetailUseCase: container.getPostDetailUseCase,
-            setPostLikedUseCase: container.setPostLikedUseCase,
-            createCommentUseCase: container.createCommentUseCase,
-            deleteCommentUseCase: container.deleteCommentUseCase,
-            deletePostUseCase: container.deletePostUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
-    }
+    /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
+    @State private var confirmAction: ConfirmAction?
 
     /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
@@ -71,6 +57,19 @@ struct PostDetailView: View {
         let uiState = postDetailViewModel.uiState
 
         VStack(spacing: 0) {
+            if let message = uiState.notice {
+                HStack {
+                    Text(message).font(.caption).foregroundColor(colors.moss)
+                    Spacer()
+                    Button("닫기") { postDetailViewModel.onAction(.clearNotice) }
+                        .font(.caption.bold())
+                        .foregroundColor(colors.accent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(colors.linen)
+            }
+
             if let message = uiState.error {
                 HStack {
                     Text(message).font(.caption).foregroundColor(colors.ink)
@@ -120,33 +119,67 @@ struct PostDetailView: View {
             composer(uiState)
         }
         .background(colors.paper)
+        .overlay {
+            if let action = confirmAction {
+                ActionConfirmDialog(
+                    title: action == .report ? "게시글 신고" : "사용자 차단",
+                    message: action == .report
+                        ? "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
+                        : "\(uiState.post?.authorName ?? "")님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다.",
+                    confirmText: action == .report ? "신고" : "차단",
+                    isLoading: action == .report ? uiState.isReporting : uiState.isBlocking,
+                    onDismiss: { confirmAction = nil },
+                    onConfirm: {
+                        confirmAction = nil
+                        postDetailViewModel.onAction(action == .report ? .reportPost : .blockAuthor)
+                    }
+                )
+            }
+        }
         .navigationTitle("게시글")
         .navigationBarTitleDisplayMode(.inline)
-        // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다.
-        // 조건은 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 조건 분기(buildIf)는 iOS 16+라
+        // ⚠️조건 분기는 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 buildIf는 iOS 16+라
         // .toolbar { if ... } 는 배포 타깃 15.0에서 컴파일되지 않는다(GroupDetailView와 같은 형태)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                if uiState.isMyPost {
-                    // 두 액션을 상단바에 늘어놓지 않고 더보기 한 칸에 모은다(Compose DropdownMenu와 미러).
-                    // 삭제는 destructive 역할로 빨갛게 — Compose는 같은 자리를 sg.rust로 칠한다
-                    Menu {
+                // 더보기는 항상 노출하고 메뉴 내용만 갈린다 — 내 글이면 수정·삭제,
+                // 남의 글이면 신고·차단(Compose DropdownMenu와 미러). 권한은 서버가 판정한다.
+                // 파괴적 항목은 destructive 역할로 빨갛게 — Compose는 같은 자리를 sg.rust로 칠한다
+                Menu {
+                    if uiState.isMyPost {
                         Button("수정") { showEdit = true }
                         Button(role: .destructive) {
                             postDetailViewModel.onAction(.deletePost)
                         } label: {
                             Text("삭제")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                    } else {
+                        Button(role: .destructive) {
+                            confirmAction = .report
+                        } label: {
+                            Text("신고하기")
+                        }
+                        Button(role: .destructive) {
+                            confirmAction = .block
+                        } label: {
+                            Text("차단하기")
+                        }
+                        // 글이 아직 안 실렸으면 작성자를 모르므로 차단할 수 없다
+                        .disabled(uiState.post == nil)
                     }
-                    .disabled(uiState.isDeletingPost)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
+                .disabled(uiState.isDeletingPost || uiState.isBlocking)
             }
         }
         .onReceive(postDetailViewModel.event) { event in
             switch event {
             case .postDeleted:
+                onDeleted()
+                dismiss()
+            // 차단하면 그 사용자의 글이 목록에서도 사라진다 — 삭제와 같은 복귀·갱신 경로
+            case .authorBlocked:
                 onDeleted()
                 dismiss()
             // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
@@ -266,5 +299,84 @@ struct PostDetailView: View {
             .padding(.vertical, 8)
         }
         .background(colors.paper)
+    }
+    
+    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
+        self.onDeleted = onDeleted
+        self.container = container
+        self.groupId = groupId
+        self.postId = postId
+        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
+            groupId: groupId,
+            postId: postId,
+            getPostDetailUseCase: container.getPostDetailUseCase,
+            setPostLikedUseCase: container.setPostLikedUseCase,
+            createCommentUseCase: container.createCommentUseCase,
+            deleteCommentUseCase: container.deleteCommentUseCase,
+            deletePostUseCase: container.deletePostUseCase,
+            reportPostUseCase: container.reportPostUseCase,
+            blockUserUseCase: container.blockUserUseCase,
+            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+        ))
+    }
+}
+
+/// 더보기 메뉴의 되돌릴 수 없는 액션 — 확인 다이얼로그를 한 번 거친다(Compose ConfirmAction 미러)
+private enum ConfirmAction {
+    case report
+    case block
+}
+
+/// 신고·차단 확인 다이얼로그 — Compose ActionConfirmDialog 미러(GroupDetailView의 DmConfirmDialog와
+/// 같은 반투명 배경+중앙 카드). 실패 메시지는 다이얼로그가 아니라 화면 상단 에러 배너에 뜬다.
+private struct ActionConfirmDialog: View {
+    let title: String
+
+    let message: String
+
+    let confirmText: String
+
+    let isLoading: Bool
+
+    let onDismiss: () -> Void
+
+    let onConfirm: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            SGCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(colors.ink)
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundColor(colors.ink)
+                    HStack(spacing: 8) {
+                        Button(action: onDismiss) {
+                            Text("취소")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                // SGPrimaryButton과 같은 높이로 나란히 맞춘다
+                                .frame(height: 48)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                                        .stroke(colors.stoneBorder, lineWidth: 1)
+                                )
+                                .foregroundColor(colors.ink)
+                        }
+                        .buttonStyle(.plain)
+                        SGPrimaryButton(title: confirmText, isLoading: isLoading, action: onConfirm)
+                    }
+                }
+                .padding(16)
+            }
+            .padding(24)
+        }
     }
 }

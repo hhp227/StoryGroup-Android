@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Comment
 import kr.hhp227.storygroup.shared.domain.model.Post
+import kr.hhp227.storygroup.shared.domain.usecase.BlockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateCommentUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeleteCommentUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeletePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
@@ -25,6 +27,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 게시글 상세 — 본문·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
  * 진입 시 스스로 로드한다(피드가 넘겨준 값을 쓰지 않는다 — 그 사이 수정·삭제됐을 수 있다).
  * 삭제 성공은 Event.PostDeleted 일회성 발화 — 호출부가 복귀+피드 갱신을 처리한다.
+ * 남의 글이면 신고·차단을 할 수 있다(웹 게시글 상세 미러) — 차단은 그 글이 목록에서 사라지므로
+ * 삭제와 같은 복귀·갱신 경로(Event.AuthorBlocked)를 탄다.
  * iosApp PostDetailViewModel.swift와 1:1 미러
  */
 class PostDetailViewModel(
@@ -35,6 +39,8 @@ class PostDetailViewModel(
     private val createCommentUseCase: CreateCommentUseCase,
     private val deleteCommentUseCase: DeleteCommentUseCase,
     private val deletePostUseCase: DeletePostUseCase,
+    private val reportPostUseCase: ReportPostUseCase,
+    private val blockUserUseCase: BlockUserUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel(), MviViewModel<PostDetailViewModel.UiState, PostDetailViewModel.Action, PostDetailViewModel.Event> {
     private val myUserId = getCurrentUserIdUseCase()
@@ -57,7 +63,10 @@ class PostDetailViewModel(
             is Action.SetReplyTo -> _uiState.update { it.copy(replyTo = action.comment) }
             is Action.DeleteComment -> deleteComment(action.commentId)
             Action.DeletePost -> deletePost()
+            Action.ReportPost -> reportPost()
+            Action.BlockAuthor -> blockAuthor()
             Action.ClearError -> _uiState.update { it.copy(error = null) }
+            Action.ClearNotice -> _uiState.update { it.copy(notice = null) }
         }
     }
 
@@ -177,9 +186,45 @@ class PostDetailViewModel(
         }
     }
 
+    private fun reportPost() {
+        if (_uiState.value.isReporting) return
+
+        _uiState.update { it.copy(isReporting = true, error = null, notice = null) }
+        viewModelScope.launch {
+            runCatching { reportPostUseCase(groupId, postId) }
+                .onSuccess {
+                    // 화면에서 달라지는 게 없으므로 접수됐다는 안내가 유일한 피드백이다(웹 미러)
+                    _uiState.update { it.copy(isReporting = false, notice = "신고가 접수되었습니다.") }
+                }
+                .onFailure { e ->
+                    // 이미 대기중 신고가 있으면 409 — 서버 메시지를 그대로 보여준다
+                    _uiState.update { it.copy(isReporting = false, error = e.message ?: "신고에 실패했습니다.") }
+                }
+        }
+    }
+
+    private fun blockAuthor() {
+        val authorId = _uiState.value.post?.userId ?: return
+
+        if (_uiState.value.isBlocking) return
+        _uiState.update { it.copy(isBlocking = true, error = null, notice = null) }
+        viewModelScope.launch {
+            runCatching { blockUserUseCase(authorId) }
+                .onSuccess {
+                    _uiState.update { it.copy(isBlocking = false) }
+                    _event.tryEmit(Event.AuthorBlocked)
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: "차단에 실패했습니다.") }
+                }
+        }
+    }
+
     data class UiState(
         val isLoading: Boolean = false,
         val error: String? = null,
+        /** 완료 안내(신고 접수 등) — 에러와 같은 자리에 다른 톤으로 그린다 */
+        val notice: String? = null,
         val post: Post? = null,
         val likeCount: Int = 0,
         val isLiked: Boolean = false,
@@ -189,6 +234,8 @@ class PostDetailViewModel(
         val replyTo: Comment? = null,
         val isSubmittingComment: Boolean = false,
         val isDeletingPost: Boolean = false,
+        val isReporting: Boolean = false,
+        val isBlocking: Boolean = false,
         val myUserId: Long? = null
     ) {
         val isMyPost: Boolean get() = post != null && post.userId == myUserId
@@ -207,11 +254,21 @@ class PostDetailViewModel(
         data class SetReplyTo(val comment: Comment?) : Action
         data class DeleteComment(val commentId: Long) : Action
         data object DeletePost : Action
+
+        /** 게시글 신고 — 남의 글에만 노출된다(권한 판정은 서버) */
+        data object ReportPost : Action
+
+        /** 작성자 차단 — 남의 글에만 노출된다 */
+        data object BlockAuthor : Action
         data object ClearError : Action
+        data object ClearNotice : Action
     }
 
     sealed interface Event {
         data object PostDeleted : Event
+
+        /** 차단 성공 — 그 사용자의 글은 목록에서도 사라지므로 삭제와 같은 복귀·갱신 경로를 탄다 */
+        data object AuthorBlocked : Event
         data object CommentCreated : Event
     }
 }

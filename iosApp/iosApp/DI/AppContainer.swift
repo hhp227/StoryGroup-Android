@@ -37,6 +37,14 @@ final class AppContainer {
     let deleteCommentUseCase: DeleteCommentUseCase
 
     let deletePostUseCase: DeletePostUseCase
+
+    // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
+    let reportPostUseCase: ReportPostUseCase
+
+    let blockUserUseCase: BlockUserUseCase
+
+    // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
+    let getBlockedUsersUseCase: GetBlockedUsersUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
     let createGroupUseCase: CreateGroupUseCase
@@ -123,6 +131,9 @@ final class AppContainer {
         createCommentUseCase = CreateCommentUseCase(postRepository: postRepository)
         deleteCommentUseCase = DeleteCommentUseCase(postRepository: postRepository)
         deletePostUseCase = DeletePostUseCase(postRepository: postRepository)
+        reportPostUseCase = ReportPostUseCase(postRepository: postRepository)
+        blockUserUseCase = BlockUserUseCase(userRepository: userRepository)
+        getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository: userRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)

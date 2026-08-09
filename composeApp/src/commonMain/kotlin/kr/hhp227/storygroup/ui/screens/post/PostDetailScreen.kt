@@ -23,6 +23,7 @@ import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
@@ -46,11 +47,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.Comment
 import kr.hhp227.storygroup.ui.components.SgAvatar
+import kr.hhp227.storygroup.ui.components.SgCard
+import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -69,6 +73,8 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
             createCommentUseCase = container.createCommentUseCase,
             deleteCommentUseCase = container.deleteCommentUseCase,
             deletePostUseCase = container.deletePostUseCase,
+            reportPostUseCase = container.reportPostUseCase,
+            blockUserUseCase = container.blockUserUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
     }
@@ -99,6 +105,8 @@ fun PostDetailScreen(
     var commentText by rememberSaveable { mutableStateOf("") }
     // 상단바 더보기 메뉴 — 열린 채로 화면을 벗어나면 닫히는 게 맞아 remember면 충분하다
     var menuExpanded by remember { mutableStateOf(false) }
+    // 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
+    var confirmAction by remember { mutableStateOf<ConfirmAction?>(null) }
 
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
@@ -113,6 +121,8 @@ fun PostDetailScreen(
         viewModel.event.collect { event ->
             when (event) {
                 PostDetailViewModel.Event.PostDeleted -> onDeleted()
+                // 차단하면 그 사용자의 글이 목록에서도 사라진다 — 삭제와 같은 복귀·갱신 경로
+                PostDetailViewModel.Event.AuthorBlocked -> onDeleted()
                 // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
                 PostDetailViewModel.Event.CommentCreated -> commentText = ""
             }
@@ -128,15 +138,18 @@ fun PostDetailScreen(
                 }
             },
             actions = {
-                // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다.
-                // 두 액션을 상단바에 늘어놓지 않고 더보기(⋮) 한 칸에 모은다(iosApp의 Menu와 미러)
-                if (uiState.isMyPost) {
-                    // 메뉴가 이 아이콘 바로 아래에 뜨도록 Box로 묶어 앵커를 잡는다
-                    Box {
-                        IconButton(onClick = { menuExpanded = true }, enabled = !uiState.isDeletingPost) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "더보기")
-                        }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                // 더보기(⋮)는 항상 노출하고 메뉴 내용만 갈린다 — 내 글이면 수정·삭제,
+                // 남의 글이면 신고·차단(웹 게시글 상세+UserActionMenu 미러). 권한은 서버가 판정한다.
+                // 메뉴가 이 아이콘 바로 아래에 뜨도록 Box로 묶어 앵커를 잡는다
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        enabled = !uiState.isDeletingPost && !uiState.isBlocking
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "더보기")
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        if (uiState.isMyPost) {
                             DropdownMenuItem(
                                 onClick = {
                                     menuExpanded = false
@@ -153,11 +166,42 @@ fun PostDetailScreen(
                             ) {
                                 Text("삭제", style = SgTheme.typography.bodyMedium, color = sg.rust)
                             }
+                        } else {
+                            DropdownMenuItem(
+                                onClick = {
+                                    menuExpanded = false
+                                    confirmAction = ConfirmAction.Report
+                                }
+                            ) {
+                                Text("신고하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                            }
+                            DropdownMenuItem(
+                                // 글이 아직 안 실렸으면 작성자를 모르므로 차단할 수 없다
+                                enabled = uiState.post != null,
+                                onClick = {
+                                    menuExpanded = false
+                                    confirmAction = ConfirmAction.Block
+                                }
+                            ) {
+                                Text("차단하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                            }
                         }
                     }
                 }
             }
         )
+
+        uiState.notice?.let { message ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().background(sg.linen).padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(message, style = SgTheme.typography.bodySmall, color = sg.moss, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onAction(PostDetailViewModel.Action.ClearNotice) }) {
+                    Text("닫기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                }
+            }
+        }
 
         uiState.error?.let { message ->
             Row(
@@ -233,6 +277,71 @@ fun PostDetailScreen(
             onCancelReply = { onAction(PostDetailViewModel.Action.SetReplyTo(null)) },
             onSubmit = { onAction(PostDetailViewModel.Action.SubmitComment(commentText)) }
         )
+    }
+
+    confirmAction?.let { action ->
+        val authorName = uiState.post?.authorName ?: ""
+
+        ActionConfirmDialog(
+            title = if (action == ConfirmAction.Report) "게시글 신고" else "사용자 차단",
+            message = when (action) {
+                ConfirmAction.Report -> "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
+                ConfirmAction.Block ->
+                    "${authorName}님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다."
+            },
+            confirmText = if (action == ConfirmAction.Report) "신고" else "차단",
+            isLoading = if (action == ConfirmAction.Report) uiState.isReporting else uiState.isBlocking,
+            onDismiss = { confirmAction = null },
+            onConfirm = {
+                confirmAction = null
+                onAction(
+                    if (action == ConfirmAction.Report) {
+                        PostDetailViewModel.Action.ReportPost
+                    } else {
+                        PostDetailViewModel.Action.BlockAuthor
+                    }
+                )
+            }
+        )
+    }
+}
+
+/** 더보기 메뉴의 되돌릴 수 없는 액션 — 확인 다이얼로그를 한 번 거친다 */
+private enum class ConfirmAction { Report, Block }
+
+/**
+ * 신고·차단 확인 다이얼로그 — GroupDetailScreen의 DmConfirmDialog와 같은 카드형.
+ * 실패 메시지는 다이얼로그가 아니라 화면 상단 에러 배너에 뜬다(닫고 나서 결과가 오기 때문).
+ */
+@Composable
+private fun ActionConfirmDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sg = SgTheme.colors
+
+    Dialog(onDismissRequest = onDismiss) {
+        SgCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(title, style = SgTheme.typography.titleMedium, color = sg.ink, fontWeight = FontWeight.Bold)
+                Text(message, style = SgTheme.typography.bodyMedium, color = sg.ink)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = onDismiss, shape = SgTheme.shapes.button, modifier = Modifier.weight(1f)) {
+                        Text("취소", color = sg.ink)
+                    }
+                    SgPrimaryButton(
+                        text = confirmText,
+                        onClick = onConfirm,
+                        isLoading = isLoading,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 

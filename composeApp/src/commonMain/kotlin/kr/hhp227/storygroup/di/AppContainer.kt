@@ -22,6 +22,7 @@ import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.BlockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
@@ -34,6 +35,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetBlockedUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
@@ -69,6 +71,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
@@ -121,6 +124,11 @@ class AppContainer(
     val createCommentUseCase = CreateCommentUseCase(postRepository)
     val deleteCommentUseCase = DeleteCommentUseCase(postRepository)
     val deletePostUseCase = DeletePostUseCase(postRepository)
+    // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
+    val reportPostUseCase = ReportPostUseCase(postRepository)
+    val blockUserUseCase = BlockUserUseCase(userRepository)
+    // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
+    val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
