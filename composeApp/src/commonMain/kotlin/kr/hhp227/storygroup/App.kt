@@ -42,6 +42,7 @@ import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
+import kr.hhp227.storygroup.ui.screens.post.PostDetailScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
 import kr.hhp227.storygroup.ui.theme.NightMode
@@ -66,9 +67,19 @@ internal data class GroupDetailRoute(val groupId: Long)
 @Serializable
 internal data class ChatRoomRoute(val chatRoomId: Long, val groupId: Long?, val title: String)
 
-/** 게시글 작성 — groupId null이면 라운지(홈 피드)에 게시(웹 메인 피드 폼 미러) */
+/**
+ * 게시글 작성 — groupId null이면 라운지(홈 피드)에 게시(웹 메인 피드 폼 미러).
+ * postId가 있으면 같은 폼이 수정 모드로 동작한다(수정은 그 글의 groupId로 들어오므로 groupId도 항상 있다).
+ */
 @Serializable
-internal data class CreatePostRoute(val groupId: Long?)
+internal data class CreatePostRoute(val groupId: Long?, val postId: Long? = null)
+
+/**
+ * 게시글 상세 — 본문·좋아요·댓글(웹 /groups/{id}/posts/{postId} 미러).
+ * 라운지 글도 라운지 그룹 id로 들어오므로 홈·그룹 피드가 같은 목적지를 쓴다.
+ */
+@Serializable
+internal data class PostDetailRoute(val groupId: Long, val postId: Long)
 
 /** 계정 설정 — 프로필 수정+비밀번호 변경(웹 /settings/profile·password 미러) */
 @Serializable
@@ -157,6 +168,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 themeState = themeState,
                 onOpenGroupDetail = { group -> navController.navigate(GroupDetailRoute(group.id)) },
                 onCreatePost = { navController.navigate(CreatePostRoute(groupId = null)) },
+                onOpenPostDetail = { groupId, postId -> navController.navigate(PostDetailRoute(groupId, postId)) },
                 onOpenChatRoom = { chatRoomId, groupId, title ->
                     navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
                 },
@@ -183,6 +195,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             groupId = route.groupId,
                             onBack = { navController.popBackStack() },
                             onCreatePost = { navController.navigate(CreatePostRoute(groupId = route.groupId)) },
+                            onOpenPostDetail = { postId -> navController.navigate(PostDetailRoute(route.groupId, postId)) },
                             // 상단바 채팅 버튼(기본 방)과 멤버 스트립 DM — 셸의 채팅 허브와 같은 라우트로 들어간다
                             onOpenChatRoom = { chatRoomId, groupId, title ->
                                 navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
@@ -255,12 +268,40 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                         )
                     }
                 }
+                composable<PostDetailRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<PostDetailRoute>()
+                    // 수정 화면이 남긴 결과 수신 — 돌아오면 상세를 다시 읽어 바뀐 본문을 보여준다
+                    val postUpdated by backStackEntry.savedStateHandle
+                        .getStateFlow(POST_CREATED_KEY, false)
+                        .collectAsState()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        PostDetailScreen(
+                            groupId = route.groupId,
+                            postId = route.postId,
+                            onBack = { navController.popBackStack() },
+                            onEdit = { navController.navigate(CreatePostRoute(route.groupId, route.postId)) },
+                            // 삭제하면 돌아갈 피드에서 그 글이 사라져야 한다 — 어디서 들어왔는지 모르므로
+                            // 홈·그룹 양쪽 신호를 다 세우고 나간다(작성 성공과 같은 갱신 경로).
+                            onDeleted = {
+                                homeRefreshPending = true
+                                navController.previousBackStackEntry?.savedStateHandle?.set(POST_CREATED_KEY, true)
+                                navController.popBackStack()
+                            },
+                            refreshRequested = postUpdated,
+                            onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
                 composable<CreatePostRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<CreatePostRoute>()
 
                     Surface(color = SgTheme.colors.paper) {
                         CreatePostScreen(
                             groupId = route.groupId,
+                            postId = route.postId,
                             onBack = { navController.popBackStack() },
                             onCreated = {
                                 if (route.groupId == null) {

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
+import app.cash.paging.map
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -23,12 +24,14 @@ import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetBlockedUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
@@ -53,8 +56,10 @@ class GroupDetailViewModel(
     private val createGroupInviteUseCase: CreateGroupInviteUseCase,
     private val openDirectRoomUseCase: OpenDirectRoomUseCase,
     private val getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
+    private val getBlockedUsersUseCase: GetBlockedUsersUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
-    getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+    getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
+    observePostUpdatesUseCase: ObservePostUpdatesUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -64,6 +69,17 @@ class GroupDetailViewModel(
 
     private fun setPagingData(pagingData: PagingData<Post>) {
         _uiState.update { it.copy(pagingData = pagingData) }
+    }
+
+    /**
+     * 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
+     * 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
+     * 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
+     */
+    private fun applyPostUpdate(post: Post) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.map { if (it.id == post.id) post else it })
+        }
     }
 
     override fun onAction(action: Action) {
@@ -96,12 +112,17 @@ class GroupDetailViewModel(
                     else emptyList()
                 // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨고 다음 Refresh가 따라잡는다)
                 val defaultChatRoomId = runCatching { getGroupDefaultChatRoomUseCase(groupId) }.getOrNull()
+                // 서버는 멤버 목록에서 차단 사용자를 빼주지 않는다 — 스트립에서 직접 걸러내려고 함께 읽는다.
+                // 실패해도 상세는 그린다(안 걸러진 멤버가 보일 뿐, 다음 Refresh가 따라잡는다)
+                val blockedUserIds = runCatching { getBlockedUsersUseCase().map { blocked -> blocked.userId }.toSet() }
+                    .getOrDefault(emptySet())
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         group = group,
                         members = members,
+                        blockedUserIds = blockedUserIds,
                         joinRequests = joinRequests,
                         defaultChatRoomId = defaultChatRoomId
                     )
@@ -206,6 +227,10 @@ class GroupDetailViewModel(
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
             .launchIn(viewModelScope)
+        // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
+        observePostUpdatesUseCase()
+            .onEach(::applyPostUpdate)
+            .launchIn(viewModelScope)
     }
 
     data class UiState(
@@ -217,6 +242,8 @@ class GroupDetailViewModel(
         val defaultChatRoomId: Long? = null,
         val pagingData: PagingData<Post> = PagingData.empty(),
         val members: List<GroupMember> = emptyList(),
+        // 내가 차단한 사용자 — 서버가 멤버 목록에선 걸러주지 않아 화면이 직접 뺀다
+        val blockedUserIds: Set<Long> = emptySet(),
         // 모더레이터에게만 채워진다 — 일반 멤버는 항상 빈 목록이라 인박스가 그려지지 않는다
         val joinRequests: List<GroupJoinRequest> = emptyList(),
         // 승인/거절 버튼 로딩 표시용 — 동시에 하나만 처리(웹 busyFor 미러)
@@ -235,6 +262,12 @@ class GroupDetailViewModel(
     ) {
         // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정
         val canModerate: Boolean get() = group?.canModerate == true
+
+        /**
+         * 멤버 스트립에 그릴 멤버 — 차단한 사용자는 뺀다(차단=내 화면에서 숨김).
+         * 탭하면 DM인데 차단하면 DM 자체가 막히므로, 남겨두면 열 수 없는 진입점이 된다.
+         */
+        val visibleMembers: List<GroupMember> get() = members.filterNot { it.userId in blockedUserIds }
     }
 
     sealed interface Action {

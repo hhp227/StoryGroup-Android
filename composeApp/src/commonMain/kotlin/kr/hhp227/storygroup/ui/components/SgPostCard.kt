@@ -27,12 +27,15 @@ import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
-/** 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속) */
+/**
+ * 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속).
+ * onClick을 주지 않으면 카드는 눌러도 아무 일이 없다 — 상세로 갈 수 없는 자리(미리보기 등)를 위해 기본값을 둔다.
+ */
 @Composable
-fun SgPostCard(post: Post, modifier: Modifier = Modifier) {
+fun SgPostCard(post: Post, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     val sg = SgTheme.colors
 
-    SgCard(modifier = modifier.fillMaxWidth(), onClick = { /* TODO: 게시글 상세 */ }) {
+    SgCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SgAvatar(post.authorName, imageUrl = post.authorProfileImg)

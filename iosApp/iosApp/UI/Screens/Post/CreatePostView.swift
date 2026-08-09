@@ -51,13 +51,17 @@ struct CreatePostView: View {
             imageAttachmentRow
         }
         .background(colors.paper)
-        .navigationTitle("글쓰기")
+        .navigationTitle(viewModel.uiState.isEditMode ? "글 수정" : "글쓰기")
+        // 수정 모드에서 기존 본문이 도착하면 입력창에 한 번 채운다(그 뒤 편집은 사용자 몫)
+        .onChange(of: viewModel.uiState.loadedText) { loaded in
+            if let loaded = loaded { text = loaded }
+        }
         .navigationBarTitleDisplayMode(.inline)
         // 홈이 최상단(투명 바) 상태에서 push돼도 기본 내비바로 표시 — 복귀 시엔 호출 화면이 재적용
         .navigationBarScrim(visible: true)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("등록") { viewModel.onAction(.submit(text: text)) }
+                Button(viewModel.uiState.isEditMode ? "수정" : "등록") { viewModel.onAction(.submit(text: text)) }
                     .disabled(viewModel.uiState.isLoading || viewModel.uiState.isUploadingImage)
             }
         }
@@ -120,12 +124,16 @@ struct CreatePostView: View {
         }
     }
 
-    init(container: AppContainer, groupId: Int64?, onCreated: @escaping () -> Void) {
+    /// postId가 있으면 같은 폼이 수정 모드로 동작한다(Compose CreatePostScreen 미러)
+    init(container: AppContainer, groupId: Int64?, postId: Int64? = nil, onCreated: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: CreatePostViewModel(
             groupId: groupId,
+            postId: postId,
             createPostUseCase: container.createPostUseCase,
             createLoungePostUseCase: container.createLoungePostUseCase,
-            uploadImageUseCase: container.uploadImageUseCase
+            uploadImageUseCase: container.uploadImageUseCase,
+            getPostUseCase: container.getPostUseCase,
+            updatePostUseCase: container.updatePostUseCase
         ))
         self.onCreated = onCreated
     }

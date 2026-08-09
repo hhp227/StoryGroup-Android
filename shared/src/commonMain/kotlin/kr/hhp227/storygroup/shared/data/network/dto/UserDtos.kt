@@ -30,3 +30,12 @@ data class ChangePasswordRequest(
     val currentPassword: String,
     val newPassword: String
 )
+
+@Serializable
+data class BlockedUserResponse(
+    val userId: Long,
+    val name: String,
+    val profileImg: String? = null,
+    val blockedAt: String = ""
+)
+

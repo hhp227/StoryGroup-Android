@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
@@ -24,15 +26,37 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  */
 class CreatePostViewModel(
     private val groupId: Long?,
+    // 있으면 수정 모드 — 같은 폼을 재사용한다(작성용 폼이 두 벌이 되지 않게)
+    private val postId: Long? = null,
     private val createPostUseCase: CreatePostUseCase,
     private val createLoungePostUseCase: CreateLoungePostUseCase,
-    private val uploadImageUseCase: UploadImageUseCase
+    private val uploadImageUseCase: UploadImageUseCase,
+    private val getPostUseCase: GetPostUseCase,
+    private val updatePostUseCase: UpdatePostUseCase
 ) : ViewModel(), MviViewModel<CreatePostViewModel.UiState, CreatePostViewModel.Action, CreatePostViewModel.Event> {
-    private val _uiState = MutableStateFlow(UiState())
+    private val _uiState = MutableStateFlow(UiState(isEditMode = postId != null))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val event: Flow<Event> = _event.asSharedFlow()
+
+    init {
+        // 수정 모드면 기존 본문·첨부를 읽어와 폼을 채운다(라우트로 실어 나르기엔 본문이 길다)
+        if (groupId != null && postId != null) {
+            _uiState.update { it.copy(isLoading = true) }
+            viewModelScope.launch {
+                runCatching { getPostUseCase(groupId, postId) }
+                    .onSuccess { post ->
+                        _uiState.update {
+                            it.copy(isLoading = false, images = post.imageUrls, loadedText = post.text)
+                        }
+                    }
+                    .onFailure { e ->
+                        _uiState.update { it.copy(isLoading = false, error = e.message ?: "게시글을 불러오지 못했습니다.") }
+                    }
+            }
+        }
+    }
 
     override fun onAction(action: Action) {
         when (action) {
@@ -70,12 +94,19 @@ class CreatePostViewModel(
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             runCatching {
-                groupId?.let { createPostUseCase(it, text, images) } ?: createLoungePostUseCase(text, images)
+                when {
+                    // 수정은 라운지 글도 그 글의 groupId로 들어오므로 groupId가 항상 있다
+                    groupId != null && postId != null -> updatePostUseCase(groupId, postId, text, images)
+                    groupId != null -> createPostUseCase(groupId, text, images)
+                    else -> createLoungePostUseCase(text, images)
+                }
             }.onSuccess {
                 _uiState.update { it.copy(isLoading = false) }
                 _event.tryEmit(Event.Created)
             }.onFailure { e ->
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "게시글 작성에 실패했습니다.") }
+                val fallback = if (postId != null) "게시글 수정에 실패했습니다." else "게시글 작성에 실패했습니다."
+
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: fallback) }
             }
         }
     }
@@ -84,7 +115,10 @@ class CreatePostViewModel(
         val isLoading: Boolean = false,
         val error: String? = null,
         val images: List<String> = emptyList(),
-        val isUploadingImage: Boolean = false
+        val isUploadingImage: Boolean = false,
+        val isEditMode: Boolean = false,
+        /** 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(null이면 아직 로드 전) */
+        val loadedText: String? = null
     )
 
     sealed interface Action {

@@ -90,8 +90,10 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             createGroupInviteUseCase = container.createGroupInviteUseCase,
             openDirectRoomUseCase = container.openDirectRoomUseCase,
             getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
+            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
-            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
+            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
+            observePostUpdatesUseCase = container.observePostUpdatesUseCase
         )
     }
 }
@@ -106,6 +108,8 @@ fun GroupDetailScreen(
     groupId: Long,
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
+    // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘긴다
+    onOpenPostDetail: (postId: Long) -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
@@ -117,6 +121,7 @@ fun GroupDetailScreen(
         viewModel = viewModel,
         onBack = onBack,
         onCreatePost = onCreatePost,
+        onOpenPostDetail = onOpenPostDetail,
         onOpenChatRoom = onOpenChatRoom,
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
@@ -129,6 +134,8 @@ private fun GroupDetailContent(
     viewModel: GroupDetailViewModel,
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
+    // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘긴다
+    onOpenPostDetail: (postId: Long) -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
@@ -295,10 +302,10 @@ private fun GroupDetailContent(
                 }
             }
         }
-        if (uiState.members.isNotEmpty()) {
+        if (uiState.visibleMembers.isNotEmpty()) {
             item(key = "members") {
                 MemberStrip(
-                    members = uiState.members,
+                    members = uiState.visibleMembers,
                     myUserId = uiState.myUserId,
                     onMemberClick = { dmTargetMember = it },
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -354,7 +361,7 @@ private fun GroupDetailContent(
             else -> {
                 items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
                     lazyPagingItems[index]?.let { post ->
-                        SgPostCard(post, Modifier.padding(horizontal = 16.dp))
+                        SgPostCard(post, Modifier.padding(horizontal = 16.dp)) { onOpenPostDetail(post.id) }
                     }
                 }
                 if (appendState is LoadStateLoading || appendState is LoadStateError) {

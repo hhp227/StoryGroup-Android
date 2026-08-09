@@ -13,6 +13,13 @@ final class CreatePostViewModel: MviViewModel {
 
     private let groupId: Int64?
 
+    /// 있으면 수정 모드 — 같은 폼을 재사용한다(작성용 폼이 두 벌이 되지 않게)
+    private let postId: Int64?
+
+    private let getPostUseCase: GetPostUseCase
+
+    private let updatePostUseCase: UpdatePostUseCase
+
     private let createPostUseCase: CreatePostUseCase
 
     private let createLoungePostUseCase: CreateLoungePostUseCase
@@ -62,7 +69,10 @@ final class CreatePostViewModel: MviViewModel {
         uiState.error = nil
         Task { @MainActor in
             do {
-                if let groupId = groupId {
+                // 수정은 라운지 글도 그 글의 groupId로 들어오므로 groupId가 항상 있다
+                if let groupId = groupId, let postId = postId {
+                    _ = try await updatePostUseCase.invoke(groupId: groupId, postId: postId, text: text, images: images)
+                } else if let groupId = groupId {
                     _ = try await createPostUseCase.invoke(groupId: groupId, text: text, images: images)
                 } else {
                     _ = try await createLoungePostUseCase.invoke(text: text, images: images)
@@ -71,21 +81,45 @@ final class CreatePostViewModel: MviViewModel {
                 event.send(.created)
             } catch {
                 uiState.isLoading = false
-                uiState.error = error.kotlinMessage(fallback: "게시글 작성에 실패했습니다.")
+                uiState.error = error.kotlinMessage(
+                    fallback: postId != nil ? "게시글 수정에 실패했습니다." : "게시글 작성에 실패했습니다."
+                )
             }
         }
     }
 
     init(
         groupId: Int64?,
+        postId: Int64? = nil,
         createPostUseCase: CreatePostUseCase,
         createLoungePostUseCase: CreateLoungePostUseCase,
-        uploadImageUseCase: UploadImageUseCase
+        uploadImageUseCase: UploadImageUseCase,
+        getPostUseCase: GetPostUseCase,
+        updatePostUseCase: UpdatePostUseCase
     ) {
         self.groupId = groupId
+        self.postId = postId
         self.createPostUseCase = createPostUseCase
         self.createLoungePostUseCase = createLoungePostUseCase
         self.uploadImageUseCase = uploadImageUseCase
+        self.getPostUseCase = getPostUseCase
+        self.updatePostUseCase = updatePostUseCase
+        self.uiState.isEditMode = postId != nil
+        // 수정 모드면 기존 본문·첨부를 읽어와 폼을 채운다
+        if let groupId = groupId, let postId = postId {
+            uiState.isLoading = true
+            Task { @MainActor in
+                do {
+                    let post = try await getPostUseCase.invoke(groupId: groupId, postId: postId)
+                    uiState.isLoading = false
+                    uiState.images = post.imageUrls
+                    uiState.loadedText = post.text
+                } catch {
+                    uiState.isLoading = false
+                    uiState.error = error.kotlinMessage(fallback: "게시글을 불러오지 못했습니다.")
+                }
+            }
+        }
     }
 
     struct UiState {
@@ -93,6 +127,9 @@ final class CreatePostViewModel: MviViewModel {
         var error: String? = nil
         var images: [String] = []
         var isUploadingImage = false
+        var isEditMode = false
+        /// 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(nil이면 아직 로드 전)
+        var loadedText: String? = nil
     }
 
     enum Action {

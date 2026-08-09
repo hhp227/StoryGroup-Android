@@ -57,17 +57,22 @@ import storygroup.composeapp.generated.resources.header
 @Composable
 fun HomeScreen(
     onCreatePost: () -> Unit,
+    // 라운지 글도 그룹 글이라 상세는 그 글의 groupId로 들어간다
+    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     // 글쓰기 성공 신호(라운지) — 소비 후 onRefreshHandled로 소거한다
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
-    viewModel: HomeViewModel = sessionViewModel { HomeViewModel(it.getLoungePostsPagingDataUseCase) }
+    viewModel: HomeViewModel = sessionViewModel {
+        HomeViewModel(it.getLoungePostsPagingDataUseCase, it.observePostUpdatesUseCase)
+    }
 ) {
     HomeContent(
         viewModel = viewModel,
         onCreatePost = onCreatePost,
+        onOpenPostDetail = onOpenPostDetail,
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
         onOpenNotifications = onOpenNotifications,
@@ -80,6 +85,8 @@ fun HomeScreen(
 private fun HomeContent(
     viewModel: HomeViewModel,
     onCreatePost: () -> Unit,
+    // 라운지 글도 그룹 글이라 상세는 그 글의 groupId로 들어간다
+    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
@@ -195,7 +202,9 @@ private fun HomeContent(
             else -> {
                 items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
                     lazyPagingItems[index]?.let { post ->
-                        SgPostCard(post, Modifier.padding(horizontal = 16.dp))
+                        SgPostCard(post, Modifier.padding(horizontal = 16.dp)) {
+                            onOpenPostDetail(post.groupId, post.id)
+                        }
                     }
                 }
                 if (appendState is LoadStateLoading || appendState is LoadStateError) {

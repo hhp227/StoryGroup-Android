@@ -42,6 +42,8 @@
 		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
 		A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */; };
 		A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */; };
+		A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011035AABBCCDDEEFF0035 /* PostDetailView.swift */; };
+		A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */; };
 		A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */; };
 		A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */; };
 		A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */; };
@@ -95,6 +97,8 @@
 		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
 		A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
+		A1011035AABBCCDDEEFF0035 /* PostDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailView.swift; sourceTree = "<group>"; };
+		A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailViewModel.swift; sourceTree = "<group>"; };
 		A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
 		A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsViewModel.swift; sourceTree = "<group>"; };
 		A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupView.swift; sourceTree = "<group>"; };
@@ -283,6 +287,8 @@
 			children = (
 				A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */,
 				A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */,
+				A1011035AABBCCDDEEFF0035 /* PostDetailView.swift */,
+				A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */,
 			);
 			path = Post;
 			sourceTree = "<group>";
@@ -494,6 +500,8 @@
 				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
 				A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */,
 				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
+				A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */,
+				A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */,
 				A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */,
 				A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */,
 				A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */,

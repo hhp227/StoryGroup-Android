@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.bridge
 
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.map
 import io.github.hhp227.paging.swiftui.SwiftUiPagingBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 
 // Kotlin Flow ↔ Combine Publisher 대응 계층 (Paging-CRUD 샘플과 동일 패턴).
 // Swift 쪽(KmpInterop.swift)이 이 핸들들을 Combine Publisher로 감싸서,
@@ -72,3 +74,25 @@ class PagingDataSubject<T : Any> {
 
 /** Swift State 기본값용 — Kotlin의 PagingData.empty() 대응 */
 fun emptyPostPagingData(): PagingData<Post> = PagingData.empty()
+
+/** 게시글 수정 알림 Flow 대응 핸들 — PersonalEventFlowAdapter와 동일 규약(타입별 어댑터) */
+class PostUpdateFlowAdapter internal constructor(
+    private val source: Flow<Post>
+) {
+    fun subscribe(onEach: (Post) -> Unit): FlowSubscription {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+        scope.launch { source.collect { onEach(it) } }
+        return FlowSubscription(scope)
+    }
+}
+
+/** Kotlin의 observePostUpdatesUseCase() 호출 대응 — Swift callAsFunction이 감싼다 */
+fun ObservePostUpdatesUseCase.updatesFlow(): PostUpdateFlowAdapter = PostUpdateFlowAdapter(invoke())
+
+/**
+ * Kotlin의 pagingData.map { if (it.id == post.id) post else it } 대응 —
+ * PagingData.map의 transform은 suspend라 Swift 클로저를 넘길 수 없어 브리지 함수로 제공한다.
+ */
+fun postPagingDataWithUpdate(pagingData: PagingData<Post>, post: Post): PagingData<Post> =
+    pagingData.map { if (it.id == post.id) post else it }
