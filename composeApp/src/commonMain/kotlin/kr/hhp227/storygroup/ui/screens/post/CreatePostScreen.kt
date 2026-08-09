@@ -46,15 +46,18 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
 @Composable
-private fun createPostViewModel(groupId: Long?): CreatePostViewModel {
+private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
     val container = LocalAppContainer.current
 
-    return viewModel(key = "create-post-$groupId") {
+    return viewModel(key = "create-post-$groupId-$postId") {
         CreatePostViewModel(
             groupId = groupId,
+            postId = postId,
             createPostUseCase = container.createPostUseCase,
             createLoungePostUseCase = container.createLoungePostUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
+            uploadImageUseCase = container.uploadImageUseCase,
+            getPostUseCase = container.getPostUseCase,
+            updatePostUseCase = container.updatePostUseCase
         )
     }
 }
@@ -71,12 +74,19 @@ fun CreatePostScreen(
     onBack: () -> Unit,
     onCreated: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: CreatePostViewModel = createPostViewModel(groupId)
+    // 있으면 수정 모드 — 기존 본문·첨부를 불러와 채운다
+    postId: Long? = null,
+    viewModel: CreatePostViewModel = createPostViewModel(groupId, postId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
     var text by rememberSaveable { mutableStateOf("") }
+
+    // 수정 모드에서 기존 본문이 도착하면 입력창에 한 번 채운다(그 뒤 편집은 사용자 몫)
+    LaunchedEffect(uiState.loadedText) {
+        uiState.loadedText?.let { text = it }
+    }
 
     val pickImage = rememberImagePickerLauncher { picked ->
         onAction(CreatePostViewModel.Action.AddImage(picked.bytes, picked.fileName, picked.contentType))
@@ -93,7 +103,7 @@ fun CreatePostScreen(
 
     Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
-            title = "글쓰기",
+            title = if (uiState.isEditMode) "글 수정" else "글쓰기",
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
@@ -105,7 +115,7 @@ fun CreatePostScreen(
                     enabled = !uiState.isLoading && !uiState.isUploadingImage
                 ) {
                     Text(
-                        "등록",
+                        if (uiState.isEditMode) "수정" else "등록",
                         fontWeight = FontWeight.Bold,
                         color = if (uiState.isLoading) sg.inkFaint else sg.accent
                     )

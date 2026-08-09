@@ -26,7 +26,14 @@ import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateCommentUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeleteCommentUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeletePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
@@ -104,6 +111,13 @@ class AppContainer(
     val getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository)
     val createPostUseCase = CreatePostUseCase(postRepository)
     val createLoungePostUseCase = CreateLoungePostUseCase(postRepository)
+    val getPostUseCase = GetPostUseCase(postRepository)
+    val updatePostUseCase = UpdatePostUseCase(postRepository)
+    val getPostDetailUseCase = GetPostDetailUseCase(postRepository)
+    val setPostLikedUseCase = SetPostLikedUseCase(postRepository)
+    val createCommentUseCase = CreateCommentUseCase(postRepository)
+    val deleteCommentUseCase = DeleteCommentUseCase(postRepository)
+    val deletePostUseCase = DeletePostUseCase(postRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)

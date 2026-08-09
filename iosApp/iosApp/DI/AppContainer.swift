@@ -18,6 +18,22 @@ final class AppContainer {
     let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
     let createPostUseCase: CreatePostUseCase
+
+    // 게시글 수정 — 작성 폼이 수정 모드로 재사용한다
+    let getPostUseCase: GetPostUseCase
+
+    let updatePostUseCase: UpdatePostUseCase
+
+    // 게시글 상세 — 본문·좋아요·댓글
+    let getPostDetailUseCase: GetPostDetailUseCase
+
+    let setPostLikedUseCase: SetPostLikedUseCase
+
+    let createCommentUseCase: CreateCommentUseCase
+
+    let deleteCommentUseCase: DeleteCommentUseCase
+
+    let deletePostUseCase: DeletePostUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
     let createGroupUseCase: CreateGroupUseCase
@@ -96,6 +112,13 @@ final class AppContainer {
         getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
         createPostUseCase = CreatePostUseCase(postRepository: postRepository)
+        getPostUseCase = GetPostUseCase(postRepository: postRepository)
+        updatePostUseCase = UpdatePostUseCase(postRepository: postRepository)
+        getPostDetailUseCase = GetPostDetailUseCase(postRepository: postRepository)
+        setPostLikedUseCase = SetPostLikedUseCase(postRepository: postRepository)
+        createCommentUseCase = CreateCommentUseCase(postRepository: postRepository)
+        deleteCommentUseCase = DeleteCommentUseCase(postRepository: postRepository)
+        deletePostUseCase = DeletePostUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)

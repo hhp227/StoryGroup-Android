@@ -49,6 +49,8 @@ fun MainShell(
     themeState: ThemeState,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    // 피드 카드 탭 → 게시글 상세(홈 라운지 글도 라운지 그룹 id로 들어간다)
+    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     // 채팅방 풀스크린 목적지(그룹 상세와 동일한 NavHost 배선) — 그룹 방은 groupId, DM은 null
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     // 홈(라운지) 글쓰기 성공 신호 — HomeScreen이 소비하고 onHomeRefreshHandled로 소거한다
@@ -71,6 +73,7 @@ fun MainShell(
                 onDestinationSelected = { currentDestination = it },
                 onOpenGroupDetail = onOpenGroupDetail,
                 onCreatePost = onCreatePost,
+                onOpenPostDetail = onOpenPostDetail,
                 onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
@@ -85,6 +88,7 @@ fun MainShell(
                 onDestinationSelected = { currentDestination = it },
                 onOpenGroupDetail = onOpenGroupDetail,
                 onCreatePost = onCreatePost,
+                onOpenPostDetail = onOpenPostDetail,
                 onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
@@ -115,6 +119,8 @@ internal fun DestinationContent(
     destination: MainDestination,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    // 피드 카드 탭 → 게시글 상세(홈 라운지 글도 라운지 그룹 id로 들어간다)
+    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
@@ -137,6 +143,7 @@ internal fun DestinationContent(
                             destination = dest,
                             onOpenGroupDetail = onOpenGroupDetail,
                             onCreatePost = onCreatePost,
+                            onOpenPostDetail = onOpenPostDetail,
                             onOpenChatRoom = onOpenChatRoom,
                             homeRefreshRequested = homeRefreshRequested,
                             onHomeRefreshHandled = onHomeRefreshHandled,
@@ -168,6 +175,8 @@ private fun DestinationScreen(
     destination: MainDestination,
     onOpenGroupDetail: (Group) -> Unit,
     onCreatePost: () -> Unit,
+    // 피드 카드 탭 → 게시글 상세(홈 라운지 글도 라운지 그룹 id로 들어간다)
+    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
@@ -183,6 +192,7 @@ private fun DestinationScreen(
         // 홈은 셸 상단바 없이 화면이 콜랩싱 헤더(레거시 라운지 CollapsingToolbar 미러)를 직접 그린다
         MainDestination.HOME -> HomeScreen(
             onCreatePost = onCreatePost,
+            onOpenPostDetail = onOpenPostDetail,
             refreshRequested = homeRefreshRequested,
             onRefreshHandled = onHomeRefreshHandled,
             onOpenNotifications = onOpenNotifications,

@@ -13,6 +13,16 @@ data class CreatePostRequest(
     val videos: List<String>? = null
 )
 
+// images/videos는 3상태 계약이다 — null이면 기존 첨부 유지, 빈 리스트면 전부 삭제, 값이 있으면 전체 교체.
+// 앱은 폼이 들고 있는 목록을 항상 통째로 보내(전체 교체) "안 건드림"과 "다 지움"을 구분할 일이 없게 한다.
+// videos는 앱 작성 폼에 동영상 첨부가 없으므로 null로 두어 기존 첨부를 건드리지 않는다.
+@Serializable
+data class UpdatePostRequest(
+    val text: String,
+    val images: List<String>? = null,
+    val videos: List<String>? = null
+)
+
 @Serializable
 data class PostResponse(
     val id: Long,
@@ -32,6 +42,35 @@ data class PostResponse(
 data class ImageResponse(
     val id: Long,
     val image: String
+)
+
+// 게시글 상세 — 댓글/좋아요 (/posts/{postId}/comments, /posts/{postId}/likes)
+
+@Serializable
+data class CommentResponse(
+    val id: Long,
+    val postId: Long,
+    val userId: Long,
+    val authorName: String,
+    val authorProfileImg: String? = null,
+    val parentReplyId: Long? = null,
+    val text: String,
+    val createdAt: String
+)
+
+// parentReplyId가 null이면 최상위 댓글 — 답글일 때만 실어 보낸다.
+@Serializable
+data class CreateCommentRequest(
+    val text: String,
+    val parentReplyId: Long? = null
+)
+
+@Serializable
+data class PostLikeResponse(
+    val userId: Long,
+    val authorName: String,
+    val authorProfileImg: String? = null,
+    val createdAt: String
 )
 
 @Serializable

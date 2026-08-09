@@ -157,7 +157,18 @@ private struct HomeContent: View {
             LazyVStack(spacing: 12) {
                 ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { post in
                     if let post {
-                        SGPostCard(post: post)
+                        // 카드 탭 → 게시글 상세 push. 삭제하고 돌아오면 그 글이 사라져야 하므로 피드를 다시 읽는다
+                        NavigationLink {
+                            PostDetailView(
+                                container: container,
+                                groupId: post.groupId,
+                                postId: post.id,
+                                onDeleted: { viewModel.onAction(.refresh) }
+                            )
+                        } label: {
+                            SGPostCard(post: post)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 SGPagingFooter(
