@@ -24,6 +24,13 @@ interface UserRepository {
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
 
     /**
+     * 사용자 신고 — POST /api/users/{userId}/report. 접수는 앱 운영자의 신고 관리로 간다
+     * (게시글 신고는 그룹 모더레이터 신고함으로 가서 접수처가 다르다).
+     * 같은 대상에 대기중 신고가 있으면 409 — 서버 메시지를 그대로 보여준다.
+     */
+    suspend fun reportUser(userId: Long, reason: String? = null): Result<Unit>
+
+    /**
      * 사용자 차단 — POST /api/users/{userId}/block. 차단하면 그 사용자의 게시글·댓글·채팅이
      * 내 화면에서 숨겨지고(단방향), DM은 양방향으로 막힌다. 해제는 설정의 차단 목록에서 한다.
      */

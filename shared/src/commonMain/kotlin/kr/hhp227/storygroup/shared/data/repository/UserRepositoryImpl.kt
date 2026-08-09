@@ -11,6 +11,7 @@ import io.ktor.http.contentType
 import kr.hhp227.storygroup.shared.data.network.dto.BlockedUserResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChangePasswordRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ProfileResponse
+import kr.hhp227.storygroup.shared.data.network.dto.ReportUserRequest
 import kr.hhp227.storygroup.shared.data.network.dto.UpdateProfileRequest
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
@@ -38,6 +39,15 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
             client.patch("/api/users/me/password") {
                 contentType(ContentType.Application.Json)
                 setBody(ChangePasswordRequest(currentPassword, newPassword))
+            }
+            Unit
+        }
+
+    override suspend fun reportUser(userId: Long, reason: String?): Result<Unit> =
+        runCatching {
+            client.post("/api/users/$userId/report") {
+                contentType(ContentType.Application.Json)
+                setBody(ReportUserRequest(reason))
             }
             Unit
         }

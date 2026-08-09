@@ -72,6 +72,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
@@ -126,6 +127,8 @@ class AppContainer(
     val deletePostUseCase = DeletePostUseCase(postRepository)
     // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
     val reportPostUseCase = ReportPostUseCase(postRepository)
+    // 댓글엔 신고 API가 없어 작성자를 신고한다(접수처는 운영자 — 게시글 신고와 다르다)
+    val reportUserUseCase = ReportUserUseCase(userRepository)
     val blockUserUseCase = BlockUserUseCase(userRepository)
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)

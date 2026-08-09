@@ -20,6 +20,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.DeletePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
@@ -29,6 +30,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 삭제 성공은 Event.PostDeleted 일회성 발화 — 호출부가 복귀+피드 갱신을 처리한다.
  * 남의 글이면 신고·차단을 할 수 있다(웹 게시글 상세 미러) — 차단은 그 글이 목록에서 사라지므로
  * 삭제와 같은 복귀·갱신 경로(Event.AuthorBlocked)를 탄다.
+ * 댓글도 같은 메뉴를 갖는다 — 댓글 신고 API는 없어 작성자를 신고하고(웹 UserActionMenu 미러),
+ * 차단하면 그 작성자의 댓글을 목록에서 바로 걷어낸다(서버 숨김과 같은 결과).
  * iosApp PostDetailViewModel.swift와 1:1 미러
  */
 class PostDetailViewModel(
@@ -40,6 +43,7 @@ class PostDetailViewModel(
     private val deleteCommentUseCase: DeleteCommentUseCase,
     private val deletePostUseCase: DeletePostUseCase,
     private val reportPostUseCase: ReportPostUseCase,
+    private val reportUserUseCase: ReportUserUseCase,
     private val blockUserUseCase: BlockUserUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel(), MviViewModel<PostDetailViewModel.UiState, PostDetailViewModel.Action, PostDetailViewModel.Event> {
@@ -65,6 +69,8 @@ class PostDetailViewModel(
             Action.DeletePost -> deletePost()
             Action.ReportPost -> reportPost()
             Action.BlockAuthor -> blockAuthor()
+            is Action.ReportCommentAuthor -> reportCommentAuthor(action.userId)
+            is Action.BlockCommentAuthor -> blockCommentAuthor(action.userId)
             Action.ClearError -> _uiState.update { it.copy(error = null) }
             Action.ClearNotice -> _uiState.update { it.copy(notice = null) }
         }
@@ -220,6 +226,45 @@ class PostDetailViewModel(
         }
     }
 
+    private fun reportCommentAuthor(userId: Long) {
+        if (_uiState.value.isReporting) return
+
+        _uiState.update { it.copy(isReporting = true, error = null, notice = null) }
+        viewModelScope.launch {
+            runCatching { reportUserUseCase(userId) }
+                .onSuccess {
+                    _uiState.update { it.copy(isReporting = false, notice = "신고가 접수되었습니다.") }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isReporting = false, error = e.message ?: "신고에 실패했습니다.") }
+                }
+        }
+    }
+
+    private fun blockCommentAuthor(userId: Long) {
+        if (_uiState.value.isBlocking) return
+
+        _uiState.update { it.copy(isBlocking = true, error = null, notice = null) }
+        viewModelScope.launch {
+            runCatching { blockUserUseCase(userId) }
+                .onSuccess {
+                    // 서버는 다음 조회부터 이 사람의 댓글을 숨긴다 — 화면에선 지금 바로 걷어낸다(웹 미러).
+                    // 답글 대상이었다면 함께 해제한다(사라진 댓글에 답글을 달 수 없다)
+                    _uiState.update { state ->
+                        state.copy(
+                            isBlocking = false,
+                            notice = "차단했습니다.",
+                            comments = state.comments.filterNot { it.userId == userId },
+                            replyTo = state.replyTo?.takeIf { it.userId != userId }
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: "차단에 실패했습니다.") }
+                }
+        }
+    }
+
     data class UiState(
         val isLoading: Boolean = false,
         val error: String? = null,
@@ -260,6 +305,12 @@ class PostDetailViewModel(
 
         /** 작성자 차단 — 남의 글에만 노출된다 */
         data object BlockAuthor : Action
+
+        /** 댓글 작성자 신고 — 댓글 신고 API가 없어 사용자 신고로 접수한다 */
+        data class ReportCommentAuthor(val userId: Long) : Action
+
+        /** 댓글 작성자 차단 — 그 작성자의 댓글을 목록에서 걷어낸다 */
+        data class BlockCommentAuthor(val userId: Long) : Action
         data object ClearError : Action
         data object ClearNotice : Action
     }

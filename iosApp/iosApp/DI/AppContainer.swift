@@ -41,6 +41,9 @@ final class AppContainer {
     // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
     let reportPostUseCase: ReportPostUseCase
 
+    // 댓글엔 신고 API가 없어 작성자를 신고한다(접수처는 운영자 — 게시글 신고와 다르다)
+    let reportUserUseCase: ReportUserUseCase
+
     let blockUserUseCase: BlockUserUseCase
 
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
@@ -132,6 +135,7 @@ final class AppContainer {
         deleteCommentUseCase = DeleteCommentUseCase(postRepository: postRepository)
         deletePostUseCase = DeletePostUseCase(postRepository: postRepository)
         reportPostUseCase = ReportPostUseCase(postRepository: postRepository)
+        reportUserUseCase = ReportUserUseCase(userRepository: userRepository)
         blockUserUseCase = BlockUserUseCase(userRepository: userRepository)
         getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository: userRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
