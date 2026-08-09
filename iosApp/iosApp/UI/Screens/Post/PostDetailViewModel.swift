@@ -9,6 +9,7 @@ import Shared
 /// 삭제와 같은 복귀·갱신 경로(Event.authorBlocked)를 탄다.
 /// 댓글도 같은 메뉴를 갖는다 — 댓글 신고 API는 없어 작성자를 신고하고(웹 UserActionMenu 미러),
 /// 차단하면 그 작성자의 댓글을 목록에서 바로 걷어낸다(서버 숨김과 같은 결과).
+/// 피드에서 그 작성자의 글을 걷어내는 건 각 피드 VM이 차단 알림을 받아 처리한다.
 final class PostDetailViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -309,7 +310,8 @@ final class PostDetailViewModel: MviViewModel {
 
     enum Event {
         case postDeleted
-        /// 차단 성공 — 그 사용자의 글은 목록에서도 사라지므로 삭제와 같은 복귀·갱신 경로를 탄다
+        /// 게시글 작성자 차단 성공 — 화면만 닫는다. 목록에서 그 사람의 글을 걷어내는 일은
+        /// 피드 VM이 차단 알림(ObserveUserBlocksUseCase)을 받아 스냅샷에서 처리한다
         case authorBlocked
         case commentCreated
     }

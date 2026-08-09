@@ -44,6 +44,13 @@ final class GroupDetailViewModel: MviViewModel {
     /// 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
     /// 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
     /// (Kotlin: pagingData.map { ... } — transform이 suspend라 Swift 클로저를 못 넘겨 브리지 함수 사용)
+    /// 차단한 작성자의 글을 현재 스냅샷에서 걷어낸다(멤버 스트립은 다음 refresh가 걸러낸다) —
+    /// refresh를 태우면 첫 페이지부터 전체 재조회라 쌓아둔 페이지와 스크롤 위치를 잃는다.
+    /// (Kotlin: pagingData.filter { ... } — predicate가 suspend라 Swift 클로저를 못 넘겨 브리지 사용)
+    private func removeBlockedAuthorPosts(_ userId: Int64) {
+        uiState.pagingData = PostBridgesKt.postPagingDataWithoutAuthor(pagingData: uiState.pagingData, userId: userId)
+    }
+
     private func applyPostUpdate(_ post: Post) {
         uiState.pagingData = PostBridgesKt.postPagingDataWithUpdate(pagingData: uiState.pagingData, post: post)
     }
@@ -194,7 +201,8 @@ final class GroupDetailViewModel: MviViewModel {
         getBlockedUsersUseCase: GetBlockedUsersUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
-        observePostUpdatesUseCase: ObservePostUpdatesUseCase
+        observePostUpdatesUseCase: ObservePostUpdatesUseCase,
+        observeUserBlocksUseCase: ObserveUserBlocksUseCase
     ) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase
@@ -219,6 +227,12 @@ final class GroupDetailViewModel: MviViewModel {
             observePostUpdatesUseCase.updatesFlow().subscribe(onEach: onEach)
         }
         .sink { [weak self] post in self?.applyPostUpdate(post) }
+        .store(in: &cancellables)
+        // 차단하면 그 사람의 글이 목록에서 사라져야 한다 — 재조회 대신 그 항목들만 제거
+        KotlinFlowPublisher<KotlinLong> { onEach in
+            observeUserBlocksUseCase.blocksFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] userId in self?.removeBlockedAuthorPosts(userId.int64Value) }
         .store(in: &cancellables)
     }
 

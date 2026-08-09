@@ -220,9 +220,9 @@ struct PostDetailView: View {
             case .postDeleted:
                 onDeleted()
                 dismiss()
-            // 차단하면 그 사용자의 글이 목록에서도 사라진다 — 삭제와 같은 복귀·갱신 경로
+            // 차단하면 이 글도 목록에서 사라진다 — 목록 갱신 신호는 필요 없다.
+            // 피드 VM이 차단 알림을 받아 그 작성자의 글만 스냅샷에서 걷어내므로 화면만 닫는다
             case .authorBlocked:
-                onDeleted()
                 dismiss()
             // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
             case .commentCreated:

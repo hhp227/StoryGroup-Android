@@ -67,6 +67,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
@@ -132,6 +133,8 @@ class AppContainer(
     val blockUserUseCase = BlockUserUseCase(userRepository)
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
+    // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
+    val observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
