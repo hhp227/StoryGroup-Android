@@ -28,25 +28,6 @@ struct PostDetailView: View {
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
 
-    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
-        self.onDeleted = onDeleted
-        self.container = container
-        self.groupId = groupId
-        self.postId = postId
-        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
-            groupId: groupId,
-            postId: postId,
-            getPostDetailUseCase: container.getPostDetailUseCase,
-            setPostLikedUseCase: container.setPostLikedUseCase,
-            createCommentUseCase: container.createCommentUseCase,
-            deleteCommentUseCase: container.deleteCommentUseCase,
-            deletePostUseCase: container.deletePostUseCase,
-            reportPostUseCase: container.reportPostUseCase,
-            blockUserUseCase: container.blockUserUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
-    }
-
     /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
@@ -318,6 +299,25 @@ struct PostDetailView: View {
             .padding(.vertical, 8)
         }
         .background(colors.paper)
+    }
+    
+    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
+        self.onDeleted = onDeleted
+        self.container = container
+        self.groupId = groupId
+        self.postId = postId
+        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
+            groupId: groupId,
+            postId: postId,
+            getPostDetailUseCase: container.getPostDetailUseCase,
+            setPostLikedUseCase: container.setPostLikedUseCase,
+            createCommentUseCase: container.createCommentUseCase,
+            deleteCommentUseCase: container.deleteCommentUseCase,
+            deletePostUseCase: container.deletePostUseCase,
+            reportPostUseCase: container.reportPostUseCase,
+            blockUserUseCase: container.blockUserUseCase,
+            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+        ))
     }
 }
 
