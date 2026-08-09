@@ -94,10 +94,12 @@ struct PostDetailView: View {
         .background(colors.paper)
         .navigationTitle("게시글")
         .navigationBarTitleDisplayMode(.inline)
-        // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다
+        // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다.
+        // 조건은 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 조건 분기(buildIf)는 iOS 16+라
+        // .toolbar { if ... } 는 배포 타깃 15.0에서 컴파일되지 않는다(GroupDetailView와 같은 형태)
         .toolbar {
-            if uiState.isMyPost {
-                ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if uiState.isMyPost {
                     HStack(spacing: 12) {
                         NavigationLink {
                             CreatePostView(container: container, groupId: groupId, postId: postId) {
