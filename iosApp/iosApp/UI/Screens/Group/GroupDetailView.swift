@@ -33,6 +33,7 @@ struct GroupDetailView: View {
             createGroupInviteUseCase: container.createGroupInviteUseCase,
             openDirectRoomUseCase: container.openDirectRoomUseCase,
             getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase,
+            getBlockedUsersUseCase: container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase
@@ -271,7 +272,7 @@ private struct GroupDetailContent: View {
         if viewModel.uiState.canModerate {
             inviteButton.padding(.horizontal, 16)
         }
-        if !viewModel.uiState.members.isEmpty {
+        if !viewModel.uiState.visibleMembers.isEmpty {
             memberStrip.padding(.horizontal, 16)
         }
         if let error = viewModel.uiState.error {
@@ -306,7 +307,13 @@ private struct GroupDetailContent: View {
                                 container: container,
                                 groupId: post.groupId,
                                 postId: post.id,
-                                onDeleted: { viewModel.onAction(.refreshFeed) }
+                                onDeleted: {
+                                    // 글이 사라졌으니 피드를 다시 읽고, 차단으로 돌아온 경우를 위해
+                                    // 그룹 정보(+차단 목록)까지 다시 읽어 멤버 스트립에서도 그 사람을 뺀다.
+                                    // Compose는 재진입 시 화면이 재구성되며 Refresh가 다시 걸린다
+                                    viewModel.onAction(.refreshFeed)
+                                    viewModel.onAction(.refresh)
+                                }
                             )
                         } label: {
                             SGPostCard(post: post)
@@ -418,12 +425,12 @@ private struct GroupDetailContent: View {
     /// 타인을 탭하면 1:1 DM 확인으로 이어진다
     private var memberStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("멤버 \(viewModel.uiState.members.count)")
+            Text("멤버 \(viewModel.uiState.visibleMembers.count)")
                 .font(.subheadline.bold())
                 .foregroundColor(colors.ink)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(viewModel.uiState.members, id: \.userId) { member in
+                    ForEach(viewModel.uiState.visibleMembers, id: \.userId) { member in
                         Button(action: { dmTargetMember = member }) {
                             VStack(spacing: 4) {
                                 SGAvatar(name: member.name, imageUrl: member.profileImg)

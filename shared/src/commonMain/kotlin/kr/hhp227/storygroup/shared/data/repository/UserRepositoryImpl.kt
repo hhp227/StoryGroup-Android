@@ -8,9 +8,11 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kr.hhp227.storygroup.shared.data.network.dto.BlockedUserResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChangePasswordRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ProfileResponse
 import kr.hhp227.storygroup.shared.data.network.dto.UpdateProfileRequest
+import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 
@@ -45,6 +47,11 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
             client.post("/api/users/$userId/block")
             Unit
         }
+
+    override suspend fun getBlockedUsers(): Result<List<BlockedUser>> =
+        runCatching {
+            client.get("/api/users/me/blocks").body<List<BlockedUserResponse>>().map { it.toDomain() }
+        }
 }
 
 private fun ProfileResponse.toDomain() = Profile(
@@ -55,4 +62,11 @@ private fun ProfileResponse.toDomain() = Profile(
     bio = bio,
     statusMessage = statusMessage,
     isAdmin = isAdmin
+)
+
+private fun BlockedUserResponse.toDomain() = BlockedUser(
+    userId = userId,
+    name = name,
+    profileImg = profileImg,
+    blockedAt = blockedAt
 )

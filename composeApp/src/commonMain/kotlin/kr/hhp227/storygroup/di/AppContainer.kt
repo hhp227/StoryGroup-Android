@@ -35,6 +35,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetBlockedUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
@@ -126,6 +127,8 @@ class AppContainer(
     // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
     val reportPostUseCase = ReportPostUseCase(postRepository)
     val blockUserUseCase = BlockUserUseCase(userRepository)
+    // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
+    val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)

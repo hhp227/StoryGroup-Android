@@ -42,6 +42,9 @@ final class AppContainer {
     let reportPostUseCase: ReportPostUseCase
 
     let blockUserUseCase: BlockUserUseCase
+
+    // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
+    let getBlockedUsersUseCase: GetBlockedUsersUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
     let createGroupUseCase: CreateGroupUseCase
@@ -130,6 +133,7 @@ final class AppContainer {
         deletePostUseCase = DeletePostUseCase(postRepository: postRepository)
         reportPostUseCase = ReportPostUseCase(postRepository: postRepository)
         blockUserUseCase = BlockUserUseCase(userRepository: userRepository)
+        getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository: userRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)

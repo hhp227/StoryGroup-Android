@@ -32,6 +32,8 @@ final class GroupDetailViewModel: MviViewModel {
 
     private let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
 
+    private let getBlockedUsersUseCase: GetBlockedUsersUseCase
+
     private var cancellables = Set<AnyCancellable>()
 
     private func setPagingData(_ pagingData: PagingData<Post>) {
@@ -81,9 +83,13 @@ final class GroupDetailViewModel: MviViewModel {
                     : []
                 // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨고 다음 refresh가 따라잡는다)
                 let defaultChatRoomId = ((try? await getGroupDefaultChatRoomUseCase.invoke(groupId: groupId)) ?? nil)?.int64Value
+                // 서버는 멤버 목록에서 차단 사용자를 빼주지 않는다 — 스트립에서 직접 걸러내려고 함께 읽는다.
+                // 실패해도 상세는 그린다(안 걸러진 멤버가 보일 뿐, 다음 refresh가 따라잡는다)
+                let blockedUserIds = Set(((try? await getBlockedUsersUseCase.invoke()) ?? []).map { $0.userId })
                 uiState.isLoading = false
                 uiState.group = group
                 uiState.members = members
+                uiState.blockedUserIds = blockedUserIds
                 uiState.joinRequests = joinRequests
                 uiState.defaultChatRoomId = defaultChatRoomId
             } catch {
@@ -185,6 +191,7 @@ final class GroupDetailViewModel: MviViewModel {
         createGroupInviteUseCase: CreateGroupInviteUseCase,
         openDirectRoomUseCase: OpenDirectRoomUseCase,
         getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
+        getBlockedUsersUseCase: GetBlockedUsersUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
         observePostUpdatesUseCase: ObservePostUpdatesUseCase
@@ -198,6 +205,7 @@ final class GroupDetailViewModel: MviViewModel {
         self.createGroupInviteUseCase = createGroupInviteUseCase
         self.openDirectRoomUseCase = openDirectRoomUseCase
         self.getGroupDefaultChatRoomUseCase = getGroupDefaultChatRoomUseCase
+        self.getBlockedUsersUseCase = getBlockedUsersUseCase
         uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
@@ -222,6 +230,8 @@ final class GroupDetailViewModel: MviViewModel {
         // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
         var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
         var members: [GroupMember] = []
+        /// 내가 차단한 사용자 — 서버가 멤버 목록에선 걸러주지 않아 화면이 직접 뺀다
+        var blockedUserIds: Set<Int64> = []
         // 모더레이터에게만 채워진다 — 일반 멤버는 항상 빈 목록이라 인박스가 그려지지 않는다
         var joinRequests: [GroupJoinRequest] = []
         // 승인/거절 버튼 로딩 표시용 — 동시에 하나만 처리(웹 busyFor 미러)
@@ -245,6 +255,10 @@ final class GroupDetailViewModel: MviViewModel {
             guard let group = group else { return false }
             return !group.isLounge && group.myRole != .member
         }
+
+        /// 멤버 스트립에 그릴 멤버 — 차단한 사용자는 뺀다(차단=내 화면에서 숨김).
+        /// 탭하면 DM인데 차단하면 DM 자체가 막히므로, 남겨두면 열 수 없는 진입점이 된다.
+        var visibleMembers: [GroupMember] { members.filter { !blockedUserIds.contains($0.userId) } }
     }
 
     enum Action {
