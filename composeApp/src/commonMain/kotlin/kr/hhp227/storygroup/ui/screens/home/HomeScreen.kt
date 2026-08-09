@@ -69,7 +69,8 @@ fun HomeScreen(
         HomeViewModel(
             it.getLoungePostsPagingDataUseCase,
             it.observePostUpdatesUseCase,
-            it.observeUserBlocksUseCase
+            it.observeUserBlocksUseCase,
+            it.observePostDeletionsUseCase
         )
     }
 ) {

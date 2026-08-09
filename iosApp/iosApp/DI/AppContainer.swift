@@ -51,6 +51,9 @@ final class AppContainer {
 
     // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
     let observeUserBlocksUseCase: ObserveUserBlocksUseCase
+
+    // 삭제 알림 — 목록이 재조회 없이 그 글만 걷어낸다
+    let observePostDeletionsUseCase: ObservePostDeletionsUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
     let createGroupUseCase: CreateGroupUseCase
@@ -142,6 +145,7 @@ final class AppContainer {
         blockUserUseCase = BlockUserUseCase(userRepository: userRepository)
         getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository: userRepository)
         observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository: userRepository)
+        observePostDeletionsUseCase = ObservePostDeletionsUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)

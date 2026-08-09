@@ -4,7 +4,8 @@ import Shared
 
 /// 게시글 상세 — composeApp PostDetailViewModel.kt와 1:1 미러.
 /// 진입 시 스스로 로드한다(피드가 넘겨준 값을 쓰지 않는다 — 그 사이 수정·삭제됐을 수 있다).
-/// 삭제 성공은 Event.postDeleted 일회성 발화 — 호출부가 복귀+피드 갱신을 처리한다.
+/// 삭제 성공은 Event.postDeleted 일회성 발화 — 화면은 닫기만 하고, 목록에서 그 글을 걷어내는 일은
+/// 피드 VM이 삭제 알림(ObservePostDeletionsUseCase)을 받아 스냅샷에서 처리한다.
 /// 남의 글이면 신고·차단을 할 수 있다(웹 게시글 상세 미러) — 차단은 그 글이 목록에서 사라지므로
 /// 삭제와 같은 복귀·갱신 경로(Event.authorBlocked)를 탄다.
 /// 댓글도 같은 메뉴를 갖는다 — 댓글 신고 API는 없어 작성자를 신고하고(웹 UserActionMenu 미러),

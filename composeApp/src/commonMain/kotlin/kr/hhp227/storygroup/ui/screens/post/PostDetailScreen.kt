@@ -84,8 +84,8 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
 
 /**
  * 게시글 상세 — 본문·이미지·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
- * NavHost 풀스크린 목적지라 상단바는 화면이 소유하고, 삭제 성공은 화면이 수집해 onDeleted로 알린다
- * (호출부가 복귀+피드 갱신을 처리한다 — CreatePostScreen과 같은 규약).
+ * NavHost 풀스크린 목적지라 상단바는 화면이 소유한다. 삭제·차단 성공은 화면을 닫기만 하고,
+ * 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
  * iosApp PostDetailView.swift와 1:1 미러
  */
 @Composable
@@ -94,7 +94,6 @@ fun PostDetailScreen(
     postId: Long,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
     refreshRequested: Boolean = false,
@@ -122,9 +121,9 @@ fun PostDetailScreen(
     LaunchedEffect(viewModel) {
         viewModel.event.collect { event ->
             when (event) {
-                PostDetailViewModel.Event.PostDeleted -> onDeleted()
-                // 차단하면 이 글도 목록에서 사라진다 — 목록 갱신 신호는 필요 없다.
-                // 피드 VM이 차단 알림을 받아 그 작성자의 글만 스냅샷에서 걷어내므로 화면만 닫는다
+                // 삭제·차단 모두 화면만 닫는다 — 목록에서 그 글을 걷어내는 일은 피드 VM이
+                // 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다)
+                PostDetailViewModel.Event.PostDeleted -> onBack()
                 PostDetailViewModel.Event.AuthorBlocked -> onBack()
                 // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
                 PostDetailViewModel.Event.CommentCreated -> commentText = ""

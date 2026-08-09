@@ -2,11 +2,9 @@ import Shared
 import SwiftUI
 
 /// 게시글 상세 — composeApp PostDetailScreen.kt와 1:1 미러.
-/// 본문·이미지·좋아요·댓글(답글 포함). 삭제 성공은 화면이 수집해 onDeleted로 알린다
-/// (호출부가 복귀+피드 갱신을 처리한다 — CreatePostView와 같은 규약).
+/// 본문·이미지·좋아요·댓글(답글 포함). 삭제·차단 성공은 화면을 닫기만 하고,
+/// 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
 struct PostDetailView: View {
-    let onDeleted: () -> Void
-
     // 수정 화면을 push할 때 다시 필요하다
     private let container: AppContainer
 
@@ -217,11 +215,10 @@ struct PostDetailView: View {
         }
         .onReceive(postDetailViewModel.event) { event in
             switch event {
+            // 삭제·차단 모두 화면만 닫는다 — 목록에서 그 글을 걷어내는 일은 피드 VM이
+            // 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다)
             case .postDeleted:
-                onDeleted()
                 dismiss()
-            // 차단하면 이 글도 목록에서 사라진다 — 목록 갱신 신호는 필요 없다.
-            // 피드 VM이 차단 알림을 받아 그 작성자의 글만 스냅샷에서 걷어내므로 화면만 닫는다
             case .authorBlocked:
                 dismiss()
             // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
@@ -363,8 +360,7 @@ struct PostDetailView: View {
         .background(colors.paper)
     }
     
-    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
-        self.onDeleted = onDeleted
+    init(container: AppContainer, groupId: Int64, postId: Int64) {
         self.container = container
         self.groupId = groupId
         self.postId = postId

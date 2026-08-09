@@ -52,6 +52,13 @@ interface PostRepository {
     suspend fun reportPost(groupId: Long, postId: Long, reason: String? = null): Result<Unit>
 
     /**
+     * 게시글이 삭제됐다는 알림(삭제된 postId) — [deletePost] 성공 시 흘린다.
+     * 목록 화면이 이걸 받아 자기 PagingData 스냅샷에서 그 글만 걷어낸다 — refresh는 첫 페이지부터
+     * 전체 재조회라 쌓아둔 페이지와 스크롤 위치를 잃기 때문이다([postUpdates]와 같은 규약).
+     */
+    val postDeletions: Flow<Long>
+
+    /**
      * 게시글이 수정됐다는 알림 — [updatePost] 성공 응답(최신 본문)을 그대로 흘린다.
      * 목록 화면이 이걸 받아 자기 PagingData 스냅샷에서 그 항목만 갈아끼운다 — refresh는
      * 첫 페이지부터 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃기 때문이다.

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
@@ -32,7 +33,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 class HomeViewModel(
     getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
     observePostUpdatesUseCase: ObservePostUpdatesUseCase,
-    observeUserBlocksUseCase: ObserveUserBlocksUseCase
+    observeUserBlocksUseCase: ObserveUserBlocksUseCase,
+    observePostDeletionsUseCase: ObservePostDeletionsUseCase
 ) : ViewModel(), MviViewModel<HomeViewModel.UiState, HomeViewModel.Action, HomeViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -65,6 +67,16 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * 삭제된 글을 현재 스냅샷에서 걷어낸다 — refresh를 태우면 첫 페이지부터 전체 재조회라
+     * 쌓아둔 페이지와 스크롤 위치를 잃는다. 다음 세대부턴 서버 응답에 애초에 없다.
+     */
+    private fun removeDeletedPost(postId: Long) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.filter { it.id != postId })
+        }
+    }
+
     override fun onAction(action: Action) {
         when (action) {
             // 글쓰기 성공 시 발화 — 화면이 refresh()로 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
@@ -85,6 +97,10 @@ class HomeViewModel(
         // 차단하면 그 사람의 글이 목록에서 사라져야 한다 — 재조회 대신 그 항목들만 제거
         observeUserBlocksUseCase()
             .onEach(::removeBlockedAuthorPosts)
+            .launchIn(viewModelScope)
+        // 상세에서 삭제하면 목록에서도 사라져야 한다 — 재조회 대신 그 항목만 제거
+        observePostDeletionsUseCase()
+            .onEach(::removeDeletedPost)
             .launchIn(viewModelScope)
     }
 

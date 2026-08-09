@@ -43,6 +43,11 @@ class PostRepositoryImpl(
 
     override val postUpdates: Flow<Post> = _postUpdates.asSharedFlow()
 
+    private val _postDeletions =
+        MutableSharedFlow<Long>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override val postDeletions: Flow<Long> = _postDeletions.asSharedFlow()
+
     override suspend fun getPosts(groupId: Long, page: Int, size: Int): Result<List<Post>> =
         runCatching {
             client.get("/api/groups/$groupId/posts") {
@@ -97,7 +102,13 @@ class PostRepositoryImpl(
         }
 
     override suspend fun deletePost(groupId: Long, postId: Long): Result<Unit> =
-        runCatching { client.delete("/api/groups/$groupId/posts/$postId") }.map { }
+        runCatching { client.delete("/api/groups/$groupId/posts/$postId") }
+            .map { }
+            .onSuccess {
+                // 목록은 이 알림으로 그 글만 걷어낸다 — 재조회(refresh)는 첫 페이지부터 다시 읽어
+                // 이미 쌓아둔 페이지와 스크롤 위치를 잃는다
+                _postDeletions.tryEmit(postId)
+            }
 
     override suspend fun reportPost(groupId: Long, postId: Long, reason: String?): Result<Unit> =
         runCatching {

@@ -94,7 +94,8 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase = container.observePostUpdatesUseCase,
-            observeUserBlocksUseCase = container.observeUserBlocksUseCase
+            observeUserBlocksUseCase = container.observeUserBlocksUseCase,
+            observePostDeletionsUseCase = container.observePostDeletionsUseCase
         )
     }
 }
