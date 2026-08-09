@@ -64,6 +64,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
@@ -109,6 +110,8 @@ class AppContainer(
     val getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository)
     val getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository)
     val getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository)
+    // 수정 알림 — 목록이 재조회 없이 그 항목만 갈아끼운다
+    val observePostUpdatesUseCase = ObservePostUpdatesUseCase(postRepository)
     val createPostUseCase = CreatePostUseCase(postRepository)
     val createLoungePostUseCase = CreateLoungePostUseCase(postRepository)
     val getPostUseCase = GetPostUseCase(postRepository)

@@ -22,6 +22,9 @@ struct PostDetailView: View {
 
     @State private var commentText = ""
 
+    /// 더보기 메뉴에서 고른 "수정" — 메뉴 안에서는 NavigationLink가 동작하지 않아 상태로 push한다
+    @State private var showEdit = false
+
     init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
         self.onDeleted = onDeleted
         self.container = container
@@ -39,7 +42,32 @@ struct PostDetailView: View {
         ))
     }
 
+    /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
+        if #available(iOS 16.0, *) {
+            core.navigationDestination(isPresented: $showEdit) { editDestination }
+        } else {
+            core.background(
+                NavigationLink(isActive: $showEdit) {
+                    editDestination
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
+        }
+    }
+
+    private var editDestination: some View {
+        CreatePostView(container: container, groupId: groupId, postId: postId) {
+            // 수정하고 돌아오면 바뀐 본문을 보여줘야 한다.
+            // 목록은 갱신 신호를 받지 않는다 — 수정 알림(ObservePostUpdatesUseCase)을 받은 목록 VM이
+            // 자기 스냅샷에서 그 항목만 갈아끼운다(refresh를 태우면 첫 페이지부터 전체 재조회가 된다)
+            postDetailViewModel.onAction(.reload)
+        }
+    }
+
+    @ViewBuilder private var core: some View {
         let uiState = postDetailViewModel.uiState
 
         VStack(spacing: 0) {
@@ -100,19 +128,19 @@ struct PostDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if uiState.isMyPost {
-                    HStack(spacing: 12) {
-                        NavigationLink {
-                            CreatePostView(container: container, groupId: groupId, postId: postId) {
-                                // 수정하고 돌아오면 바뀐 본문을 보여줘야 한다
-                                postDetailViewModel.onAction(.reload)
-                            }
+                    // 두 액션을 상단바에 늘어놓지 않고 더보기 한 칸에 모은다(Compose DropdownMenu와 미러).
+                    // 삭제는 destructive 역할로 빨갛게 — Compose는 같은 자리를 sg.rust로 칠한다
+                    Menu {
+                        Button("수정") { showEdit = true }
+                        Button(role: .destructive) {
+                            postDetailViewModel.onAction(.deletePost)
                         } label: {
-                            Text("수정").foregroundColor(colors.accent)
+                            Text("삭제")
                         }
-                        Button("삭제") { postDetailViewModel.onAction(.deletePost) }
-                            .foregroundColor(colors.rust)
-                            .disabled(uiState.isDeletingPost)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
+                    .disabled(uiState.isDeletingPost)
                 }
             }
         }

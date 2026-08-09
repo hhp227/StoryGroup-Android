@@ -38,6 +38,14 @@ final class GroupDetailViewModel: MviViewModel {
         uiState.pagingData = pagingData
     }
 
+    /// 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
+    /// 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
+    /// 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
+    /// (Kotlin: pagingData.map { ... } — transform이 suspend라 Swift 클로저를 못 넘겨 브리지 함수 사용)
+    private func applyPostUpdate(_ post: Post) {
+        uiState.pagingData = PostBridgesKt.postPagingDataWithUpdate(pagingData: uiState.pagingData, post: post)
+    }
+
     func onAction(_ action: Action) {
         switch action {
         case .refresh: refresh()
@@ -178,7 +186,8 @@ final class GroupDetailViewModel: MviViewModel {
         openDirectRoomUseCase: OpenDirectRoomUseCase,
         getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
-        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
+        observePostUpdatesUseCase: ObservePostUpdatesUseCase
     ) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase
@@ -197,6 +206,12 @@ final class GroupDetailViewModel: MviViewModel {
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
+        // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
+        KotlinFlowPublisher<Post> { onEach in
+            observePostUpdatesUseCase.updatesFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] post in self?.applyPostUpdate(post) }
+        .store(in: &cancellables)
     }
 
     struct UiState {

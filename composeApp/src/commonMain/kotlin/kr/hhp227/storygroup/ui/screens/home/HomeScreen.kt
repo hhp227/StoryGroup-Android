@@ -65,7 +65,9 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
-    viewModel: HomeViewModel = sessionViewModel { HomeViewModel(it.getLoungePostsPagingDataUseCase) }
+    viewModel: HomeViewModel = sessionViewModel {
+        HomeViewModel(it.getLoungePostsPagingDataUseCase, it.observePostUpdatesUseCase)
+    }
 ) {
     HomeContent(
         viewModel = viewModel,

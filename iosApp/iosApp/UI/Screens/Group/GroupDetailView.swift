@@ -34,7 +34,8 @@ struct GroupDetailView: View {
             openDirectRoomUseCase: container.openDirectRoomUseCase,
             getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
-            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase
+            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
+            observePostUpdatesUseCase: container.observePostUpdatesUseCase
         ))
         self.container = container
         self.chatViewModel = chatViewModel

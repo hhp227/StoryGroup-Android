@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
+import app.cash.paging.map
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
@@ -26,7 +28,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
  * 바로 시작한다(재로그인 시 재생성). iosApp HomeViewModel.swift와 1:1 미러
  */
 class HomeViewModel(
-    getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
+    getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
+    observePostUpdatesUseCase: ObservePostUpdatesUseCase
 ) : ViewModel(), MviViewModel<HomeViewModel.UiState, HomeViewModel.Action, HomeViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -36,6 +39,17 @@ class HomeViewModel(
 
     private fun setPagingData(pagingData: PagingData<Post>) {
         _uiState.update { it.copy(pagingData = pagingData) }
+    }
+
+    /**
+     * 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
+     * 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
+     * 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
+     */
+    private fun applyPostUpdate(post: Post) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.map { if (it.id == post.id) post else it })
+        }
     }
 
     override fun onAction(action: Action) {
@@ -50,6 +64,10 @@ class HomeViewModel(
         getLoungePostsPagingDataUseCase()
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
+            .launchIn(viewModelScope)
+        // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
+        observePostUpdatesUseCase()
+            .onEach(::applyPostUpdate)
             .launchIn(viewModelScope)
     }
 

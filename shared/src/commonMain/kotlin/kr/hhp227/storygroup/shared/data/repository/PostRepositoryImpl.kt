@@ -12,7 +12,10 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kr.hhp227.storygroup.shared.data.network.dto.CommentResponse
 import kr.hhp227.storygroup.shared.data.network.dto.CreateCommentRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreatePostRequest
@@ -33,6 +36,11 @@ class PostRepositoryImpl(
     private val client: HttpClient,
     private val groupRepository: GroupRepository
 ) : PostRepository {
+    // 구독자(홈·그룹 피드)가 살아 있는 동안만 의미 있는 일회성 신호라 replay는 두지 않는다
+    private val _postUpdates =
+        MutableSharedFlow<Post>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override val postUpdates: Flow<Post> = _postUpdates.asSharedFlow()
 
     override suspend fun getPosts(groupId: Long, page: Int, size: Int): Result<List<Post>> =
         runCatching {
@@ -81,6 +89,10 @@ class PostRepositoryImpl(
                 // 수정에서만 건드리면 웹에서 올린 동영상을 앱이 지워버리게 된다.
                 setBody(UpdatePostRequest(text = text, images = images))
             }.body<PostResponse>().toDomain()
+        }.onSuccess { post ->
+            // 목록은 이 알림으로 그 항목만 갈아끼운다 — 재조회(refresh)는 첫 페이지부터 다시 읽어
+            // 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다)
+            _postUpdates.tryEmit(post)
         }
 
     override suspend fun deletePost(groupId: Long, postId: Long): Result<Unit> =

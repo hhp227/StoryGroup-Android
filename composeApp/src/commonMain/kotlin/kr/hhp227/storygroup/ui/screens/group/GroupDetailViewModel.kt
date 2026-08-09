@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
+import app.cash.paging.map
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,6 +30,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
@@ -54,7 +56,8 @@ class GroupDetailViewModel(
     private val openDirectRoomUseCase: OpenDirectRoomUseCase,
     private val getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
-    getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+    getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
+    observePostUpdatesUseCase: ObservePostUpdatesUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -64,6 +67,17 @@ class GroupDetailViewModel(
 
     private fun setPagingData(pagingData: PagingData<Post>) {
         _uiState.update { it.copy(pagingData = pagingData) }
+    }
+
+    /**
+     * 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
+     * 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
+     * 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
+     */
+    private fun applyPostUpdate(post: Post) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.map { if (it.id == post.id) post else it })
+        }
     }
 
     override fun onAction(action: Action) {
@@ -205,6 +219,10 @@ class GroupDetailViewModel(
         getGroupPostsPagingDataUseCase(groupId)
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
+            .launchIn(viewModelScope)
+        // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
+        observePostUpdatesUseCase()
+            .onEach(::applyPostUpdate)
             .launchIn(viewModelScope)
     }
 

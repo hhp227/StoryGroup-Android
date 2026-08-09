@@ -17,7 +17,10 @@ struct HomeView: View {
     }
 
     init(container: AppContainer) {
-        _homeViewModel = StateObject(wrappedValue: HomeViewModel(getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase))
+        _homeViewModel = StateObject(wrappedValue: HomeViewModel(
+            getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
+            observePostUpdatesUseCase: container.observePostUpdatesUseCase
+        ))
         self.container = container
     }
 }

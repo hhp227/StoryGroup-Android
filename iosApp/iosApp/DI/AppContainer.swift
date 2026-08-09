@@ -17,6 +17,9 @@ final class AppContainer {
     let getGroupMembersUseCase: GetGroupMembersUseCase
     let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+
+    // 수정 알림 — 목록이 재조회 없이 그 항목만 갈아끼운다
+    let observePostUpdatesUseCase: ObservePostUpdatesUseCase
     let createPostUseCase: CreatePostUseCase
 
     // 게시글 수정 — 작성 폼이 수정 모드로 재사용한다
@@ -111,6 +114,7 @@ final class AppContainer {
         getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
         getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
+        observePostUpdatesUseCase = ObservePostUpdatesUseCase(postRepository: postRepository)
         createPostUseCase = CreatePostUseCase(postRepository: postRepository)
         getPostUseCase = GetPostUseCase(postRepository: postRepository)
         updatePostUseCase = UpdatePostUseCase(postRepository: postRepository)

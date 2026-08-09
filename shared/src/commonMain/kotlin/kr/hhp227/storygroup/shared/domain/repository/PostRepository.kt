@@ -45,6 +45,14 @@ interface PostRepository {
     /** 게시글 삭제 — DELETE, 작성자 본인만(권한은 서버가 판정한다) */
     suspend fun deletePost(groupId: Long, postId: Long): Result<Unit>
 
+    /**
+     * 게시글이 수정됐다는 알림 — [updatePost] 성공 응답(최신 본문)을 그대로 흘린다.
+     * 목록 화면이 이걸 받아 자기 PagingData 스냅샷에서 그 항목만 갈아끼운다 — refresh는
+     * 첫 페이지부터 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃기 때문이다.
+     * 값을 보관하지 않는 일회성 신호라, 이후 새로고침에는 서버 값이 그대로 이긴다.
+     */
+    val postUpdates: Flow<Post>
+
     /** 좋아요 누른 사람 목록 — 개수와 "내가 눌렀는지"를 이 목록에서 파생한다(웹 미러) */
     suspend fun getPostLikes(groupId: Long, postId: Long): Result<List<PostLike>>
 

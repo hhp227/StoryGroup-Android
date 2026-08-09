@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
@@ -28,12 +30,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -93,11 +97,15 @@ fun PostDetailScreen(
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
     var commentText by rememberSaveable { mutableStateOf("") }
+    // 상단바 더보기 메뉴 — 열린 채로 화면을 벗어나면 닫히는 게 맞아 remember면 충분하다
+    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
             onAction(PostDetailViewModel.Action.Reload)
             onRefreshHandled()
+            // 목록은 갱신 신호를 받지 않는다 — 수정 알림(ObservePostUpdatesUseCase)을 받은 목록 VM이
+            // 자기 스냅샷에서 그 항목만 갈아끼운다(refresh를 태우면 첫 페이지부터 전체 재조회가 된다)
         }
     }
 
@@ -120,16 +128,32 @@ fun PostDetailScreen(
                 }
             },
             actions = {
-                // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다
+                // 수정·삭제는 작성자 본인만 — 서버도 같은 규칙(requirePostOwner)이라 화면은 미리 감출 뿐이다.
+                // 두 액션을 상단바에 늘어놓지 않고 더보기(⋮) 한 칸에 모은다(iosApp의 Menu와 미러)
                 if (uiState.isMyPost) {
-                    TextButton(onClick = onEdit, enabled = !uiState.isDeletingPost) {
-                        Text("수정", color = sg.accent)
-                    }
-                    TextButton(
-                        onClick = { onAction(PostDetailViewModel.Action.DeletePost) },
-                        enabled = !uiState.isDeletingPost
-                    ) {
-                        Text("삭제", color = sg.rust)
+                    // 메뉴가 이 아이콘 바로 아래에 뜨도록 Box로 묶어 앵커를 잡는다
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }, enabled = !uiState.isDeletingPost) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "더보기")
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                onClick = {
+                                    menuExpanded = false
+                                    onEdit()
+                                }
+                            ) {
+                                Text("수정", style = SgTheme.typography.bodyMedium, color = sg.ink)
+                            }
+                            DropdownMenuItem(
+                                onClick = {
+                                    menuExpanded = false
+                                    onAction(PostDetailViewModel.Action.DeletePost)
+                                }
+                            ) {
+                                Text("삭제", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                            }
+                        }
                     }
                 }
             }

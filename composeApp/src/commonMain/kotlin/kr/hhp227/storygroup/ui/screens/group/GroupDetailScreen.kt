@@ -91,7 +91,8 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             openDirectRoomUseCase = container.openDirectRoomUseCase,
             getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
-            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase
+            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
+            observePostUpdatesUseCase = container.observePostUpdatesUseCase
         )
     }
 }
