@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
+import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -36,6 +37,12 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
                 contentType(ContentType.Application.Json)
                 setBody(ChangePasswordRequest(currentPassword, newPassword))
             }
+            Unit
+        }
+
+    override suspend fun blockUser(userId: Long): Result<Unit> =
+        runCatching {
+            client.post("/api/users/$userId/block")
             Unit
         }
 }

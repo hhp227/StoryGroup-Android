@@ -21,6 +21,7 @@ import kr.hhp227.storygroup.shared.data.network.dto.CreateCommentRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreatePostRequest
 import kr.hhp227.storygroup.shared.data.network.dto.PostLikeResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PostResponse
+import kr.hhp227.storygroup.shared.data.network.dto.ReportPostRequest
 import kr.hhp227.storygroup.shared.data.network.dto.UpdatePostRequest
 import kr.hhp227.storygroup.shared.data.paging.PagePagingConfig
 import kr.hhp227.storygroup.shared.data.paging.PagePagingSource
@@ -97,6 +98,15 @@ class PostRepositoryImpl(
 
     override suspend fun deletePost(groupId: Long, postId: Long): Result<Unit> =
         runCatching { client.delete("/api/groups/$groupId/posts/$postId") }.map { }
+
+    override suspend fun reportPost(groupId: Long, postId: Long, reason: String?): Result<Unit> =
+        runCatching {
+            client.post("/api/groups/$groupId/posts/$postId/report") {
+                contentType(ContentType.Application.Json)
+                setBody(ReportPostRequest(reason))
+            }
+            Unit
+        }
 
     override suspend fun getPostLikes(groupId: Long, postId: Long): Result<List<PostLike>> =
         runCatching {

@@ -21,4 +21,10 @@ interface UserRepository {
      * 현재 액세스 토큰 만료(30분) 후에는 재로그인이 필요하다(다른 기기 세션 차단 목적).
      */
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
+
+    /**
+     * 사용자 차단 — POST /api/users/{userId}/block. 차단하면 그 사용자의 게시글·댓글·채팅이
+     * 내 화면에서 숨겨지고(단방향), DM은 양방향으로 막힌다. 해제는 설정의 차단 목록에서 한다.
+     */
+    suspend fun blockUser(userId: Long): Result<Unit>
 }

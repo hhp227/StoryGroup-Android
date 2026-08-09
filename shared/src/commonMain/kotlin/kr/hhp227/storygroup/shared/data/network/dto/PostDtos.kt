@@ -13,6 +13,13 @@ data class CreatePostRequest(
     val videos: List<String>? = null
 )
 
+// 게시글 신고 — 접수는 그 그룹의 모더레이터 신고함으로 간다(웹 reportPost 미러).
+// reason은 선택(웹도 사유 입력 UI 없이 null을 보낸다), 같은 글의 "대기중" 신고는 1건만(중복 409).
+@Serializable
+data class ReportPostRequest(
+    val reason: String? = null
+)
+
 // images/videos는 3상태 계약이다 — null이면 기존 첨부 유지, 빈 리스트면 전부 삭제, 값이 있으면 전체 교체.
 // 앱은 폼이 들고 있는 목록을 항상 통째로 보내(전체 교체) "안 건드림"과 "다 지움"을 구분할 일이 없게 한다.
 // videos는 앱 작성 폼에 동영상 첨부가 없으므로 null로 두어 기존 첨부를 건드리지 않는다.

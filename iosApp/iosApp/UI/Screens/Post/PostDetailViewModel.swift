@@ -5,6 +5,8 @@ import Shared
 /// 게시글 상세 — composeApp PostDetailViewModel.kt와 1:1 미러.
 /// 진입 시 스스로 로드한다(피드가 넘겨준 값을 쓰지 않는다 — 그 사이 수정·삭제됐을 수 있다).
 /// 삭제 성공은 Event.postDeleted 일회성 발화 — 호출부가 복귀+피드 갱신을 처리한다.
+/// 남의 글이면 신고·차단을 할 수 있다(웹 게시글 상세 미러) — 차단은 그 글이 목록에서 사라지므로
+/// 삭제와 같은 복귀·갱신 경로(Event.authorBlocked)를 탄다.
 final class PostDetailViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -24,6 +26,10 @@ final class PostDetailViewModel: MviViewModel {
 
     private let deletePostUseCase: DeletePostUseCase
 
+    private let reportPostUseCase: ReportPostUseCase
+
+    private let blockUserUseCase: BlockUserUseCase
+
     private let myUserId: Int64?
 
     func onAction(_ action: Action) {
@@ -34,7 +40,10 @@ final class PostDetailViewModel: MviViewModel {
         case .setReplyTo(let comment): uiState.replyTo = comment
         case .deleteComment(let commentId): deleteComment(commentId: commentId)
         case .deletePost: deletePost()
+        case .reportPost: reportPost()
+        case .blockAuthor: blockAuthor()
         case .clearError: uiState.error = nil
+        case .clearNotice: uiState.notice = nil
         }
     }
 
@@ -138,6 +147,44 @@ final class PostDetailViewModel: MviViewModel {
         }
     }
 
+    private func reportPost() {
+        if uiState.isReporting { return }
+
+        uiState.isReporting = true
+        uiState.error = nil
+        uiState.notice = nil
+        Task { @MainActor in
+            do {
+                try await reportPostUseCase.invoke(groupId: groupId, postId: postId, reason: nil)
+                // 화면에서 달라지는 게 없으므로 접수됐다는 안내가 유일한 피드백이다(웹 미러)
+                uiState.isReporting = false
+                uiState.notice = "신고가 접수되었습니다."
+            } catch {
+                // 이미 대기중 신고가 있으면 409 — 서버 메시지를 그대로 보여준다
+                uiState.isReporting = false
+                uiState.error = error.kotlinMessage(fallback: "신고에 실패했습니다.")
+            }
+        }
+    }
+
+    private func blockAuthor() {
+        guard let authorId = uiState.post?.userId, !uiState.isBlocking else { return }
+
+        uiState.isBlocking = true
+        uiState.error = nil
+        uiState.notice = nil
+        Task { @MainActor in
+            do {
+                try await blockUserUseCase.invoke(userId: authorId)
+                uiState.isBlocking = false
+                event.send(.authorBlocked)
+            } catch {
+                uiState.isBlocking = false
+                uiState.error = error.kotlinMessage(fallback: "차단에 실패했습니다.")
+            }
+        }
+    }
+
     init(
         groupId: Int64,
         postId: Int64,
@@ -146,6 +193,8 @@ final class PostDetailViewModel: MviViewModel {
         createCommentUseCase: CreateCommentUseCase,
         deleteCommentUseCase: DeleteCommentUseCase,
         deletePostUseCase: DeletePostUseCase,
+        reportPostUseCase: ReportPostUseCase,
+        blockUserUseCase: BlockUserUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase
     ) {
         self.groupId = groupId
@@ -155,6 +204,8 @@ final class PostDetailViewModel: MviViewModel {
         self.createCommentUseCase = createCommentUseCase
         self.deleteCommentUseCase = deleteCommentUseCase
         self.deletePostUseCase = deletePostUseCase
+        self.reportPostUseCase = reportPostUseCase
+        self.blockUserUseCase = blockUserUseCase
         self.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
         self.uiState.myUserId = self.myUserId
         load()
@@ -163,6 +214,8 @@ final class PostDetailViewModel: MviViewModel {
     struct UiState {
         var isLoading = false
         var error: String? = nil
+        /// 완료 안내(신고 접수 등) — 에러와 같은 자리에 다른 톤으로 그린다
+        var notice: String? = nil
         var post: Post? = nil
         var likeCount = 0
         var isLiked = false
@@ -172,6 +225,8 @@ final class PostDetailViewModel: MviViewModel {
         var replyTo: Comment? = nil
         var isSubmittingComment = false
         var isDeletingPost = false
+        var isReporting = false
+        var isBlocking = false
         var myUserId: Int64? = nil
 
         var isMyPost: Bool { post.map { $0.userId == myUserId } ?? false }
@@ -192,11 +247,18 @@ final class PostDetailViewModel: MviViewModel {
         case setReplyTo(comment: Comment?)
         case deleteComment(commentId: Int64)
         case deletePost
+        /// 게시글 신고 — 남의 글에만 노출된다(권한 판정은 서버)
+        case reportPost
+        /// 작성자 차단 — 남의 글에만 노출된다
+        case blockAuthor
         case clearError
+        case clearNotice
     }
 
     enum Event {
         case postDeleted
+        /// 차단 성공 — 그 사용자의 글은 목록에서도 사라지므로 삭제와 같은 복귀·갱신 경로를 탄다
+        case authorBlocked
         case commentCreated
     }
 }
