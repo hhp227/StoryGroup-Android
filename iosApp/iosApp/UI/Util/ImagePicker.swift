@@ -93,6 +93,6 @@ struct ImagePicker: UIViewControllerRepresentable {
 /// 만들어 한 바이트씩 넣으면 바이트마다 Swift↔Kotlin 경계를 넘어, 10MB 동영상에서 눈에 띄게 멈춘다.
 extension Data {
     func toKotlinByteArray() -> KotlinByteArray {
-        MediaBridgesKt.nsDataToByteArray(data: self as NSData)
+        MediaBridgesKt.nsDataToByteArray(data: (self as NSData) as Data)
     }
 }
