@@ -25,6 +25,10 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             // 회의 영상 통화 — 미디어는 플랫폼 네이티브(README 원칙), 시그널링만 shared가 담당
             implementation(libs.getstream.webrtc)
+            // 게시글 첨부 동영상 재생 — PlayerView가 컨트롤·시크·종횡비 resize를 준다.
+            // iOS는 AVKit, Desktop은 브라우저로 넘기므로 이 의존성은 androidMain에만 둔다.
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.ui)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

@@ -26,6 +26,10 @@ struct PostDetailView: View {
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
 
+    /// 지금 재생 중인 동영상 URL — 한 게시글에 동영상이 여럿이어도 재생기는 하나만 뜬다.
+    /// 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(Compose playingVideoUrl 미러)
+    @State private var playingVideoUrl: String?
+
     /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
@@ -250,6 +254,14 @@ struct PostDetailView: View {
                         Color.clear
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                // 동영상은 이미지 다음에 온다(웹 상세 페이지와 같은 순서)
+                ForEach(post.videoUrls, id: \.self) { url in
+                    SGVideoAttachment(
+                        urlString: url,
+                        isPlaying: url == playingVideoUrl,
+                        onPlayRequest: { playingVideoUrl = url }
+                    )
                 }
                 HStack(spacing: 16) {
                     Button {

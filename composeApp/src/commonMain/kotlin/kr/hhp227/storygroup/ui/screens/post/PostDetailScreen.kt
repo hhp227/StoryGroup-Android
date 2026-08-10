@@ -58,6 +58,7 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.components.SgVideoAttachment
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -108,6 +109,9 @@ fun PostDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     // 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     var confirmAction by remember { mutableStateOf<ConfirmAction?>(null) }
+    // 지금 재생 중인 동영상 URL — 한 게시글에 동영상이 여럿이어도 재생기는 하나만 뜬다.
+    // 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(menuExpanded와 같은 성격).
+    var playingVideoUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
@@ -237,7 +241,14 @@ fun PostDetailScreen(
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    item { PostBody(uiState, onAction) }
+                    item {
+                        PostBody(
+                            uiState = uiState,
+                            onAction = onAction,
+                            playingVideoUrl = playingVideoUrl,
+                            onPlayVideo = { playingVideoUrl = it }
+                        )
+                    }
                     item {
                         Divider(color = sg.stoneBorder)
                         Text(
@@ -386,7 +397,12 @@ private fun ActionConfirmDialog(
 }
 
 @Composable
-private fun PostBody(uiState: PostDetailViewModel.UiState, onAction: (PostDetailViewModel.Action) -> Unit) {
+private fun PostBody(
+    uiState: PostDetailViewModel.UiState,
+    onAction: (PostDetailViewModel.Action) -> Unit,
+    playingVideoUrl: String?,
+    onPlayVideo: (String) -> Unit
+) {
     val sg = SgTheme.colors
     val post = uiState.post ?: return
 
@@ -413,6 +429,14 @@ private fun PostBody(uiState: PostDetailViewModel.UiState, onAction: (PostDetail
                 contentDescription = null,
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            )
+        }
+        // 동영상은 이미지 다음에 온다(웹 상세 페이지와 같은 순서)
+        post.videoUrls.forEach { url ->
+            SgVideoAttachment(
+                url = url,
+                isPlaying = url == playingVideoUrl,
+                onPlayRequest = { onPlayVideo(url) }
             )
         }
         // IconButton은 48dp 터치 영역 안에 24dp 아이콘을 가운데 두므로 좌우로 12dp가 남는다 —

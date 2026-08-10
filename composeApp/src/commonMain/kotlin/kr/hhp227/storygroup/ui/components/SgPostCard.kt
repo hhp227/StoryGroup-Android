@@ -27,8 +27,12 @@ import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
+/** 피드 카드 첨부 썸네일 한 칸의 크기 — 이미지와 동영상이 같은 줄에 서므로 값을 공유한다 */
+private val THUMBNAIL_SIZE = 120.dp
+
 /**
- * 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속).
+ * 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 첨부는 가로 스크롤 썸네일이고
+ * 동영상은 ▶ 자리로 표시한다(재생은 상세에서).
  * onClick을 주지 않으면 카드는 눌러도 아무 일이 없다 — 상세로 갈 수 없는 자리(미리보기 등)를 위해 기본값을 둔다.
  */
 @Composable
@@ -69,7 +73,9 @@ fun SgPostCard(post: Post, modifier: Modifier = Modifier, onClick: () -> Unit = 
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            if (post.imageUrls.isNotEmpty()) {
+            // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
+            // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
+            if (post.imageUrls.isNotEmpty() || post.videoUrls.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(post.imageUrls) { url ->
@@ -77,15 +83,13 @@ fun SgPostCard(post: Post, modifier: Modifier = Modifier, onClick: () -> Unit = 
                             model = url,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(120.dp).clip(SgTheme.shapes.field)
+                            modifier = Modifier.size(THUMBNAIL_SIZE).clip(SgTheme.shapes.field)
                         )
                     }
+                    items(post.videoUrls) { url ->
+                        SgVideoThumbnail(url = url, size = THUMBNAIL_SIZE)
+                    }
                 }
-            }
-            // 동영상 재생은 후속 작업 — 개수만 요약 표기(웹 GIF 뱃지 등은 다루지 않음)
-            if (post.videoUrls.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Text("동영상 ${post.videoUrls.size}개", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
             }
         }
     }
