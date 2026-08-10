@@ -83,6 +83,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
 
 /**
  * 수동 DI 컨테이너 — 플랫폼 진입점에서 저장소 2종만 주입하면 나머지 의존성이 구성된다.
@@ -139,6 +140,7 @@ class AppContainer(
     // 삭제 알림 — 목록이 재조회 없이 그 글만 걷어낸다
     val observePostDeletionsUseCase = ObservePostDeletionsUseCase(postRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
+    val uploadVideoUseCase = UploadVideoUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
     val joinGroupUseCase = JoinGroupUseCase(groupRepository)

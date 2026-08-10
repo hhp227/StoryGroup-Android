@@ -262,7 +262,7 @@ struct SGUnreadBadge: View {
 }
 
 /// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
-/// 이미지는 가로 스크롤 썸네일, 동영상은 개수만 요약(재생은 후속 작업)
+/// 첨부는 가로 스크롤 썸네일이고 동영상은 ▶ 자리로 표시한다(재생은 상세에서)
 struct SGPostCard: View {
     let post: Post
 
@@ -295,7 +295,9 @@ struct SGPostCard: View {
                         .lineLimit(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !post.imageUrls.isEmpty {
+                // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
+                // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
+                if !post.imageUrls.isEmpty || !post.videoUrls.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(post.imageUrls, id: \.self) { urlString in
@@ -311,12 +313,11 @@ struct SGPostCard: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
                             }
+                            ForEach(post.videoUrls, id: \.self) { urlString in
+                                SGVideoThumbnail(urlString: urlString, size: 120)
+                            }
                         }
                     }
-                }
-                // 동영상 재생은 후속 작업 — 개수만 요약 표기
-                if !post.videoUrls.isEmpty {
-                    Text("동영상 \(post.videoUrls.count)개").font(.caption).foregroundColor(colors.inkSoft)
                 }
             }
             .padding(16)

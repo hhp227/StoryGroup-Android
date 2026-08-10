@@ -56,6 +56,8 @@ final class AppContainer {
     let observePostDeletionsUseCase: ObservePostDeletionsUseCase
     let createLoungePostUseCase: CreateLoungePostUseCase
     let uploadImageUseCase: UploadImageUseCase
+
+    let uploadVideoUseCase: UploadVideoUseCase
     let createGroupUseCase: CreateGroupUseCase
     let getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase
     let joinGroupUseCase: JoinGroupUseCase
@@ -148,6 +150,7 @@ final class AppContainer {
         observePostDeletionsUseCase = ObservePostDeletionsUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
         uploadImageUseCase = UploadImageUseCase(mediaRepository: mediaRepository)
+        uploadVideoUseCase = UploadVideoUseCase(mediaRepository: mediaRepository)
         createGroupUseCase = CreateGroupUseCase(groupRepository: groupRepository)
         getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository: groupRepository)
         joinGroupUseCase = JoinGroupUseCase(groupRepository: groupRepository)

@@ -44,6 +44,8 @@
 		A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */; };
 		A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011035AABBCCDDEEFF0035 /* PostDetailView.swift */; };
 		A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */; };
+		A1010037AABBCCDDEEFF0037 /* SGVideoAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */; };
+		A1010038AABBCCDDEEFF0038 /* VideoPoster.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */; };
 		A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */; };
 		A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */; };
 		A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */; };
@@ -99,6 +101,8 @@
 		A1011024AABBCCDDEEFF0024 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
 		A1011035AABBCCDDEEFF0035 /* PostDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailView.swift; sourceTree = "<group>"; };
 		A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailViewModel.swift; sourceTree = "<group>"; };
+		A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SGVideoAttachment.swift; sourceTree = "<group>"; };
+		A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPoster.swift; sourceTree = "<group>"; };
 		A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
 		A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsViewModel.swift; sourceTree = "<group>"; };
 		A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupView.swift; sourceTree = "<group>"; };
@@ -186,6 +190,7 @@
 			isa = PBXGroup;
 			children = (
 				A101100CAABBCCDDEEFF000C /* SGComponents.swift */,
+				A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -334,6 +339,7 @@
 			isa = PBXGroup;
 			children = (
 				A1011027AABBCCDDEEFF0027 /* ImagePicker.swift */,
+				A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */,
 				A101101CAABBCCDDEEFF001C /* TimeFormats.swift */,
 			);
 			path = Util;
@@ -483,6 +489,7 @@
 				A101001AAABBCCDDEEFF001A /* HomeViewModel.swift in Sources */,
 				A101001BAABBCCDDEEFF001B /* TimeFormats.swift in Sources */,
 				A1010027AABBCCDDEEFF0027 /* ImagePicker.swift in Sources */,
+				A1010038AABBCCDDEEFF0038 /* VideoPoster.swift in Sources */,
 				A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */,
 				A1010006AABBCCDDEEFF0006 /* SGTheme.swift in Sources */,
 				A101000BAABBCCDDEEFF000B /* SGComponents.swift in Sources */,
@@ -502,6 +509,7 @@
 				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
 				A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */,
 				A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */,
+				A1010037AABBCCDDEEFF0037 /* SGVideoAttachment.swift in Sources */,
 				A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */,
 				A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */,
 				A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */,

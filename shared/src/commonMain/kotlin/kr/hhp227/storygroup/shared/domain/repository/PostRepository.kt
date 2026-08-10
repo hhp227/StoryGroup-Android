@@ -21,12 +21,22 @@ interface PostRepository {
 
     /**
      * 게시글 작성 — POST /api/groups/{id}/posts, 생성된 게시글을 돌려준다.
-     * images는 [UploadImageUseCase]로 먼저 업로드해 받은 URL 목록 — 첨부 순서 그대로 서버에 전달된다.
+     * images/videos는 [UploadImageUseCase]·[UploadVideoUseCase]로 먼저 업로드해 받은 URL 목록 —
+     * 첨부 순서 그대로 서버에 전달된다.
      */
-    suspend fun createPost(groupId: Long, text: String, images: List<String> = emptyList()): Result<Post>
+    suspend fun createPost(
+        groupId: Long,
+        text: String,
+        images: List<String> = emptyList(),
+        videos: List<String> = emptyList()
+    ): Result<Post>
 
     /** 라운지에 게시 — 홈 피드 작성 진입점(웹 메인 피드 폼 미러), 라운지 해석 포함 */
-    suspend fun createLoungePost(text: String, images: List<String> = emptyList()): Result<Post>
+    suspend fun createLoungePost(
+        text: String,
+        images: List<String> = emptyList(),
+        videos: List<String> = emptyList()
+    ): Result<Post>
 
     /**
      * 게시글 단건 — GET /api/groups/{groupId}/posts/{postId}.
@@ -37,10 +47,17 @@ interface PostRepository {
 
     /**
      * 게시글 수정 — PATCH, 작성자 본인만(권한은 서버가 판정한다).
-     * images는 폼이 들고 있는 목록을 그대로 보내 전체 교체한다 — 서버의 3상태(null=유지) 계약을
+     * images/videos는 폼이 들고 있는 목록을 그대로 보내 전체 교체한다 — 서버의 3상태(null=유지) 계약을
      * 쓰지 않아야 "사진을 지웠는데 그대로 남는" 경우가 생기지 않는다.
+     * ⚠️전체 교체라 호출부(작성 폼)는 수정 모드 진입 시 기존 images/videos를 반드시 채워 넣어야 한다.
      */
-    suspend fun updatePost(groupId: Long, postId: Long, text: String, images: List<String>): Result<Post>
+    suspend fun updatePost(
+        groupId: Long,
+        postId: Long,
+        text: String,
+        images: List<String>,
+        videos: List<String>
+    ): Result<Post>
 
     /** 게시글 삭제 — DELETE, 작성자 본인만(권한은 서버가 판정한다) */
     suspend fun deletePost(groupId: Long, postId: Long): Result<Unit>

@@ -16,11 +16,12 @@ import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
  * 게시글 작성 — groupId가 null이면 라운지(홈 피드)에 게시한다(웹 메인 피드 폼 미러).
- * 이미지는 선택 즉시 업로드해 URL을 UiState에 쌓아두고, 등록 시 함께 전송한다(웹 ImageUploadField 미러).
+ * 이미지·동영상은 선택 즉시 업로드해 URL을 UiState에 쌓아두고, 등록 시 함께 전송한다(웹 ImageUploadField 미러).
  * 성공은 Event.Created 일회성 발화 — 호출부(App.kt)가 복귀+피드 갱신을 처리한다.
  * iosApp CreatePostViewModel.swift와 1:1 미러
  */
@@ -31,6 +32,7 @@ class CreatePostViewModel(
     private val createPostUseCase: CreatePostUseCase,
     private val createLoungePostUseCase: CreateLoungePostUseCase,
     private val uploadImageUseCase: UploadImageUseCase,
+    private val uploadVideoUseCase: UploadVideoUseCase,
     private val getPostUseCase: GetPostUseCase,
     private val updatePostUseCase: UpdatePostUseCase
 ) : ViewModel(), MviViewModel<CreatePostViewModel.UiState, CreatePostViewModel.Action, CreatePostViewModel.Event> {
@@ -47,8 +49,15 @@ class CreatePostViewModel(
             viewModelScope.launch {
                 runCatching { getPostUseCase(groupId, postId) }
                     .onSuccess { post ->
+                        // ⚠️videos도 반드시 채운다 — 저장이 전체 교체라 비워둔 채 보내면
+                        // 웹에서 올린 동영상이 수정 한 번에 전부 삭제된다(images와 같은 이유)
                         _uiState.update {
-                            it.copy(isLoading = false, images = post.imageUrls, loadedText = post.text)
+                            it.copy(
+                                isLoading = false,
+                                images = post.imageUrls,
+                                videos = post.videoUrls,
+                                loadedText = post.text
+                            )
                         }
                     }
                     .onFailure { e ->
@@ -64,6 +73,8 @@ class CreatePostViewModel(
             Action.ClearError -> _uiState.update { it.copy(error = null) }
             is Action.AddImage -> addImage(action.bytes, action.fileName, action.contentType)
             is Action.RemoveImage -> _uiState.update { it.copy(images = it.images - action.url) }
+            is Action.AddVideo -> addVideo(action.bytes, action.fileName, action.contentType)
+            is Action.RemoveVideo -> _uiState.update { it.copy(videos = it.videos - action.url) }
         }
     }
 
@@ -82,13 +93,34 @@ class CreatePostViewModel(
         }
     }
 
+    private fun addVideo(bytes: ByteArray, fileName: String, contentType: String) {
+        if (_uiState.value.videos.size >= MAX_VIDEOS) return
+        // 올려놓고 서버 거절을 기다리게 하지 않는다 — 큰 파일일수록 헛되이 기다리는 시간이 길다
+        if (bytes.size > MAX_VIDEO_BYTES) {
+            _uiState.update { it.copy(error = "동영상은 ${MAX_VIDEO_BYTES / 1024 / 1024}MB까지 올릴 수 있습니다.") }
+            return
+        }
+
+        _uiState.update { it.copy(isUploadingVideo = true, error = null) }
+        viewModelScope.launch {
+            runCatching { uploadVideoUseCase(bytes, fileName, contentType) }
+                .onSuccess { url ->
+                    _uiState.update { it.copy(isUploadingVideo = false, videos = it.videos + url) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isUploadingVideo = false, error = e.message ?: "동영상 업로드에 실패했습니다.") }
+                }
+        }
+    }
+
     private fun submit(text: String) {
         if (_uiState.value.isLoading) return
 
         val images = _uiState.value.images
+        val videos = _uiState.value.videos
         // 본문/첨부 중 하나는 필수 — 백엔드 규칙과 일치(웹 폼의 required={images.length===0} 미러)
-        if (text.isBlank() && images.isEmpty()) {
-            _uiState.update { it.copy(error = "내용을 입력하거나 사진을 추가해주세요.") }
+        if (text.isBlank() && images.isEmpty() && videos.isEmpty()) {
+            _uiState.update { it.copy(error = "내용을 입력하거나 사진·동영상을 추가해주세요.") }
             return
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
@@ -96,9 +128,9 @@ class CreatePostViewModel(
             runCatching {
                 when {
                     // 수정은 라운지 글도 그 글의 groupId로 들어오므로 groupId가 항상 있다
-                    groupId != null && postId != null -> updatePostUseCase(groupId, postId, text, images)
-                    groupId != null -> createPostUseCase(groupId, text, images)
-                    else -> createLoungePostUseCase(text, images)
+                    groupId != null && postId != null -> updatePostUseCase(groupId, postId, text, images, videos)
+                    groupId != null -> createPostUseCase(groupId, text, images, videos)
+                    else -> createLoungePostUseCase(text, images, videos)
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isLoading = false) }
@@ -116,6 +148,8 @@ class CreatePostViewModel(
         val error: String? = null,
         val images: List<String> = emptyList(),
         val isUploadingImage: Boolean = false,
+        val videos: List<String> = emptyList(),
+        val isUploadingVideo: Boolean = false,
         val isEditMode: Boolean = false,
         /** 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(null이면 아직 로드 전) */
         val loadedText: String? = null
@@ -126,6 +160,8 @@ class CreatePostViewModel(
         data object ClearError : Action
         class AddImage(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
         data class RemoveImage(val url: String) : Action
+        class AddVideo(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
+        data class RemoveVideo(val url: String) : Action
     }
 
     sealed interface Event {
@@ -135,5 +171,9 @@ class CreatePostViewModel(
     companion object {
         // 서버는 개수 제한이 없지만 앱은 카드 레이아웃 감안해 클라 상한을 둔다(화면의 추가 버튼 비활성 조건과 공유)
         const val MAX_IMAGES = 4
+        const val MAX_VIDEOS = 2
+
+        /** 서버 multipart 상한은 20MB지만 클라는 절반으로 조인다 — 모바일 상향 대역폭에서 20MB는 너무 오래 걸린다 */
+        const val MAX_VIDEO_BYTES = 10 * 1024 * 1024
     }
 }
