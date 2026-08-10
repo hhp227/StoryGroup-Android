@@ -19,7 +19,9 @@ struct HomeView: View {
     init(container: AppContainer) {
         _homeViewModel = StateObject(wrappedValue: HomeViewModel(
             getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
-            observePostUpdatesUseCase: container.observePostUpdatesUseCase
+            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
+            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
+            observePostDeletionsUseCase: container.observePostDeletionsUseCase
         ))
         self.container = container
     }
@@ -160,13 +162,13 @@ private struct HomeContent: View {
             LazyVStack(spacing: 12) {
                 ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { post in
                     if let post {
-                        // 카드 탭 → 게시글 상세 push. 삭제하고 돌아오면 그 글이 사라져야 하므로 피드를 다시 읽는다
+                        // 카드 탭 → 게시글 상세 push. 삭제·차단은 상세가 알림만 흘리고,
+                        // 이 VM이 스냅샷에서 그 글을 걷어낸다(전체 재조회 없음)
                         NavigationLink {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id,
-                                onDeleted: { viewModel.onAction(.refresh) }
+                                postId: post.id
                             )
                         } label: {
                             SGPostCard(post: post)

@@ -39,3 +39,10 @@ data class BlockedUserResponse(
     val blockedAt: String = ""
 )
 
+// 사용자 신고 — 접수는 앱 운영자(admin) 신고 관리로 간다(게시글 신고와 접수처가 다르다).
+// reason은 선택(웹도 사유 입력 UI 없이 null을 보낸다), 같은 대상의 "대기중" 신고는 1건만(중복 409).
+@Serializable
+data class ReportUserRequest(
+    val reason: String? = null
+)
+

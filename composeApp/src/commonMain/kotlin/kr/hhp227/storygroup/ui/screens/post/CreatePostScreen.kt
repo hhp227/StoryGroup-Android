@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,7 +44,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.components.SgVideoThumbnail
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.PickerMode
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
 @Composable
@@ -56,6 +60,7 @@ private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewMo
             createPostUseCase = container.createPostUseCase,
             createLoungePostUseCase = container.createLoungePostUseCase,
             uploadImageUseCase = container.uploadImageUseCase,
+            uploadVideoUseCase = container.uploadVideoUseCase,
             getPostUseCase = container.getPostUseCase,
             updatePostUseCase = container.updatePostUseCase
         )
@@ -63,7 +68,7 @@ private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewMo
 }
 
 /**
- * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진 첨부 행.
+ * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진·동영상 첨부 행.
  * groupId null이면 라운지(홈 피드)에 게시. NavHost 풀스크린 목적지라 상단바는 화면이 소유하고,
  * 성공 이벤트는 화면이 수집해 onCreated로 알린다(ConCafe CafeScreen 패턴).
  * iosApp CreatePostView.swift와 1:1 미러
@@ -91,6 +96,9 @@ fun CreatePostScreen(
     val pickImage = rememberImagePickerLauncher { picked ->
         onAction(CreatePostViewModel.Action.AddImage(picked.bytes, picked.fileName, picked.contentType))
     }
+    val pickVideo = rememberImagePickerLauncher(PickerMode.Video) { picked ->
+        onAction(CreatePostViewModel.Action.AddVideo(picked.bytes, picked.fileName, picked.contentType))
+    }
 
     // 일회성 이벤트 수집 — 성공 시 호출부(App.kt)가 피드 갱신+복귀를 처리한다
     LaunchedEffect(viewModel) {
@@ -112,7 +120,8 @@ fun CreatePostScreen(
             actions = {
                 TextButton(
                     onClick = { onAction(CreatePostViewModel.Action.Submit(text)) },
-                    enabled = !uiState.isLoading && !uiState.isUploadingImage
+                    // 업로드가 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
+                    enabled = !uiState.isLoading && !uiState.isUploadingImage && !uiState.isUploadingVideo
                 ) {
                     Text(
                         if (uiState.isEditMode) "수정" else "등록",
@@ -156,24 +165,53 @@ fun CreatePostScreen(
                 CircularProgressIndicator(color = sg.accent, modifier = Modifier.align(Alignment.Center))
             }
         }
-        ImageAttachmentRow(
-            images = uiState.images,
+        AttachmentRow(
+            urls = uiState.images,
             isUploading = uiState.isUploadingImage,
             canAddMore = uiState.images.size < CreatePostViewModel.MAX_IMAGES,
+            addIcon = Icons.Default.AddAPhoto,
+            addDescription = "사진 추가",
             onAddClick = pickImage,
-            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveImage(url)) }
+            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveImage(url)) },
+            thumbnail = { url ->
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(SgTheme.shapes.field)
+                )
+            }
+        )
+        AttachmentRow(
+            urls = uiState.videos,
+            isUploading = uiState.isUploadingVideo,
+            canAddMore = uiState.videos.size < CreatePostViewModel.MAX_VIDEOS,
+            addIcon = Icons.Default.VideoCall,
+            addDescription = "동영상 추가",
+            onAddClick = pickVideo,
+            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveVideo(url)) },
+            thumbnail = { url -> SgVideoThumbnail(url = url, size = ATTACHMENT_SIZE) }
         )
     }
 }
 
-/** 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장) */
+/** 첨부 썸네일 한 칸의 크기 — 사진 행과 동영상 행이 같은 높이로 서도록 값을 공유한다 */
+private val ATTACHMENT_SIZE = 72.dp
+
+/**
+ * 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장).
+ * 사진 행과 동영상 행이 칸 모양만 다르고 나머지가 같아 [thumbnail]만 갈아끼워 공유한다.
+ */
 @Composable
-private fun ImageAttachmentRow(
-    images: List<String>,
+private fun AttachmentRow(
+    urls: List<String>,
     isUploading: Boolean,
     canAddMore: Boolean,
+    addIcon: ImageVector,
+    addDescription: String,
     onAddClick: () -> Unit,
     onRemove: (String) -> Unit,
+    thumbnail: @Composable (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -182,14 +220,9 @@ private fun ImageAttachmentRow(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(images) { url ->
-            Box(Modifier.size(72.dp)) {
-                AsyncImage(
-                    model = url,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(SgTheme.shapes.field)
-                )
+        items(urls) { url ->
+            Box(Modifier.size(ATTACHMENT_SIZE)) {
+                thumbnail(url)
                 IconButton(
                     onClick = { onRemove(url) },
                     modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
@@ -206,7 +239,7 @@ private fun ImageAttachmentRow(
         item {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(ATTACHMENT_SIZE)
                     .background(sg.linen, SgTheme.shapes.field),
                 contentAlignment = Alignment.Center
             ) {
@@ -215,8 +248,8 @@ private fun ImageAttachmentRow(
                 } else {
                     IconButton(onClick = onAddClick, enabled = canAddMore) {
                         Icon(
-                            Icons.Default.AddAPhoto,
-                            contentDescription = "사진 추가",
+                            addIcon,
+                            contentDescription = addDescription,
                             tint = if (canAddMore) sg.inkSoft else sg.inkFaint
                         )
                     }

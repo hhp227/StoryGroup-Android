@@ -22,6 +22,19 @@ final class HomeViewModel: MviViewModel {
     /// 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
     /// 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
     /// (Kotlin: pagingData.map { ... } — transform이 suspend라 Swift 클로저를 못 넘겨 브리지 함수 사용)
+    /// 차단한 작성자의 글을 현재 스냅샷에서 걷어낸다 — refresh를 태우면 첫 페이지부터 전체
+    /// 재조회라 쌓아둔 페이지와 스크롤 위치를 잃는다. 다음 세대부턴 서버가 알아서 걸러준다.
+    /// (Kotlin: pagingData.filter { ... } — predicate가 suspend라 Swift 클로저를 못 넘겨 브리지 사용)
+    /// 삭제된 글을 현재 스냅샷에서 걷어낸다 — refresh를 태우면 첫 페이지부터 전체 재조회라
+    /// 쌓아둔 페이지와 스크롤 위치를 잃는다. 다음 세대부턴 서버 응답에 애초에 없다.
+    private func removeDeletedPost(_ postId: Int64) {
+        uiState.pagingData = PostBridgesKt.postPagingDataWithoutPost(pagingData: uiState.pagingData, postId: postId)
+    }
+
+    private func removeBlockedAuthorPosts(_ userId: Int64) {
+        uiState.pagingData = PostBridgesKt.postPagingDataWithoutAuthor(pagingData: uiState.pagingData, userId: userId)
+    }
+
     private func applyPostUpdate(_ post: Post) {
         uiState.pagingData = PostBridgesKt.postPagingDataWithUpdate(pagingData: uiState.pagingData, post: post)
     }
@@ -36,7 +49,9 @@ final class HomeViewModel: MviViewModel {
 
     init(
         getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
-        observePostUpdatesUseCase: ObservePostUpdatesUseCase
+        observePostUpdatesUseCase: ObservePostUpdatesUseCase,
+        observeUserBlocksUseCase: ObserveUserBlocksUseCase,
+        observePostDeletionsUseCase: ObservePostDeletionsUseCase
     ) {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: getLoungePostsPagingDataUseCase().cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
@@ -49,6 +64,18 @@ final class HomeViewModel: MviViewModel {
             observePostUpdatesUseCase.updatesFlow().subscribe(onEach: onEach)
         }
         .sink { [weak self] post in self?.applyPostUpdate(post) }
+        .store(in: &cancellables)
+        // 차단하면 그 사람의 글이 목록에서 사라져야 한다 — 재조회 대신 그 항목들만 제거
+        KotlinFlowPublisher<KotlinLong> { onEach in
+            observeUserBlocksUseCase.blocksFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] userId in self?.removeBlockedAuthorPosts(userId.int64Value) }
+        .store(in: &cancellables)
+        // 상세에서 삭제하면 목록에서도 사라져야 한다 — 재조회 대신 그 항목만 제거
+        KotlinFlowPublisher<KotlinLong> { onEach in
+            observePostDeletionsUseCase.deletionsFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] postId in self?.removeDeletedPost(postId.int64Value) }
         .store(in: &cancellables)
     }
 

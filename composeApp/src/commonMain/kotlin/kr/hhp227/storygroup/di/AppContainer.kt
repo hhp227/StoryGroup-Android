@@ -66,12 +66,15 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
@@ -80,6 +83,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
 
 /**
  * 수동 DI 컨테이너 — 플랫폼 진입점에서 저장소 2종만 주입하면 나머지 의존성이 구성된다.
@@ -126,10 +130,17 @@ class AppContainer(
     val deletePostUseCase = DeletePostUseCase(postRepository)
     // 게시글 상세 더보기 메뉴(남의 글) — 신고는 그룹 신고함, 차단은 내 화면에서 숨김
     val reportPostUseCase = ReportPostUseCase(postRepository)
+    // 댓글엔 신고 API가 없어 작성자를 신고한다(접수처는 운영자 — 게시글 신고와 다르다)
+    val reportUserUseCase = ReportUserUseCase(userRepository)
     val blockUserUseCase = BlockUserUseCase(userRepository)
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
+    // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
+    val observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository)
+    // 삭제 알림 — 목록이 재조회 없이 그 글만 걷어낸다
+    val observePostDeletionsUseCase = ObservePostDeletionsUseCase(postRepository)
     val uploadImageUseCase = UploadImageUseCase(mediaRepository)
+    val uploadVideoUseCase = UploadVideoUseCase(mediaRepository)
     val createGroupUseCase = CreateGroupUseCase(groupRepository)
     val getDiscoverGroupsPagingDataUseCase = GetDiscoverGroupsPagingDataUseCase(groupRepository)
     val joinGroupUseCase = JoinGroupUseCase(groupRepository)

@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.bridge
 
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import androidx.paging.map
 import io.github.hhp227.paging.swiftui.SwiftUiPagingBridge
 import kotlinx.coroutines.CoroutineScope
@@ -15,7 +16,9 @@ import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 
 // Kotlin Flow ↔ Combine Publisher 대응 계층 (Paging-CRUD 샘플과 동일 패턴).
 // Swift 쪽(KmpInterop.swift)이 이 핸들들을 Combine Publisher로 감싸서,
@@ -96,3 +99,48 @@ fun ObservePostUpdatesUseCase.updatesFlow(): PostUpdateFlowAdapter = PostUpdateF
  */
 fun postPagingDataWithUpdate(pagingData: PagingData<Post>, post: Post): PagingData<Post> =
     pagingData.map { if (it.id == post.id) post else it }
+
+/** 사용자 차단 알림 Flow 대응 핸들 — PostUpdateFlowAdapter와 동일 규약(타입별 어댑터) */
+class UserBlockFlowAdapter internal constructor(
+    private val source: Flow<Long>
+) {
+    fun subscribe(onEach: (Long) -> Unit): FlowSubscription {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+        scope.launch { source.collect { onEach(it) } }
+        return FlowSubscription(scope)
+    }
+}
+
+/** Kotlin의 observeUserBlocksUseCase() 호출 대응 — Swift callAsFunction이 감싼다 */
+fun ObserveUserBlocksUseCase.blocksFlow(): UserBlockFlowAdapter = UserBlockFlowAdapter(invoke())
+
+/**
+ * Kotlin의 pagingData.filter { it.userId != userId } 대응 —
+ * PagingData.filter의 predicate는 suspend라 Swift 클로저를 넘길 수 없어 브리지 함수로 제공한다.
+ */
+fun postPagingDataWithoutAuthor(pagingData: PagingData<Post>, userId: Long): PagingData<Post> =
+    pagingData.filter { it.userId != userId }
+
+/** 게시글 삭제 알림 Flow 대응 핸들 — UserBlockFlowAdapter와 동일 규약(타입별 어댑터) */
+class PostDeletionFlowAdapter internal constructor(
+    private val source: Flow<Long>
+) {
+    fun subscribe(onEach: (Long) -> Unit): FlowSubscription {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+        scope.launch { source.collect { onEach(it) } }
+        return FlowSubscription(scope)
+    }
+}
+
+/** Kotlin의 observePostDeletionsUseCase() 호출 대응 — Swift callAsFunction이 감싼다 */
+fun ObservePostDeletionsUseCase.deletionsFlow(): PostDeletionFlowAdapter = PostDeletionFlowAdapter(invoke())
+
+/**
+ * Kotlin의 pagingData.filter { it.id != postId } 대응 —
+ * PagingData.filter의 predicate는 suspend라 Swift 클로저를 넘길 수 없어 브리지 함수로 제공한다.
+ */
+fun postPagingDataWithoutPost(pagingData: PagingData<Post>, postId: Long): PagingData<Post> =
+    pagingData.filter { it.id != postId }
+

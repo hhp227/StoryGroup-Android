@@ -281,13 +281,6 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             postId = route.postId,
                             onBack = { navController.popBackStack() },
                             onEdit = { navController.navigate(CreatePostRoute(route.groupId, route.postId)) },
-                            // 삭제하면 돌아갈 피드에서 그 글이 사라져야 한다 — 어디서 들어왔는지 모르므로
-                            // 홈·그룹 양쪽 신호를 다 세우고 나간다(작성 성공과 같은 갱신 경로).
-                            onDeleted = {
-                                homeRefreshPending = true
-                                navController.previousBackStackEntry?.savedStateHandle?.set(POST_CREATED_KEY, true)
-                                navController.popBackStack()
-                            },
                             refreshRequested = postUpdated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화

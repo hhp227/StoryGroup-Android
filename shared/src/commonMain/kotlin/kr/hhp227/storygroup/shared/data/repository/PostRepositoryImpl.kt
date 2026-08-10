@@ -43,6 +43,11 @@ class PostRepositoryImpl(
 
     override val postUpdates: Flow<Post> = _postUpdates.asSharedFlow()
 
+    private val _postDeletions =
+        MutableSharedFlow<Long>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override val postDeletions: Flow<Long> = _postDeletions.asSharedFlow()
+
     override suspend fun getPosts(groupId: Long, page: Int, size: Int): Result<List<Post>> =
         runCatching {
             client.get("/api/groups/$groupId/posts") {
@@ -68,27 +73,45 @@ class PostRepositoryImpl(
             }
         }.flow
 
-    override suspend fun createPost(groupId: Long, text: String, images: List<String>): Result<Post> =
+    override suspend fun createPost(
+        groupId: Long,
+        text: String,
+        images: List<String>,
+        videos: List<String>
+    ): Result<Post> =
         runCatching {
             client.post("/api/groups/$groupId/posts") {
                 contentType(ContentType.Application.Json)
-                setBody(CreatePostRequest(text = text, images = images.ifEmpty { null }))
+                setBody(
+                    CreatePostRequest(
+                        text = text,
+                        images = images.ifEmpty { null },
+                        videos = videos.ifEmpty { null }
+                    )
+                )
             }.body<PostResponse>().toDomain()
         }
 
-    override suspend fun createLoungePost(text: String, images: List<String>): Result<Post> =
-        runCatching { createPost(resolveLoungeId(), text, images).getOrThrow() }
+    override suspend fun createLoungePost(text: String, images: List<String>, videos: List<String>): Result<Post> =
+        runCatching { createPost(resolveLoungeId(), text, images, videos).getOrThrow() }
 
     override suspend fun getPost(groupId: Long, postId: Long): Result<Post> =
         runCatching { client.get("/api/groups/$groupId/posts/$postId").body<PostResponse>().toDomain() }
 
-    override suspend fun updatePost(groupId: Long, postId: Long, text: String, images: List<String>): Result<Post> =
+    override suspend fun updatePost(
+        groupId: Long,
+        postId: Long,
+        text: String,
+        images: List<String>,
+        videos: List<String>
+    ): Result<Post> =
         runCatching {
             client.patch("/api/groups/$groupId/posts/$postId") {
                 contentType(ContentType.Application.Json)
-                // videos는 보내지 않는다(null=유지) — 앱 작성 폼에 동영상 첨부가 없어
-                // 수정에서만 건드리면 웹에서 올린 동영상을 앱이 지워버리게 된다.
-                setBody(UpdatePostRequest(text = text, images = images))
+                // images와 마찬가지로 videos도 폼이 들고 있는 목록을 통째로 보내 전체 교체한다.
+                // 예전에는 videos를 빼서(null=유지) 웹에서 올린 동영상을 보호했지만, 이제 앱 폼이
+                // 수정 진입 시 기존 videoUrls를 채우므로 "지운 동영상이 남는" 쪽을 막는 게 맞다.
+                setBody(UpdatePostRequest(text = text, images = images, videos = videos))
             }.body<PostResponse>().toDomain()
         }.onSuccess { post ->
             // 목록은 이 알림으로 그 항목만 갈아끼운다 — 재조회(refresh)는 첫 페이지부터 다시 읽어
@@ -97,7 +120,13 @@ class PostRepositoryImpl(
         }
 
     override suspend fun deletePost(groupId: Long, postId: Long): Result<Unit> =
-        runCatching { client.delete("/api/groups/$groupId/posts/$postId") }.map { }
+        runCatching { client.delete("/api/groups/$groupId/posts/$postId") }
+            .map { }
+            .onSuccess {
+                // 목록은 이 알림으로 그 글만 걷어낸다 — 재조회(refresh)는 첫 페이지부터 다시 읽어
+                // 이미 쌓아둔 페이지와 스크롤 위치를 잃는다
+                _postDeletions.tryEmit(postId)
+            }
 
     override suspend fun reportPost(groupId: Long, postId: Long, reason: String?): Result<Unit> =
         runCatching {

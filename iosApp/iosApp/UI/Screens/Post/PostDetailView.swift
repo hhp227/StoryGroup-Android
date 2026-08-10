@@ -2,11 +2,9 @@ import Shared
 import SwiftUI
 
 /// 게시글 상세 — composeApp PostDetailScreen.kt와 1:1 미러.
-/// 본문·이미지·좋아요·댓글(답글 포함). 삭제 성공은 화면이 수집해 onDeleted로 알린다
-/// (호출부가 복귀+피드 갱신을 처리한다 — CreatePostView와 같은 규약).
+/// 본문·이미지·좋아요·댓글(답글 포함). 삭제·차단 성공은 화면을 닫기만 하고,
+/// 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
 struct PostDetailView: View {
-    let onDeleted: () -> Void
-
     // 수정 화면을 push할 때 다시 필요하다
     private let container: AppContainer
 
@@ -28,6 +26,10 @@ struct PostDetailView: View {
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
 
+    /// 지금 재생 중인 동영상 URL — 한 게시글에 동영상이 여럿이어도 재생기는 하나만 뜬다.
+    /// 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(Compose playingVideoUrl 미러)
+    @State private var playingVideoUrl: String?
+
     /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
@@ -41,6 +43,50 @@ struct PostDetailView: View {
                 }
                 .hidden()
             )
+        }
+    }
+
+    private func isReportAction(_ action: ConfirmAction) -> Bool {
+        switch action {
+        case .reportPost, .reportComment: return true
+        case .blockAuthor, .blockComment: return false
+        }
+    }
+
+    private func confirmTitle(_ action: ConfirmAction) -> String {
+        switch action {
+        case .reportPost: return "게시글 신고"
+        case .reportComment: return "사용자 신고"
+        case .blockAuthor, .blockComment: return "사용자 차단"
+        }
+    }
+
+    private func confirmMessage(_ action: ConfirmAction) -> String {
+        // 차단 문구는 어디서 눌렀든 같다 — 차단은 사용자 단위라 글·댓글이 함께 숨겨진다
+        func blockMessage(_ name: String) -> String {
+            "\(name)님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다."
+        }
+
+        switch action {
+        case .reportPost:
+            return "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
+        // 댓글엔 신고 API가 없어 작성자를 신고한다 — 접수처도 운영자로 달라서 문구를 구분한다
+        case .reportComment(_, let authorName):
+            return "\(authorName)님을 신고할까요?\n접수된 신고는 운영자가 확인합니다."
+        case .blockAuthor:
+            // uiState는 core의 지역 상수라 여기선 VM에서 직접 읽는다
+            return blockMessage(postDetailViewModel.uiState.post?.authorName ?? "")
+        case .blockComment(_, let authorName):
+            return blockMessage(authorName)
+        }
+    }
+
+    private func confirmedAction(_ action: ConfirmAction) -> PostDetailViewModel.Action {
+        switch action {
+        case .reportPost: return .reportPost
+        case .blockAuthor: return .blockAuthor
+        case .reportComment(let userId, _): return .reportCommentAuthor(userId: userId)
+        case .blockComment(let userId, _): return .blockCommentAuthor(userId: userId)
         }
     }
 
@@ -122,16 +168,14 @@ struct PostDetailView: View {
         .overlay {
             if let action = confirmAction {
                 ActionConfirmDialog(
-                    title: action == .report ? "게시글 신고" : "사용자 차단",
-                    message: action == .report
-                        ? "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
-                        : "\(uiState.post?.authorName ?? "")님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다.",
-                    confirmText: action == .report ? "신고" : "차단",
-                    isLoading: action == .report ? uiState.isReporting : uiState.isBlocking,
+                    title: confirmTitle(action),
+                    message: confirmMessage(action),
+                    confirmText: isReportAction(action) ? "신고" : "차단",
+                    isLoading: isReportAction(action) ? uiState.isReporting : uiState.isBlocking,
                     onDismiss: { confirmAction = nil },
                     onConfirm: {
                         confirmAction = nil
-                        postDetailViewModel.onAction(action == .report ? .reportPost : .blockAuthor)
+                        postDetailViewModel.onAction(confirmedAction(action))
                     }
                 )
             }
@@ -155,12 +199,12 @@ struct PostDetailView: View {
                         }
                     } else {
                         Button(role: .destructive) {
-                            confirmAction = .report
+                            confirmAction = .reportPost
                         } label: {
                             Text("신고하기")
                         }
                         Button(role: .destructive) {
-                            confirmAction = .block
+                            confirmAction = .blockAuthor
                         } label: {
                             Text("차단하기")
                         }
@@ -175,12 +219,11 @@ struct PostDetailView: View {
         }
         .onReceive(postDetailViewModel.event) { event in
             switch event {
+            // 삭제·차단 모두 화면만 닫는다 — 목록에서 그 글을 걷어내는 일은 피드 VM이
+            // 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다)
             case .postDeleted:
-                onDeleted()
                 dismiss()
-            // 차단하면 그 사용자의 글이 목록에서도 사라진다 — 삭제와 같은 복귀·갱신 경로
             case .authorBlocked:
-                onDeleted()
                 dismiss()
             // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
             case .commentCreated:
@@ -211,6 +254,14 @@ struct PostDetailView: View {
                         Color.clear
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                // 동영상은 이미지 다음에 온다(웹 상세 페이지와 같은 순서)
+                ForEach(post.videoUrls, id: \.self) { url in
+                    SGVideoAttachment(
+                        urlString: url,
+                        isPlaying: url == playingVideoUrl,
+                        onPlayRequest: { playingVideoUrl = url }
+                    )
                 }
                 HStack(spacing: 16) {
                     Button {
@@ -243,20 +294,40 @@ struct PostDetailView: View {
                     Text(TimeFormats.relative(comment.createdAt)).font(.caption2).foregroundColor(colors.inkFaint)
                 }
                 Text(comment.text).font(.subheadline).foregroundColor(colors.ink)
-                HStack(spacing: 12) {
-                    if canReply {
-                        Button("답글") { postDetailViewModel.onAction(.setReplyTo(comment: comment)) }
-                            .font(.caption2)
-                            .foregroundColor(colors.inkFaint)
-                    }
-                    if isMine {
-                        Button("삭제") { postDetailViewModel.onAction(.deleteComment(commentId: comment.id)) }
-                            .font(.caption2)
-                            .foregroundColor(colors.inkFaint)
-                    }
+                if canReply {
+                    Button("답글") { postDetailViewModel.onAction(.setReplyTo(comment: comment)) }
+                        .font(.caption2)
+                        .foregroundColor(colors.inkFaint)
                 }
             }
             Spacer(minLength: 0)
+            // 게시글 상단바와 같은 규칙 — 더보기는 항상 노출하고 내 댓글이면 삭제, 남의 댓글이면 신고·차단
+            Menu {
+                if isMine {
+                    Button(role: .destructive) {
+                        postDetailViewModel.onAction(.deleteComment(commentId: comment.id))
+                    } label: {
+                        Text("삭제")
+                    }
+                } else {
+                    Button(role: .destructive) {
+                        confirmAction = .reportComment(userId: comment.userId, authorName: comment.authorName)
+                    } label: {
+                        Text("신고하기")
+                    }
+                    Button(role: .destructive) {
+                        confirmAction = .blockComment(userId: comment.userId, authorName: comment.authorName)
+                    } label: {
+                        Text("차단하기")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.caption)
+                    .foregroundColor(colors.inkFaint)
+                    // 아이콘만으론 터치 영역이 좁다 — 행 높이를 키우지 않는 선에서 넓힌다
+                    .frame(width: 28, height: 28)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -301,8 +372,7 @@ struct PostDetailView: View {
         .background(colors.paper)
     }
     
-    init(container: AppContainer, groupId: Int64, postId: Int64, onDeleted: @escaping () -> Void) {
-        self.onDeleted = onDeleted
+    init(container: AppContainer, groupId: Int64, postId: Int64) {
         self.container = container
         self.groupId = groupId
         self.postId = postId
@@ -315,6 +385,7 @@ struct PostDetailView: View {
             deleteCommentUseCase: container.deleteCommentUseCase,
             deletePostUseCase: container.deletePostUseCase,
             reportPostUseCase: container.reportPostUseCase,
+            reportUserUseCase: container.reportUserUseCase,
             blockUserUseCase: container.blockUserUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
@@ -323,8 +394,11 @@ struct PostDetailView: View {
 
 /// 더보기 메뉴의 되돌릴 수 없는 액션 — 확인 다이얼로그를 한 번 거친다(Compose ConfirmAction 미러)
 private enum ConfirmAction {
-    case report
-    case block
+    case reportPost
+    case blockAuthor
+    /// 댓글 신고 API는 없어 작성자를 신고한다 — 문구에 쓰려고 이름을 함께 싣는다
+    case reportComment(userId: Int64, authorName: String)
+    case blockComment(userId: Int64, authorName: String)
 }
 
 /// 신고·차단 확인 다이얼로그 — Compose ActionConfirmDialog 미러(GroupDetailView의 DmConfirmDialog와

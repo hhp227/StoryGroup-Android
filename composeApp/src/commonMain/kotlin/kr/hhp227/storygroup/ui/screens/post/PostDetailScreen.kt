@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -57,6 +58,7 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.components.SgVideoAttachment
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -74,6 +76,7 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
             deleteCommentUseCase = container.deleteCommentUseCase,
             deletePostUseCase = container.deletePostUseCase,
             reportPostUseCase = container.reportPostUseCase,
+            reportUserUseCase = container.reportUserUseCase,
             blockUserUseCase = container.blockUserUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
@@ -82,8 +85,8 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
 
 /**
  * 게시글 상세 — 본문·이미지·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
- * NavHost 풀스크린 목적지라 상단바는 화면이 소유하고, 삭제 성공은 화면이 수집해 onDeleted로 알린다
- * (호출부가 복귀+피드 갱신을 처리한다 — CreatePostScreen과 같은 규약).
+ * NavHost 풀스크린 목적지라 상단바는 화면이 소유한다. 삭제·차단 성공은 화면을 닫기만 하고,
+ * 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
  * iosApp PostDetailView.swift와 1:1 미러
  */
 @Composable
@@ -92,7 +95,6 @@ fun PostDetailScreen(
     postId: Long,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
     refreshRequested: Boolean = false,
@@ -107,6 +109,9 @@ fun PostDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     // 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     var confirmAction by remember { mutableStateOf<ConfirmAction?>(null) }
+    // 지금 재생 중인 동영상 URL — 한 게시글에 동영상이 여럿이어도 재생기는 하나만 뜬다.
+    // 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(menuExpanded와 같은 성격).
+    var playingVideoUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
@@ -120,9 +125,10 @@ fun PostDetailScreen(
     LaunchedEffect(viewModel) {
         viewModel.event.collect { event ->
             when (event) {
-                PostDetailViewModel.Event.PostDeleted -> onDeleted()
-                // 차단하면 그 사용자의 글이 목록에서도 사라진다 — 삭제와 같은 복귀·갱신 경로
-                PostDetailViewModel.Event.AuthorBlocked -> onDeleted()
+                // 삭제·차단 모두 화면만 닫는다 — 목록에서 그 글을 걷어내는 일은 피드 VM이
+                // 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다)
+                PostDetailViewModel.Event.PostDeleted -> onBack()
+                PostDetailViewModel.Event.AuthorBlocked -> onBack()
                 // 등록에 성공했을 때만 입력창을 비운다 — 실패하면 쓴 글이 남아 재시도할 수 있다
                 PostDetailViewModel.Event.CommentCreated -> commentText = ""
             }
@@ -170,7 +176,7 @@ fun PostDetailScreen(
                             DropdownMenuItem(
                                 onClick = {
                                     menuExpanded = false
-                                    confirmAction = ConfirmAction.Report
+                                    confirmAction = ConfirmAction.ReportPost
                                 }
                             ) {
                                 Text("신고하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
@@ -180,7 +186,7 @@ fun PostDetailScreen(
                                 enabled = uiState.post != null,
                                 onClick = {
                                     menuExpanded = false
-                                    confirmAction = ConfirmAction.Block
+                                    confirmAction = ConfirmAction.BlockAuthor
                                 }
                             ) {
                                 Text("차단하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
@@ -235,7 +241,14 @@ fun PostDetailScreen(
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    item { PostBody(uiState, onAction) }
+                    item {
+                        PostBody(
+                            uiState = uiState,
+                            onAction = onAction,
+                            playingVideoUrl = playingVideoUrl,
+                            onPlayVideo = { playingVideoUrl = it }
+                        )
+                    }
                     item {
                         Divider(color = sg.stoneBorder)
                         Text(
@@ -251,7 +264,13 @@ fun PostDetailScreen(
                                 comment = comment,
                                 isMine = comment.userId == uiState.myUserId,
                                 onReply = { onAction(PostDetailViewModel.Action.SetReplyTo(comment)) },
-                                onDelete = { onAction(PostDetailViewModel.Action.DeleteComment(comment.id)) }
+                                onDelete = { onAction(PostDetailViewModel.Action.DeleteComment(comment.id)) },
+                                onReport = {
+                                    confirmAction = ConfirmAction.ReportComment(comment.userId, comment.authorName)
+                                },
+                                onBlock = {
+                                    confirmAction = ConfirmAction.BlockComment(comment.userId, comment.authorName)
+                                }
                             )
                             // 답글은 한 단계만 들여쓴다(서버가 답글의 답글을 허용하지 않는다)
                             uiState.repliesOf(comment.id).forEach { reply ->
@@ -260,6 +279,12 @@ fun PostDetailScreen(
                                     isMine = reply.userId == uiState.myUserId,
                                     onReply = null,
                                     onDelete = { onAction(PostDetailViewModel.Action.DeleteComment(reply.id)) },
+                                    onReport = {
+                                        confirmAction = ConfirmAction.ReportComment(reply.userId, reply.authorName)
+                                    },
+                                    onBlock = {
+                                        confirmAction = ConfirmAction.BlockComment(reply.userId, reply.authorName)
+                                    },
                                     modifier = Modifier.padding(start = 40.dp)
                                 )
                             }
@@ -280,25 +305,44 @@ fun PostDetailScreen(
     }
 
     confirmAction?.let { action ->
-        val authorName = uiState.post?.authorName ?: ""
+        // 차단 문구는 어디서 눌렀든 같다 — 차단은 사용자 단위라 글·댓글이 함께 숨겨진다
+        val blockMessage = { name: String ->
+            "${name}님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다."
+        }
 
         ActionConfirmDialog(
-            title = if (action == ConfirmAction.Report) "게시글 신고" else "사용자 차단",
-            message = when (action) {
-                ConfirmAction.Report -> "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
-                ConfirmAction.Block ->
-                    "${authorName}님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다."
+            title = when (action) {
+                ConfirmAction.ReportPost -> "게시글 신고"
+                is ConfirmAction.ReportComment -> "사용자 신고"
+                else -> "사용자 차단"
             },
-            confirmText = if (action == ConfirmAction.Report) "신고" else "차단",
-            isLoading = if (action == ConfirmAction.Report) uiState.isReporting else uiState.isBlocking,
+            message = when (action) {
+                ConfirmAction.ReportPost -> "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
+                // 댓글엔 신고 API가 없어 작성자를 신고한다 — 접수처도 운영자로 달라서 문구를 구분한다
+                is ConfirmAction.ReportComment ->
+                    "${action.authorName}님을 신고할까요?\n접수된 신고는 운영자가 확인합니다."
+                ConfirmAction.BlockAuthor -> blockMessage(uiState.post?.authorName ?: "")
+                is ConfirmAction.BlockComment -> blockMessage(action.authorName)
+            },
+            confirmText = when (action) {
+                ConfirmAction.ReportPost, is ConfirmAction.ReportComment -> "신고"
+                else -> "차단"
+            },
+            isLoading = when (action) {
+                ConfirmAction.ReportPost, is ConfirmAction.ReportComment -> uiState.isReporting
+                else -> uiState.isBlocking
+            },
             onDismiss = { confirmAction = null },
             onConfirm = {
                 confirmAction = null
                 onAction(
-                    if (action == ConfirmAction.Report) {
-                        PostDetailViewModel.Action.ReportPost
-                    } else {
-                        PostDetailViewModel.Action.BlockAuthor
+                    when (action) {
+                        ConfirmAction.ReportPost -> PostDetailViewModel.Action.ReportPost
+                        ConfirmAction.BlockAuthor -> PostDetailViewModel.Action.BlockAuthor
+                        is ConfirmAction.ReportComment ->
+                            PostDetailViewModel.Action.ReportCommentAuthor(action.userId)
+                        is ConfirmAction.BlockComment ->
+                            PostDetailViewModel.Action.BlockCommentAuthor(action.userId)
                     }
                 )
             }
@@ -307,7 +351,14 @@ fun PostDetailScreen(
 }
 
 /** 더보기 메뉴의 되돌릴 수 없는 액션 — 확인 다이얼로그를 한 번 거친다 */
-private enum class ConfirmAction { Report, Block }
+private sealed interface ConfirmAction {
+    data object ReportPost : ConfirmAction
+    data object BlockAuthor : ConfirmAction
+
+    /** 댓글 신고 API는 없어 작성자를 신고한다 — 문구에 쓰려고 이름을 함께 싣는다 */
+    data class ReportComment(val userId: Long, val authorName: String) : ConfirmAction
+    data class BlockComment(val userId: Long, val authorName: String) : ConfirmAction
+}
 
 /**
  * 신고·차단 확인 다이얼로그 — GroupDetailScreen의 DmConfirmDialog와 같은 카드형.
@@ -346,7 +397,12 @@ private fun ActionConfirmDialog(
 }
 
 @Composable
-private fun PostBody(uiState: PostDetailViewModel.UiState, onAction: (PostDetailViewModel.Action) -> Unit) {
+private fun PostBody(
+    uiState: PostDetailViewModel.UiState,
+    onAction: (PostDetailViewModel.Action) -> Unit,
+    playingVideoUrl: String?,
+    onPlayVideo: (String) -> Unit
+) {
     val sg = SgTheme.colors
     val post = uiState.post ?: return
 
@@ -373,6 +429,14 @@ private fun PostBody(uiState: PostDetailViewModel.UiState, onAction: (PostDetail
                 contentDescription = null,
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            )
+        }
+        // 동영상은 이미지 다음에 온다(웹 상세 페이지와 같은 순서)
+        post.videoUrls.forEach { url ->
+            SgVideoAttachment(
+                url = url,
+                isPlaying = url == playingVideoUrl,
+                onPlayRequest = { onPlayVideo(url) }
             )
         }
         // IconButton은 48dp 터치 영역 안에 24dp 아이콘을 가운데 두므로 좌우로 12dp가 남는다 —
@@ -402,9 +466,12 @@ private fun CommentRow(
     isMine: Boolean,
     onReply: (() -> Unit)?,
     onDelete: () -> Unit,
+    onReport: () -> Unit,
+    onBlock: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         SgAvatar(comment.authorName, size = 28.dp, imageUrl = comment.authorProfileImg)
@@ -416,16 +483,49 @@ private fun CommentRow(
                 Text(formatRelativeTime(comment.createdAt), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
             }
             Text(comment.text, style = SgTheme.typography.bodySmall, color = sg.ink)
-            Row {
-                if (onReply != null) {
-                    TextButton(onClick = onReply, contentPadding = PaddingValues(0.dp)) {
-                        Text("답글", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
-                    }
+            if (onReply != null) {
+                TextButton(onClick = onReply, contentPadding = PaddingValues(0.dp)) {
+                    Text("답글", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
                 }
+            }
+        }
+        // 게시글 상단바와 같은 규칙 — 더보기는 항상 노출하고 내 댓글이면 삭제, 남의 댓글이면 신고·차단.
+        // 댓글 행은 촘촘해서 기본 48dp IconButton 대신 28dp로 줄인다(채팅 입력바 버튼과 같은 처리)
+        Box {
+            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "더보기",
+                    tint = sg.inkFaint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 if (isMine) {
-                    if (onReply != null) Spacer(Modifier.width(12.dp))
-                    TextButton(onClick = onDelete, contentPadding = PaddingValues(0.dp)) {
-                        Text("삭제", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+                    DropdownMenuItem(
+                        onClick = {
+                            menuExpanded = false
+                            onDelete()
+                        }
+                    ) {
+                        Text("삭제", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    }
+                } else {
+                    DropdownMenuItem(
+                        onClick = {
+                            menuExpanded = false
+                            onReport()
+                        }
+                    ) {
+                        Text("신고하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    }
+                    DropdownMenuItem(
+                        onClick = {
+                            menuExpanded = false
+                            onBlock()
+                        }
+                    ) {
+                        Text("차단하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
                     }
                 }
             }

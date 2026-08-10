@@ -66,7 +66,12 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     viewModel: HomeViewModel = sessionViewModel {
-        HomeViewModel(it.getLoungePostsPagingDataUseCase, it.observePostUpdatesUseCase)
+        HomeViewModel(
+            it.getLoungePostsPagingDataUseCase,
+            it.observePostUpdatesUseCase,
+            it.observeUserBlocksUseCase,
+            it.observePostDeletionsUseCase
+        )
     }
 ) {
     HomeContent(

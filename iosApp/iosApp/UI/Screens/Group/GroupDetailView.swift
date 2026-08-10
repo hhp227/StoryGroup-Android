@@ -36,7 +36,9 @@ struct GroupDetailView: View {
             getBlockedUsersUseCase: container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
-            observePostUpdatesUseCase: container.observePostUpdatesUseCase
+            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
+            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
+            observePostDeletionsUseCase: container.observePostDeletionsUseCase
         ))
         self.container = container
         self.chatViewModel = chatViewModel
@@ -301,19 +303,14 @@ private struct GroupDetailContent: View {
             LazyVStack(spacing: 12) {
                 ForEach(lazyPagingItems, key: { AnyHashable($0.id) }) { post in
                     if let post {
-                        // 카드 탭 → 게시글 상세 push. 삭제하고 돌아오면 그 글이 사라져야 하므로 피드를 다시 읽는다
+                        // 카드 탭 → 게시글 상세 push. 삭제·차단은 상세가 알림만 흘리고,
+                        // 이 VM이 스냅샷에서 그 글을 걷어낸다(전체 재조회 없음).
+                        // 차단한 사람은 멤버 스트립에서도 빠져야 해서 재진입 시 .refresh가 다시 걸린다
                         NavigationLink {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id,
-                                onDeleted: {
-                                    // 글이 사라졌으니 피드를 다시 읽고, 차단으로 돌아온 경우를 위해
-                                    // 그룹 정보(+차단 목록)까지 다시 읽어 멤버 스트립에서도 그 사람을 뺀다.
-                                    // Compose는 재진입 시 화면이 재구성되며 Refresh가 다시 걸린다
-                                    viewModel.onAction(.refreshFeed)
-                                    viewModel.onAction(.refresh)
-                                }
+                                postId: post.id
                             )
                         } label: {
                             SGPostCard(post: post)

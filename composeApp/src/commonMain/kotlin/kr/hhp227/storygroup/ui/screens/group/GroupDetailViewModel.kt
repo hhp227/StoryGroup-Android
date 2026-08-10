@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
+import app.cash.paging.filter
 import app.cash.paging.map
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -31,7 +32,9 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
@@ -59,7 +62,9 @@ class GroupDetailViewModel(
     private val getBlockedUsersUseCase: GetBlockedUsersUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
-    observePostUpdatesUseCase: ObservePostUpdatesUseCase
+    observePostUpdatesUseCase: ObservePostUpdatesUseCase,
+    observeUserBlocksUseCase: ObserveUserBlocksUseCase,
+    observePostDeletionsUseCase: ObservePostDeletionsUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -79,6 +84,26 @@ class GroupDetailViewModel(
     private fun applyPostUpdate(post: Post) {
         _uiState.update { state ->
             state.copy(pagingData = state.pagingData.map { if (it.id == post.id) post else it })
+        }
+    }
+
+    /**
+     * 차단한 작성자의 글을 현재 스냅샷에서 걷어낸다(멤버 스트립은 다음 Refresh가 걸러낸다) —
+     * refresh를 태우면 첫 페이지부터 전체 재조회라 쌓아둔 페이지와 스크롤 위치를 잃는다.
+     */
+    private fun removeBlockedAuthorPosts(userId: Long) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.filter { it.userId != userId })
+        }
+    }
+
+    /**
+     * 삭제된 글을 현재 스냅샷에서 걷어낸다 — refresh를 태우면 첫 페이지부터 전체 재조회라
+     * 쌓아둔 페이지와 스크롤 위치를 잃는다. 다음 세대부턴 서버 응답에 애초에 없다.
+     */
+    private fun removeDeletedPost(postId: Long) {
+        _uiState.update { state ->
+            state.copy(pagingData = state.pagingData.filter { it.id != postId })
         }
     }
 
@@ -230,6 +255,14 @@ class GroupDetailViewModel(
         // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
         observePostUpdatesUseCase()
             .onEach(::applyPostUpdate)
+            .launchIn(viewModelScope)
+        // 차단하면 그 사람의 글이 목록에서 사라져야 한다 — 재조회 대신 그 항목들만 제거
+        observeUserBlocksUseCase()
+            .onEach(::removeBlockedAuthorPosts)
+            .launchIn(viewModelScope)
+        // 상세에서 삭제하면 목록에서도 사라져야 한다 — 재조회 대신 그 항목만 제거
+        observePostDeletionsUseCase()
+            .onEach(::removeDeletedPost)
             .launchIn(viewModelScope)
     }
 
