@@ -268,59 +268,96 @@ struct SGPostCard: View {
 
     @Environment(\.sgColors) private var colors
 
+    var onToggleLike: () -> Void = {}
+
+    var onShare: () -> Void = {}
+
     var body: some View {
         SGCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
+                            Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                        }
+                        Spacer()
+                        if post.isNotice {
+                            Text("공지")
+                                .font(.caption2.weight(.medium))
+                                .foregroundColor(colors.accent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(colors.accentSoft)
+                                .cornerRadius(colors.radiusButton ?? 12)
+                        }
                     }
-                    Spacer()
-                    if post.isNotice {
-                        Text("공지")
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(colors.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(colors.accentSoft)
-                            .cornerRadius(colors.radiusButton ?? 12)
+                    if !post.text.isEmpty {
+                        Text(post.text)
+                            .font(.subheadline)
+                            .foregroundColor(colors.ink)
+                            .lineLimit(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                }
-                if !post.text.isEmpty {
-                    Text(post.text)
-                        .font(.subheadline)
-                        .foregroundColor(colors.ink)
-                        .lineLimit(6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
-                // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
-                if !post.imageUrls.isEmpty || !post.videoUrls.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(post.imageUrls, id: \.self) { urlString in
-                                if let url = URL(string: urlString) {
-                                    AsyncImage(url: url) { phase in
-                                        if case .success(let image) = phase {
-                                            image.resizable().scaledToFill()
-                                        } else {
-                                            colors.linen
+                    // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
+                    // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
+                    if !post.imageUrls.isEmpty || !post.videoUrls.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(post.imageUrls, id: \.self) { urlString in
+                                    if let url = URL(string: urlString) {
+                                        AsyncImage(url: url) { phase in
+                                            if case .success(let image) = phase {
+                                                image.resizable().scaledToFill()
+                                            } else {
+                                                colors.linen
+                                            }
                                         }
+                                        .frame(width: 120, height: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
                                     }
-                                    .frame(width: 120, height: 120)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
-                            }
-                            ForEach(post.videoUrls, id: \.self) { urlString in
-                                SGVideoThumbnail(urlString: urlString, size: 120)
+                                ForEach(post.videoUrls, id: \.self) { urlString in
+                                    SGVideoThumbnail(urlString: urlString, size: 120)
+                                }
                             }
                         }
                     }
                 }
+                .padding(16)
+                Divider().background(colors.stoneBorder)
+                HStack(spacing: 0) {
+                    // 레거시 item_post.xml 미러 — 등분 3버튼. NavigationLink 안이라 borderless로 탭을 분리한다
+                    Button(action: onToggleLike) {
+                        HStack(spacing: 4) {
+                            Image(systemName: post.likedByMe ? "heart.fill" : "heart")
+                                .font(.caption)
+                            Text(post.likeCount > 0 ? "좋아요 \(post.likeCount)" : "좋아요")
+                                .font(.caption)
+                        }
+                        .foregroundColor(post.likedByMe ? colors.accent : colors.inkSoft)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderless)
+                    Text(post.replyCount > 0 ? "댓글 \(post.replyCount)" : "댓글")
+                        .font(.caption)
+                        .foregroundColor(colors.inkSoft)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    Button(action: onShare) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.up").font(.caption)
+                            Text("공유").font(.caption)
+                        }
+                        .foregroundColor(colors.inkSoft)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
-            .padding(16)
         }
     }
 }
@@ -468,4 +505,27 @@ struct SGIncomingCallBanner: View {
             .padding(.vertical, 12)
         }
     }
+}
+
+/// 공유 본문 — "작성자 — 본문", 본문 없는 첨부 전용 글은 첫 첨부 URL로 대체(Compose postShareText 미러)
+func postShareText(_ post: Post) -> String {
+    let body = post.text.isEmpty ? ((post.imageUrls.first ?? post.videoUrls.first) ?? "") : post.text
+    return "\(post.authorName) — \(body)"
+}
+
+/// .sheet(item:)용 래퍼 — String은 Identifiable이 아니라서 감싼다
+struct ShareItem: Identifiable {
+    let id = UUID()
+    let text: String
+}
+
+/// iOS 15 타깃이라 ShareLink(iOS 16+) 대신 UIActivityViewController를 그대로 띄운다
+struct ActivityShareSheet: UIViewControllerRepresentable {
+    let text: String
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [text], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

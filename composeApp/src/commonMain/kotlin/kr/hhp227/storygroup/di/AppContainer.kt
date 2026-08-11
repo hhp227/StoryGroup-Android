@@ -80,6 +80,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
@@ -125,6 +126,8 @@ class AppContainer(
     val updatePostUseCase = UpdatePostUseCase(postRepository)
     val getPostDetailUseCase = GetPostDetailUseCase(postRepository)
     val setPostLikedUseCase = SetPostLikedUseCase(postRepository)
+    // 목록 카드 좋아요 토글 — 성공 반영은 postUpdates 알림이 담당
+    val togglePostLikeUseCase = TogglePostLikeUseCase(postRepository)
     val createCommentUseCase = CreateCommentUseCase(postRepository)
     val deleteCommentUseCase = DeleteCommentUseCase(postRepository)
     val deletePostUseCase = DeletePostUseCase(postRepository)

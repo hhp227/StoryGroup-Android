@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
@@ -44,6 +45,8 @@ import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.collapsingParallax
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.postShareText
+import kr.hhp227.storygroup.ui.util.rememberShareLauncher
 import org.jetbrains.compose.resources.painterResource
 import storygroup.composeapp.generated.resources.Res
 import storygroup.composeapp.generated.resources.header
@@ -70,7 +73,8 @@ fun HomeScreen(
             it.getLoungePostsPagingDataUseCase,
             it.observePostUpdatesUseCase,
             it.observeUserBlocksUseCase,
-            it.observePostDeletionsUseCase
+            it.observePostDeletionsUseCase,
+            it.togglePostLikeUseCase
         )
     }
 ) {
@@ -103,11 +107,14 @@ private fun HomeContent(
         viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
+    val uiState by viewModel.uiState.collectAsState()
     val sg = SgTheme.colors
     // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
     // 종 아이콘 뱃지 — 알림 화면과 같은 세션 VM의 미읽음 수
     val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
+    // 컴포지션에서 한 번만 선언해 카드마다 재사용한다
+    val share = rememberShareLauncher()
 
     // 작성 화면에서 돌아온 결과 — 라운지 피드를 첫 페이지부터 다시 읽는다
     LaunchedEffect(refreshRequested) {
@@ -207,7 +214,12 @@ private fun HomeContent(
             else -> {
                 items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
                     lazyPagingItems[index]?.let { post ->
-                        SgPostCard(post, Modifier.padding(horizontal = 16.dp)) {
+                        SgPostCard(
+                            post,
+                            Modifier.padding(horizontal = 16.dp),
+                            onToggleLike = { viewModel.onAction(HomeViewModel.Action.ToggleLike(post)) },
+                            onShare = { share(postShareText(post)) }
+                        ) {
                             onOpenPostDetail(post.groupId, post.id)
                         }
                     }
@@ -223,5 +235,16 @@ private fun HomeContent(
                 }
             }
         }
+    }
+    uiState.likeError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { viewModel.onAction(HomeViewModel.Action.DismissLikeError) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onAction(HomeViewModel.Action.DismissLikeError) }) {
+                    Text("확인", color = SgTheme.colors.accent)
+                }
+            }
+        )
     }
 }

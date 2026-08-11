@@ -32,6 +32,9 @@ final class AppContainer {
 
     let setPostLikedUseCase: SetPostLikedUseCase
 
+    // 목록 카드용 좋아요 토글 — 상세용 setPostLikedUseCase와 달리 좋아요 목록을 다시 읽지 않는다
+    let togglePostLikeUseCase: TogglePostLikeUseCase
+
     let createCommentUseCase: CreateCommentUseCase
 
     let deleteCommentUseCase: DeleteCommentUseCase
@@ -139,6 +142,7 @@ final class AppContainer {
         updatePostUseCase = UpdatePostUseCase(postRepository: postRepository)
         getPostDetailUseCase = GetPostDetailUseCase(postRepository: postRepository)
         setPostLikedUseCase = SetPostLikedUseCase(postRepository: postRepository)
+        togglePostLikeUseCase = TogglePostLikeUseCase(postRepository: postRepository)
         createCommentUseCase = CreateCommentUseCase(postRepository: postRepository)
         deleteCommentUseCase = DeleteCommentUseCase(postRepository: postRepository)
         deletePostUseCase = DeletePostUseCase(postRepository: postRepository)

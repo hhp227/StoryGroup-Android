@@ -4,6 +4,7 @@ import app.cash.paging.Pager
 import app.cash.paging.PagingData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -11,6 +12,7 @@ import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kr.hhp227.storygroup.shared.data.network.dto.CommentResponse
 import kr.hhp227.storygroup.shared.data.network.dto.CreateCommentRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreatePostRequest
+import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PostLikeResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PostResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ReportPostRequest
@@ -146,8 +149,24 @@ class PostRepositoryImpl(
         runCatching {
             val path = "/api/groups/$groupId/posts/$postId/likes"
 
-            if (liked) client.post(path) else client.delete(path)
-        }.map { }
+            try {
+                if (liked) client.post(path) else client.delete(path)
+            } catch (e: ClientRequestException) {
+                // 좋아요 연타로 두 번째 POST가 첫 응답보다 먼저 나가면 서버가 409 CONFLICT/ALREADY_LIKED로
+                // 거절한다(LikeService.kt:29, GlobalExceptionHandler.kt:24-26) — 좋아요는 이미 걸려 있으므로
+                // 스퓨리어스 에러 다이얼로그 대신 성공으로 흡수한다(상태는 아래 getPost 재조회로 수렴).
+                // DELETE(안 누른 글 취소)는 서버가 존재 여부 확인 없이 무조건 delete라 애초에 에러가 나지 않는다
+                // (LikeService.kt:37-42) — 그 외 에러(401/403/500 등)는 그대로 전파한다.
+                val code = runCatching { e.response.body<ErrorResponse>().code }.getOrNull()
+
+                if (liked && e.response.status == HttpStatusCode.Conflict && code == "ALREADY_LIKED") Unit else throw e
+            }
+        }.map { }.onSuccess {
+            // 목록 카드가 카운트를 그리므로 갱신된 단건을 다시 읽어 그 항목만 갈아끼우게 알린다
+            // (수정 반영과 같은 규약 — 재조회라 남이 그 사이 누른 것까지 반영된다).
+            // 재조회 실패는 무시 — 토글 자체는 성공했고 다음 갱신 기회에 맞춰진다.
+            getPost(groupId, postId).onSuccess { post -> _postUpdates.tryEmit(post) }
+        }
 
     override suspend fun getComments(groupId: Long, postId: Long): Result<List<Comment>> =
         runCatching {
@@ -165,10 +184,19 @@ class PostRepositoryImpl(
                 contentType(ContentType.Application.Json)
                 setBody(CreateCommentRequest(text = text, parentReplyId = parentReplyId))
             }.body<CommentResponse>().toDomain()
+        }.onSuccess {
+            // 목록 카드가 댓글 수(replyCount)를 그리므로 갱신된 단건을 다시 읽어 그 항목만 갈아끼우게 알린다
+            // (setPostLiked와 같은 규약). 재조회 실패는 무시 — 댓글 작성 자체는 성공했다.
+            getPost(groupId, postId).onSuccess { post -> _postUpdates.tryEmit(post) }
         }
 
     override suspend fun deleteComment(groupId: Long, postId: Long, commentId: Long): Result<Unit> =
         runCatching { client.delete("/api/groups/$groupId/posts/$postId/comments/$commentId") }.map { }
+            .onSuccess {
+                // 목록 카드가 댓글 수(replyCount)를 그리므로 갱신된 단건을 다시 읽어 그 항목만 갈아끼우게 알린다
+                // (setPostLiked와 같은 규약). 재조회 실패는 무시 — 댓글 삭제 자체는 성공했다.
+                getPost(groupId, postId).onSuccess { post -> _postUpdates.tryEmit(post) }
+            }
 
     private suspend fun resolveLoungeId(): Long =
         groupRepository.getMyGroups().getOrThrow().firstOrNull(Group::isLounge)?.id
@@ -203,5 +231,8 @@ private fun PostResponse.toDomain() = Post(
     imageUrls = images.map { it.image },
     videoUrls = videos.map { it.video },
     isNotice = isNotice,
-    createdAt = createdAt
+    createdAt = createdAt,
+    likeCount = likeCount,
+    replyCount = replyCount,
+    likedByMe = likedByMe
 )

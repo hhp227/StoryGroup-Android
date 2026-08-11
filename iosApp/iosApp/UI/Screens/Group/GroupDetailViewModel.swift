@@ -34,6 +34,9 @@ final class GroupDetailViewModel: MviViewModel {
 
     private let getBlockedUsersUseCase: GetBlockedUsersUseCase
 
+    // 목록 카드용 좋아요 토글 — 상세용 setPostLikedUseCase와 달리 좋아요 목록을 다시 읽지 않는다
+    private let togglePostLikeUseCase: TogglePostLikeUseCase
+
     private var cancellables = Set<AnyCancellable>()
 
     private func setPagingData(_ pagingData: PagingData<Post>) {
@@ -75,6 +78,8 @@ final class GroupDetailViewModel: MviViewModel {
             uiState.inviteError = nil
         case .openDm(let userId, let userName): openDm(userId: userId, userName: userName)
         case .dismissDm: uiState.dmError = nil
+        case .toggleLike(let post): toggleLike(post)
+        case .dismissLikeError: uiState.likeError = nil
         }
     }
 
@@ -194,6 +199,17 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
+    /// 성공 반영은 리포지토리의 postUpdates 알림(applyPostUpdate)이 담당 — 여기선 실패만 다룬다
+    private func toggleLike(_ post: Post) {
+        Task { @MainActor in
+            do {
+                try await togglePostLikeUseCase.invoke(groupId: post.groupId, postId: post.id, liked: !post.likedByMe)
+            } catch {
+                uiState.likeError = error.kotlinMessage(fallback: "좋아요 처리에 실패했습니다.")
+            }
+        }
+    }
+
     init(
         groupId: Int64,
         getGroupUseCase: GetGroupUseCase,
@@ -209,7 +225,8 @@ final class GroupDetailViewModel: MviViewModel {
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
         observePostUpdatesUseCase: ObservePostUpdatesUseCase,
         observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-        observePostDeletionsUseCase: ObservePostDeletionsUseCase
+        observePostDeletionsUseCase: ObservePostDeletionsUseCase,
+        togglePostLikeUseCase: TogglePostLikeUseCase
     ) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase
@@ -221,6 +238,7 @@ final class GroupDetailViewModel: MviViewModel {
         self.openDirectRoomUseCase = openDirectRoomUseCase
         self.getGroupDefaultChatRoomUseCase = getGroupDefaultChatRoomUseCase
         self.getBlockedUsersUseCase = getBlockedUsersUseCase
+        self.togglePostLikeUseCase = togglePostLikeUseCase
         uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
@@ -276,6 +294,7 @@ final class GroupDetailViewModel: MviViewModel {
         // DM 확인 다이얼로그 전용 — 실패 문구(차단 관계 등)는 다이얼로그 안에 표시된다
         var isOpeningDm = false
         var dmError: String? = nil
+        var likeError: String? = nil
 
         // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정(라운지 제외)
         var canModerate: Bool {
@@ -297,6 +316,8 @@ final class GroupDetailViewModel: MviViewModel {
         case dismissInvite
         case openDm(userId: Int64, userName: String)
         case dismissDm
+        case toggleLike(Post)
+        case dismissLikeError
     }
 
     enum Event {

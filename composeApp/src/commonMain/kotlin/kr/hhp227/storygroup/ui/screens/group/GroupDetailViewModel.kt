@@ -6,6 +6,7 @@ import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
 import app.cash.paging.filter
 import app.cash.paging.map
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +38,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
@@ -64,7 +66,8 @@ class GroupDetailViewModel(
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
     observePostUpdatesUseCase: ObservePostUpdatesUseCase,
     observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-    observePostDeletionsUseCase: ObservePostDeletionsUseCase
+    observePostDeletionsUseCase: ObservePostDeletionsUseCase,
+    private val togglePostLikeUseCase: TogglePostLikeUseCase
 ) : ViewModel(), MviViewModel<GroupDetailViewModel.UiState, GroupDetailViewModel.Action, GroupDetailViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -118,6 +121,8 @@ class GroupDetailViewModel(
             Action.DismissInvite -> _uiState.update { it.copy(createdInvite = null, inviteError = null) }
             is Action.OpenDm -> openDm(action.userId, action.userName)
             Action.DismissDm -> _uiState.update { it.copy(dmError = null) }
+            is Action.ToggleLike -> toggleLike(action.post)
+            Action.DismissLikeError -> _uiState.update { it.copy(likeError = null) }
         }
     }
 
@@ -246,6 +251,19 @@ class GroupDetailViewModel(
         }
     }
 
+    /** 성공 반영은 리포지토리의 postUpdates 알림(applyPostUpdate)이 담당 — 여기선 실패만 다룬다 */
+    private fun toggleLike(post: Post) {
+        viewModelScope.launch {
+            try {
+                togglePostLikeUseCase(post.groupId, post.id, !post.likedByMe)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(likeError = e.message ?: "좋아요 처리에 실패했습니다.") }
+            }
+        }
+    }
+
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         getGroupPostsPagingDataUseCase(groupId)
@@ -291,7 +309,9 @@ class GroupDetailViewModel(
         val inviteError: String? = null,
         // DM 확인 다이얼로그 전용 — 실패 문구(차단 관계 등)는 다이얼로그 안에 표시된다
         val isOpeningDm: Boolean = false,
-        val dmError: String? = null
+        val dmError: String? = null,
+        // 카드 좋아요 실패 안내 — 서버 확정 방식이라 실패해도 되돌릴 UI 상태가 없다
+        val likeError: String? = null
     ) {
         // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정
         val canModerate: Boolean get() = group?.canModerate == true
@@ -312,6 +332,8 @@ class GroupDetailViewModel(
         data object DismissInvite : Action
         data class OpenDm(val userId: Long, val userName: String) : Action
         data object DismissDm : Action
+        data class ToggleLike(val post: Post) : Action
+        data object DismissLikeError : Action
     }
 
     sealed interface Event {
