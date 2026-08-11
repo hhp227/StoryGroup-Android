@@ -42,7 +42,11 @@ data class PostResponse(
     // 웹과 동일한 방어 — videos를 모르는 배포 전 백엔드는 이 필드를 안 내려준다
     val videos: List<VideoResponse> = emptyList(),
     val isNotice: Boolean = false,
-    val createdAt: String
+    val createdAt: String,
+    // 카운트 미배포 백엔드는 이 필드들을 안 내려주므로 기본값으로 방어(videos와 같은 규약)
+    val likeCount: Int = 0,
+    val replyCount: Int = 0,
+    val likedByMe: Boolean = false
 )
 
 @Serializable

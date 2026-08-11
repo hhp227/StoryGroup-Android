@@ -13,5 +13,9 @@ data class Post(
     val videoUrls: List<String> = emptyList(),
     val isNotice: Boolean = false,
     // 서버 ISO-8601(OffsetDateTime) 원문 — 표시 포맷팅은 각 플랫폼 UI가 담당
-    val createdAt: String
+    val createdAt: String,
+    // 카드 하단 액션 바용 집계 — 카운트 미배포 서버에선 0/false로 내려앉는다
+    val likeCount: Int = 0,
+    val replyCount: Int = 0,
+    val likedByMe: Boolean = false
 )

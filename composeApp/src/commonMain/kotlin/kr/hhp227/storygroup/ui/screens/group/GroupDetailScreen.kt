@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
@@ -74,6 +75,8 @@ import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.collapsingParallax
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import kr.hhp227.storygroup.ui.util.postShareText
+import kr.hhp227.storygroup.ui.util.rememberShareLauncher
 
 @Composable
 private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
@@ -95,7 +98,8 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase = container.observePostUpdatesUseCase,
             observeUserBlocksUseCase = container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase = container.observePostDeletionsUseCase
+            observePostDeletionsUseCase = container.observePostDeletionsUseCase,
+            togglePostLikeUseCase = container.togglePostLikeUseCase
         )
     }
 }
@@ -155,6 +159,8 @@ private fun GroupDetailContent(
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
     // DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다
     var dmTargetMember by remember { mutableStateOf<GroupMember?>(null) }
+    // 컴포지션에서 한 번만 선언해 카드마다 재사용한다
+    val share = rememberShareLauncher()
 
     // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
     LaunchedEffect(viewModel) {
@@ -363,7 +369,12 @@ private fun GroupDetailContent(
             else -> {
                 items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(Post::id)) { index ->
                     lazyPagingItems[index]?.let { post ->
-                        SgPostCard(post, Modifier.padding(horizontal = 16.dp)) { onOpenPostDetail(post.id) }
+                        SgPostCard(
+                            post,
+                            Modifier.padding(horizontal = 16.dp),
+                            onToggleLike = { viewModel.onAction(GroupDetailViewModel.Action.ToggleLike(post)) },
+                            onShare = { share(postShareText(post)) }
+                        ) { onOpenPostDetail(post.id) }
                     }
                 }
                 if (appendState is LoadStateLoading || appendState is LoadStateError) {
@@ -403,6 +414,17 @@ private fun GroupDetailContent(
                 viewModel.onAction(GroupDetailViewModel.Action.DismissDm)
             },
             onConfirm = { viewModel.onAction(GroupDetailViewModel.Action.OpenDm(member.userId, member.name)) }
+        )
+    }
+    uiState.likeError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { viewModel.onAction(GroupDetailViewModel.Action.DismissLikeError) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onAction(GroupDetailViewModel.Action.DismissLikeError) }) {
+                    Text("확인", color = SgTheme.colors.accent)
+                }
+            }
         )
     }
 }

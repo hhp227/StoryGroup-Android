@@ -21,7 +21,8 @@ struct HomeView: View {
             getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase,
             observeUserBlocksUseCase: container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase: container.observePostDeletionsUseCase
+            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
+            togglePostLikeUseCase: container.togglePostLikeUseCase
         ))
         self.container = container
     }
@@ -41,6 +42,9 @@ private struct HomeContent: View {
 
     /// 라운지 글쓰기 풀스크린 push — Compose CreatePostRoute(groupId=null) 미러(그룹 상세와 동일하게 화면 소유)
     @State private var showCreatePost = false
+
+    /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
+    @State private var shareItem: ShareItem?
 
     /// 첫 레이아웃 시점 헤더의 global minY — 스크롤 오프셋은 이 기준의 상대값으로 계산한다.
     /// NavigationView 안에선 rest 오프셋이 0이 아닐 수 있어(내비바 인셋), 절대값을 쓰면
@@ -97,6 +101,18 @@ private struct HomeContent: View {
             switch event {
             case .refresh: lazyPagingItems.refresh()
             }
+        }
+        // 카드 공유 버튼 — iOS 15 타깃이라 ShareLink(16+) 대신 UIActivityViewController(Compose postShareText 미러)
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(text: item.text)
+        }
+        .alert("좋아요 처리 실패", isPresented: Binding(
+            get: { viewModel.uiState.likeError != nil },
+            set: { if !$0 { viewModel.onAction(.dismissLikeError) } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.uiState.likeError ?? "")
         }
     }
 
@@ -171,7 +187,11 @@ private struct HomeContent: View {
                                 postId: post.id
                             )
                         } label: {
-                            SGPostCard(post: post)
+                            SGPostCard(
+                                post: post,
+                                onToggleLike: { viewModel.onAction(.toggleLike(post)) },
+                                onShare: { shareItem = ShareItem(text: postShareText(post)) }
+                            )
                         }
                         .buttonStyle(.plain)
                     }

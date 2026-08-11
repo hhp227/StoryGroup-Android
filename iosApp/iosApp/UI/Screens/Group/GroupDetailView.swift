@@ -38,7 +38,8 @@ struct GroupDetailView: View {
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase,
             observeUserBlocksUseCase: container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase: container.observePostDeletionsUseCase
+            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
+            togglePostLikeUseCase: container.togglePostLikeUseCase
         ))
         self.container = container
         self.chatViewModel = chatViewModel
@@ -78,6 +79,9 @@ private struct GroupDetailContent: View {
 
     /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 스트립 DM 공용)
     @State private var pushedChatRoom: ChatRoomRef?
+
+    /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
+    @State private var shareItem: ShareItem?
 
     /// 상세 안에서 채팅방·글쓰기를 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {
@@ -195,6 +199,18 @@ private struct GroupDetailContent: View {
         .navigationBarScrim(visible: barScrimVisible)
         // 상세 진입 시 신선화 — 목록에서 받은 그룹으로 먼저 그리고 최신화한다
         .onAppear { viewModel.onAction(.refresh) }
+        // 카드 공유 버튼 — iOS 15 타깃이라 ShareLink(16+) 대신 UIActivityViewController(Compose postShareText 미러)
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(text: item.text)
+        }
+        .alert("좋아요 처리 실패", isPresented: Binding(
+            get: { viewModel.uiState.likeError != nil },
+            set: { if !$0 { viewModel.onAction(.dismissLikeError) } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.uiState.likeError ?? "")
+        }
     }
 
     /// 커버 배너 — group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백. 패럴럭스+stretchy는 HomeView 미러
@@ -313,7 +329,11 @@ private struct GroupDetailContent: View {
                                 postId: post.id
                             )
                         } label: {
-                            SGPostCard(post: post)
+                            SGPostCard(
+                                post: post,
+                                onToggleLike: { viewModel.onAction(.toggleLike(post)) },
+                                onShare: { shareItem = ShareItem(text: postShareText(post)) }
+                            )
                         }
                         .buttonStyle(.plain)
                     }

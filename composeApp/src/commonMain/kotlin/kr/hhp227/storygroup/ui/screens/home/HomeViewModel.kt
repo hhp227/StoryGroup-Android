@@ -6,6 +6,7 @@ import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
 import app.cash.paging.filter
 import app.cash.paging.map
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,11 +17,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 
 /**
@@ -34,7 +37,8 @@ class HomeViewModel(
     getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
     observePostUpdatesUseCase: ObservePostUpdatesUseCase,
     observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-    observePostDeletionsUseCase: ObservePostDeletionsUseCase
+    observePostDeletionsUseCase: ObservePostDeletionsUseCase,
+    private val togglePostLikeUseCase: TogglePostLikeUseCase
 ) : ViewModel(), MviViewModel<HomeViewModel.UiState, HomeViewModel.Action, HomeViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -81,6 +85,21 @@ class HomeViewModel(
         when (action) {
             // 글쓰기 성공 시 발화 — 화면이 refresh()로 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
             Action.Refresh -> _event.tryEmit(Event.Refresh)
+            is Action.ToggleLike -> toggleLike(action.post)
+            Action.DismissLikeError -> _uiState.update { it.copy(likeError = null) }
+        }
+    }
+
+    /** 성공 반영은 리포지토리의 postUpdates 알림(applyPostUpdate)이 담당 — 여기선 실패만 다룬다 */
+    private fun toggleLike(post: Post) {
+        viewModelScope.launch {
+            try {
+                togglePostLikeUseCase(post.groupId, post.id, !post.likedByMe)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(likeError = e.message ?: "좋아요 처리에 실패했습니다.") }
+            }
         }
     }
 
@@ -105,10 +124,16 @@ class HomeViewModel(
     }
 
     /** 게시글 목록은 Paging 스트림의 최신 스냅샷 — 로딩/에러/추가 로드는 화면이 LoadState로 그린다 */
-    data class UiState(val pagingData: PagingData<Post> = PagingData.empty())
+    data class UiState(
+        val pagingData: PagingData<Post> = PagingData.empty(),
+        // 카드 좋아요 실패 안내 — 서버 확정 방식이라 실패해도 되돌릴 UI 상태가 없다
+        val likeError: String? = null
+    )
 
     sealed interface Action {
         data object Refresh : Action
+        data class ToggleLike(val post: Post) : Action
+        data object DismissLikeError : Action
     }
 
     sealed interface Event {

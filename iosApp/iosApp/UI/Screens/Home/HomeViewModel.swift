@@ -14,6 +14,8 @@ final class HomeViewModel: MviViewModel {
 
     private var cancellables = Set<AnyCancellable>()
 
+    private let togglePostLikeUseCase: TogglePostLikeUseCase
+
     private func setPagingData(_ pagingData: PagingData<Post>) {
         uiState.pagingData = pagingData
     }
@@ -44,6 +46,21 @@ final class HomeViewModel: MviViewModel {
         // 글쓰기 성공 시 발화 — 화면이 refresh()로 라운지를 다시 찾고 첫 페이지부터 다시 읽는다
         case .refresh:
             event.send(.refresh)
+        case .toggleLike(let post):
+            toggleLike(post)
+        case .dismissLikeError:
+            uiState.likeError = nil
+        }
+    }
+
+    /// 성공 반영은 리포지토리의 postUpdates 알림(applyPostUpdate)이 담당 — 여기선 실패만 다룬다
+    private func toggleLike(_ post: Post) {
+        Task { @MainActor in
+            do {
+                try await togglePostLikeUseCase.invoke(groupId: post.groupId, postId: post.id, liked: !post.likedByMe)
+            } catch {
+                uiState.likeError = error.kotlinMessage(fallback: "좋아요 처리에 실패했습니다.")
+            }
         }
     }
 
@@ -51,8 +68,10 @@ final class HomeViewModel: MviViewModel {
         getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
         observePostUpdatesUseCase: ObservePostUpdatesUseCase,
         observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-        observePostDeletionsUseCase: ObservePostDeletionsUseCase
+        observePostDeletionsUseCase: ObservePostDeletionsUseCase,
+        togglePostLikeUseCase: TogglePostLikeUseCase
     ) {
+        self.togglePostLikeUseCase = togglePostLikeUseCase
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
         // (Kotlin: getLoungePostsPagingDataUseCase().cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
         getLoungePostsPagingDataUseCase()
@@ -83,10 +102,14 @@ final class HomeViewModel: MviViewModel {
     struct UiState {
         // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
         var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
+
+        var likeError: String? = nil
     }
 
     enum Action {
         case refresh
+        case toggleLike(Post)
+        case dismissLikeError
     }
 
     enum Event {
