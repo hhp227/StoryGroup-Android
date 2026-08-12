@@ -75,8 +75,14 @@ private struct GroupDetailContent: View {
     /// 커버가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
     @State private var barScrimVisible = false
 
-    /// 내비바 아래 노출 커버 높이 — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
+    /// 내비바 아래 노출 커버 높이(탭바 제외) — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
     private let headerHeight: CGFloat = 114
+
+    /// 커버 하단에 겹치는 탭바 높이 — Compose CollapsingTabRowHeight(48dp) 미러
+    private static let tabBarHeight: CGFloat = 48
+
+    /// 레거시 TabLayout tabTextColor(#FFE1E3E5) — 이미지 위 비선택 탭 텍스트
+    private static let tabTextOnImage = Color(red: 225 / 255, green: 227 / 255, blue: 229 / 255)
 
     /// 그룹 글쓰기 풀스크린 push — Compose CreatePostRoute(groupId) 미러
     @State private var showCreatePost = false
@@ -125,7 +131,6 @@ private struct GroupDetailContent: View {
             ScrollView {
                 VStack(spacing: 12) {
                     cover(topInset: outer.safeAreaInsets.top)
-                    tabBar
                     tabContent
                 }
                 .padding(.bottom, 16)
@@ -145,7 +150,7 @@ private struct GroupDetailContent: View {
         // 하단 인디케이터 탭바가 스크롤로 접힌 뒤 내비바 아래 고정되는 사본(핀 탭바 미러)
         .overlay(alignment: .top) {
             if barScrimVisible {
-                tabBar
+                tabBar(onImage: false)
             }
         }
         // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러 — 소식 탭에서만(레거시 isTabPositionZero 미러)
@@ -235,9 +240,11 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 커버 배너 — group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백. 패럴럭스+stretchy는 HomeView 미러
+    /// 커버 배너 — group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백. 패럴럭스+stretchy는 HomeView 미러.
+    /// 이미지는 탭바 영역까지 깔리고 탭바가 커버 하단에 겹친다(레거시 TabLayout 투명 배경 미러) —
+    /// 탭바는 패럴럭스 밖에 둬 스크롤과 같은 속도로 접힌다(Compose TabRow bottom 핀 미러)
     private func cover(topInset: CGFloat) -> some View {
-        let total = headerHeight + topInset
+        let total = headerHeight + Self.tabBarHeight + topInset
         return GeometryReader { geo in
             let raw = geo.frame(in: .global).minY
             let minY = raw - (headerRestMinY ?? raw)
@@ -260,12 +267,16 @@ private struct GroupDetailContent: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                coverOverlay.padding(16)
+                // 그룹명/설명은 투명 탭바 위에서 끝나야 안 가린다
+                coverOverlay.padding(16).padding(.bottom, Self.tabBarHeight)
             }
             .frame(width: geo.size.width, height: total + stretch)
             .offset(y: minY < 0 ? -minY * 0.5 : 0)
             .frame(width: geo.size.width, height: total + stretch, alignment: .top)
             .clipped()
+            .overlay(alignment: .bottom) {
+                tabBar(onImage: true)
+            }
             .offset(y: -stretch)
             .onAppear {
                 if headerRestMinY == nil { headerRestMinY = raw }
@@ -309,27 +320,33 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 하단 인디케이터 탭바 — Compose TabRow 미러. 인라인으로 흐르다가 barScrimVisible이면
-    /// 오버레이 사본이 내비바 아래 고정된다(핀 탭바 미러 — 단일 ScrollView라 stickyHeader가 없다)
-    private var tabBar: some View {
+    /// 하단 인디케이터 탭바 — Compose TabRow 미러. 커버 위 인라인(onImage=투명 배경·흰 텍스트,
+    /// 레거시 TabLayout 미러)으로 흐르다가 barScrimVisible이면 오버레이 사본(paper 배경·잉크
+    /// 텍스트)이 내비바 아래 고정된다(핀 탭바 미러 — 단일 ScrollView라 stickyHeader가 없다)
+    private func tabBar(onImage: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(Self.tabs.enumerated()), id: \.offset) { index, title in
                 Button { selectedTab = index } label: {
                     VStack(spacing: 6) {
                         Text(title)
                             .font(.subheadline.weight(selectedTab == index ? .bold : .regular))
-                            .foregroundColor(selectedTab == index ? colors.ink : colors.inkFaint)
+                            .foregroundColor(
+                                selectedTab == index
+                                    ? (onImage ? .white : colors.ink)
+                                    : (onImage ? Self.tabTextOnImage : colors.inkFaint)
+                            )
                         Rectangle()
                             .fill(selectedTab == index ? colors.accent : Color.clear)
                             .frame(height: 2)
                     }
-                    .padding(.top, 10)
+                    // 탭바 높이를 채워 바닥 정렬 — 48pt 전체가 탭 히트 영역
+                    .frame(height: Self.tabBarHeight, alignment: .bottom)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
             }
         }
-        .background(colors.paper)
+        .background(onImage ? Color.clear : colors.paper)
     }
 
     /// 소식 탭 — 기존 피드 목록 그대로(인박스·초대코드·멤버 스트립은 멤버 탭으로 이동, Compose GroupFeedTab 미러).

@@ -70,6 +70,7 @@ import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
+import kr.hhp227.storygroup.ui.components.CollapsingTabRowHeight
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgCollapsingTabScaffold
@@ -274,7 +275,8 @@ private fun GroupDetailContent(
                     Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        // 커버가 탭바 영역까지 커졌다 — 텍스트는 투명 탭바 위에서 끝나야 안 가린다
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp + CollapsingTabRowHeight)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
