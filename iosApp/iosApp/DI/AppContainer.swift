@@ -17,6 +17,7 @@ final class AppContainer {
     let getGroupMembersUseCase: GetGroupMembersUseCase
     let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
+    let getGroupPhotosPagingDataUseCase: GetGroupPhotosPagingDataUseCase
 
     // 수정 알림 — 목록이 재조회 없이 그 항목만 갈아끼운다
     let observePostUpdatesUseCase: ObservePostUpdatesUseCase
@@ -136,6 +137,7 @@ final class AppContainer {
         getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
         getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
+        getGroupPhotosPagingDataUseCase = GetGroupPhotosPagingDataUseCase(groupRepository: groupRepository)
         observePostUpdatesUseCase = ObservePostUpdatesUseCase(postRepository: postRepository)
         createPostUseCase = CreatePostUseCase(postRepository: postRepository)
         getPostUseCase = GetPostUseCase(postRepository: postRepository)

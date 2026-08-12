@@ -161,7 +161,7 @@ private fun rememberCollapseFraction(listState: LazyListState, collapseRangePx: 
  * 접힘 비율에 따라 배경(linen)·보더가 차오르고 콘텐츠 색이 흰색→잉크로 보간된다.
  */
 @Composable
-private fun CollapsingTopBar(
+internal fun CollapsingTopBar(
     collapseFraction: Float,
     title: String,
     navigationIcon: (@Composable () -> Unit)?,

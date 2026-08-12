@@ -46,6 +46,7 @@
 		A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */; };
 		A1010037AABBCCDDEEFF0037 /* SGVideoAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */; };
 		A1010038AABBCCDDEEFF0038 /* VideoPoster.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */; };
+		A1010039AABBCCDDEEFF0039 /* GroupAlbumTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */; };
 		A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */; };
 		A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */; };
 		A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */; };
@@ -103,6 +104,7 @@
 		A1011036AABBCCDDEEFF0036 /* PostDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailViewModel.swift; sourceTree = "<group>"; };
 		A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SGVideoAttachment.swift; sourceTree = "<group>"; };
 		A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPoster.swift; sourceTree = "<group>"; };
+		A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupAlbumTab.swift; sourceTree = "<group>"; };
 		A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
 		A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsViewModel.swift; sourceTree = "<group>"; };
 		A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupView.swift; sourceTree = "<group>"; };
@@ -248,6 +250,7 @@
 				A1011013AABBCCDDEEFF0013 /* GroupsView.swift */,
 				A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */,
 				A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */,
+				A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */,
 				A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */,
 				A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */,
 				A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */,
@@ -510,6 +513,7 @@
 				A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */,
 				A1010036AABBCCDDEEFF0036 /* PostDetailViewModel.swift in Sources */,
 				A1010037AABBCCDDEEFF0037 /* SGVideoAttachment.swift in Sources */,
+				A1010039AABBCCDDEEFF0039 /* GroupAlbumTab.swift in Sources */,
 				A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */,
 				A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */,
 				A1010028AABBCCDDEEFF0028 /* CreateGroupView.swift in Sources */,

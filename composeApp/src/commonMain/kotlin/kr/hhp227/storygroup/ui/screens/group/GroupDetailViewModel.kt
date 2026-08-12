@@ -22,6 +22,7 @@ import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
@@ -30,6 +31,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetBlockedUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
@@ -64,6 +66,7 @@ class GroupDetailViewModel(
     private val getBlockedUsersUseCase: GetBlockedUsersUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
     getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
+    getGroupPhotosPagingDataUseCase: GetGroupPhotosPagingDataUseCase,
     observePostUpdatesUseCase: ObservePostUpdatesUseCase,
     observeUserBlocksUseCase: ObserveUserBlocksUseCase,
     observePostDeletionsUseCase: ObservePostDeletionsUseCase,
@@ -77,6 +80,10 @@ class GroupDetailViewModel(
 
     private fun setPagingData(pagingData: PagingData<Post>) {
         _uiState.update { it.copy(pagingData = pagingData) }
+    }
+
+    private fun setPhotosPagingData(pagingData: PagingData<GroupPhoto>) {
+        _uiState.update { it.copy(photosPagingData = pagingData) }
     }
 
     /**
@@ -270,6 +277,11 @@ class GroupDetailViewModel(
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
             .launchIn(viewModelScope)
+        // 앨범 탭 — 게시글 첨부의 파생 뷰라 별도 스트림(갱신은 RefreshFeed 이벤트가 피드와 함께 태운다)
+        getGroupPhotosPagingDataUseCase(groupId)
+            .cachedIn(viewModelScope)
+            .onEach(::setPhotosPagingData)
+            .launchIn(viewModelScope)
         // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
         observePostUpdatesUseCase()
             .onEach(::applyPostUpdate)
@@ -292,6 +304,8 @@ class GroupDetailViewModel(
         // 상단바 채팅 버튼이 여는 기본 채팅방(가장 먼저 생성된 방) — 로드 전/실패 시 null이면 버튼이 숨는다
         val defaultChatRoomId: Long? = null,
         val pagingData: PagingData<Post> = PagingData.empty(),
+        // 앨범 탭 전용 — 피드처럼 최신 PagingData를 상태에 담는다(Paging-CRUD 샘플 패턴)
+        val photosPagingData: PagingData<GroupPhoto> = PagingData.empty(),
         val members: List<GroupMember> = emptyList(),
         // 내가 차단한 사용자 — 서버가 멤버 목록에선 걸러주지 않아 화면이 직접 뺀다
         val blockedUserIds: Set<Long> = emptySet(),

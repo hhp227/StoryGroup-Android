@@ -44,6 +44,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
@@ -118,6 +119,7 @@ class AppContainer(
     val getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository)
     val getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository)
     val getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository)
+    val getGroupPhotosPagingDataUseCase = GetGroupPhotosPagingDataUseCase(groupRepository)
     // 수정 알림 — 목록이 재조회 없이 그 항목만 갈아끼운다
     val observePostUpdatesUseCase = ObservePostUpdatesUseCase(postRepository)
     val createPostUseCase = CreatePostUseCase(postRepository)

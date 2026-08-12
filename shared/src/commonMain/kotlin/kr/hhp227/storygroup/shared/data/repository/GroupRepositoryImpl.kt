@@ -19,6 +19,8 @@ import kr.hhp227.storygroup.shared.data.network.dto.CreateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreateInviteRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DiscoverGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
+import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotoResponse
+import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotosPageResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.InviteResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinGroupResponse
@@ -34,6 +36,8 @@ import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupMembershipStatus
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
+import kr.hhp227.storygroup.shared.domain.model.GroupPhotoMediaType
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
 import kr.hhp227.storygroup.shared.domain.model.JoinResult
@@ -63,6 +67,16 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
         runCatching {
             client.get("/api/groups/$groupId/members").body<List<MemberResponse>>().map { it.toDomain() }
         }
+
+    override fun getGroupPhotosPagingData(groupId: Long): Flow<PagingData<GroupPhoto>> =
+        Pager(PagePagingConfig) {
+            PagePagingSource { page, size ->
+                client.get("/api/groups/$groupId/photos") {
+                    parameter("page", page)
+                    parameter("size", size)
+                }.body<GroupPhotosPageResponse>().photos.map { it.toDomain() }
+            }
+        }.flow
 
     override suspend fun createGroup(
         name: String,
@@ -195,5 +209,17 @@ private fun DiscoverGroupResponse.toDomain() = DiscoverGroup(
     joinType = GroupJoinType.entries.firstOrNull { it.name == joinType } ?: GroupJoinType.AUTO_APPROVE,
     memberCount = memberCount,
     membership = GroupMembershipStatus.entries.firstOrNull { it.name == membership } ?: GroupMembershipStatus.NONE,
+    createdAt = createdAt
+)
+
+private fun GroupPhotoResponse.toDomain() = GroupPhoto(
+    id = id,
+    postId = postId,
+    image = image,
+    // 미지의 값은 IMAGE 폴백 — 서버가 종류를 늘려도 그리드가 죽지 않는다
+    mediaType = if (mediaType.equals("video", ignoreCase = true)) GroupPhotoMediaType.VIDEO
+        else GroupPhotoMediaType.IMAGE,
+    userId = userId,
+    authorName = authorName,
     createdAt = createdAt
 )

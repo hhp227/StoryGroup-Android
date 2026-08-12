@@ -43,6 +43,10 @@ final class GroupDetailViewModel: MviViewModel {
         uiState.pagingData = pagingData
     }
 
+    private func setPhotosPagingData(_ pagingData: PagingData<GroupPhoto>) {
+        uiState.photosPagingData = pagingData
+    }
+
     /// 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
     /// 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
     /// 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
@@ -223,6 +227,7 @@ final class GroupDetailViewModel: MviViewModel {
         getBlockedUsersUseCase: GetBlockedUsersUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
         getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
+        getGroupPhotosPagingDataUseCase: GetGroupPhotosPagingDataUseCase,
         observePostUpdatesUseCase: ObservePostUpdatesUseCase,
         observeUserBlocksUseCase: ObserveUserBlocksUseCase,
         observePostDeletionsUseCase: ObservePostDeletionsUseCase,
@@ -246,6 +251,11 @@ final class GroupDetailViewModel: MviViewModel {
         getGroupPostsPagingDataUseCase(groupId: groupId)
             .cachedIn()
             .sink { [weak self] in self?.setPagingData($0) }
+            .store(in: &cancellables)
+        // 앨범 탭 — 게시글 첨부의 파생 뷰라 별도 스트림(갱신은 refreshFeed 이벤트가 피드와 함께 태운다)
+        getGroupPhotosPagingDataUseCase(groupId: groupId)
+            .cachedIn()
+            .sink { [weak self] in self?.setPhotosPagingData($0) }
             .store(in: &cancellables)
         // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
         KotlinFlowPublisher<Post> { onEach in
@@ -274,6 +284,8 @@ final class GroupDetailViewModel: MviViewModel {
         var defaultChatRoomId: Int64? = nil
         // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
         var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
+        // 앨범 탭 전용 — 피드처럼 최신 PagingData를 상태에 담는다(Compose photosPagingData 미러)
+        var photosPagingData: PagingData<GroupPhoto> = GroupBridgesKt.emptyGroupPhotoPagingData()
         var members: [GroupMember] = []
         /// 내가 차단한 사용자 — 서버가 멤버 목록에선 걸러주지 않아 화면이 직접 뺀다
         var blockedUserIds: Set<Int64> = []

@@ -6,7 +6,7 @@ import Shared
 import class Shared.Group
 
 /// 그룹 상세 — 웹 /groups/[id]·Compose GroupDetailScreen 미러: 콜랩싱 커버(그라데이션 폴백+
-/// 이름/설명/역할 칩)+멤버 스트립+피드(Paging). 상단바는 루트 NavigationStack의 기본 내비바.
+/// 이름/설명/역할 칩)+5탭(소식/앨범/일정/멤버/설정). 상단바는 루트 NavigationStack의 기본 내비바.
 /// groupId만 받아 VM이 스스로 로드한다(목록 페이징 전환으로 스냅샷 lookup 불가 — Compose 미러).
 /// 계층은 Compose GroupDetailScreen과 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct GroupDetailView: View {
@@ -36,6 +36,7 @@ struct GroupDetailView: View {
             getBlockedUsersUseCase: container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
             getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
+            getGroupPhotosPagingDataUseCase: container.getGroupPhotosPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase,
             observeUserBlocksUseCase: container.observeUserBlocksUseCase,
             observePostDeletionsUseCase: container.observePostDeletionsUseCase,
@@ -57,6 +58,15 @@ private struct GroupDetailContent: View {
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
 
+    /// 앨범 탭 페이징 스트림 — 피드와 동일 관용구(Compose photoLazyPagingItems 미러)
+    @StateObject private var photoLazyPagingItems: LazyPagingItems<GroupPhoto>
+
+    /// 레거시 R.array.tab_name(소식/앨범/맴버/설정)에 일정 추가 — Compose tabs 미러
+    private static let tabs = ["소식", "앨범", "일정", "멤버", "설정"]
+
+    /// 선택 탭 — Compose pagerState.currentPage 미러(iOS는 스와이프 없이 탭 터치만 — 플랫폼 관용 예외)
+    @State private var selectedTab = 0
+
     @Environment(\.sgColors) private var colors
 
     /// 첫 레이아웃 시점 커버의 global minY — 스크롤 오프셋은 이 기준의 상대값(HomeView와 동일한 인셋 보정)
@@ -74,10 +84,10 @@ private struct GroupDetailContent: View {
     /// 모더레이터 초대코드 다이얼로그 — Compose GroupDetailScreen showInviteDialog 미러
     @State private var showInviteDialog = false
 
-    /// DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다(Compose dmTargetMember 미러)
+    /// DM 확인 다이얼로그 대상 — 멤버 탭에서 타인을 탭하면 채워진다(Compose dmTargetMember 미러)
     @State private var dmTargetMember: GroupMember?
 
-    /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 스트립 DM 공용)
+    /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 탭 DM 공용)
     @State private var pushedChatRoom: ChatRoomRef?
 
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
@@ -115,24 +125,34 @@ private struct GroupDetailContent: View {
             ScrollView {
                 VStack(spacing: 12) {
                     cover(topInset: outer.safeAreaInsets.top)
-                    content
+                    tabBar
+                    tabContent
                 }
                 .padding(.bottom, 16)
             }
             .background(colors.paper)
             // 커버가 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
-            // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드를 함께 갱신한다.
+            // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드+앨범을 함께 갱신한다.
             // Compose GroupDetailScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
                 viewModel.onAction(.refresh)
                 viewModel.onAction(.refreshFeed)
                 await lazyPagingItems.awaitRefresh()
+                await photoLazyPagingItems.awaitRefresh()
             }
         }
-        // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러
+        // 하단 인디케이터 탭바가 스크롤로 접힌 뒤 내비바 아래 고정되는 사본(핀 탭바 미러)
+        .overlay(alignment: .top) {
+            if barScrimVisible {
+                tabBar
+            }
+        }
+        // 레거시 fragment_group_detail.xml의 fab(bottom|end) 미러 — 소식 탭에서만(레거시 isTabPositionZero 미러)
         .overlay(alignment: .bottomTrailing) {
-            SGFab(action: { showCreatePost = true }).padding(16)
+            if selectedTab == 0 {
+                SGFab(action: { showCreatePost = true }).padding(16)
+            }
         }
         .overlay {
             if showInviteDialog {
@@ -188,7 +208,9 @@ private struct GroupDetailContent: View {
         // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
         .onReceive(viewModel.event) { event in
             switch event {
-            case .refreshFeed: lazyPagingItems.refresh()
+            case .refreshFeed:
+                lazyPagingItems.refresh()
+                photoLazyPagingItems.refresh()
             case .dmOpened(let chatRoomId, let title):
                 dmTargetMember = nil
                 // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
@@ -276,23 +298,47 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 그룹/멤버는 UiState, 피드는 Paging LoadState — 다음 페이지 트리거는 라이브러리가 담당.
+    /// 탭바 아래 콘텐츠 — 선택된 탭에 맞는 뷰로 전환한다(Compose GroupDetailScreen page switch 미러)
+    @ViewBuilder private var tabContent: some View {
+        switch selectedTab {
+        case 0: feedTab
+        case 1: GroupAlbumTab(photoItems: photoLazyPagingItems, groupId: viewModel.groupId, container: container)
+        case 2: SGEmptyState(title: "일정", subtitle: "준비 중입니다.").padding(.vertical, 48)
+        case 3: membersTab
+        default: SGEmptyState(title: "설정", subtitle: "준비 중입니다.").padding(.vertical, 48)
+        }
+    }
+
+    /// 하단 인디케이터 탭바 — Compose TabRow 미러. 인라인으로 흐르다가 barScrimVisible이면
+    /// 오버레이 사본이 내비바 아래 고정된다(핀 탭바 미러 — 단일 ScrollView라 stickyHeader가 없다)
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(Self.tabs.enumerated()), id: \.offset) { index, title in
+                Button { selectedTab = index } label: {
+                    VStack(spacing: 6) {
+                        Text(title)
+                            .font(.subheadline.weight(selectedTab == index ? .bold : .regular))
+                            .foregroundColor(selectedTab == index ? colors.ink : colors.inkFaint)
+                        Rectangle()
+                            .fill(selectedTab == index ? colors.accent : Color.clear)
+                            .frame(height: 2)
+                    }
+                    .padding(.top, 10)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .background(colors.paper)
+    }
+
+    /// 소식 탭 — 기존 피드 목록 그대로(인박스·초대코드·멤버 스트립은 멤버 탭으로 이동, Compose GroupFeedTab 미러).
+    /// 피드는 Paging LoadState — 다음 페이지 트리거는 라이브러리가 담당.
     /// (라이브러리 LoadState.Error의 원인 에러는 internal이라 문구는 고정 메시지 사용)
-    @ViewBuilder private var content: some View {
+    @ViewBuilder private var feedTab: some View {
         let refreshState = lazyPagingItems.loadState.refresh
         let appendState = lazyPagingItems.loadState.append
 
-        // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
-        if !viewModel.uiState.joinRequests.isEmpty {
-            joinRequestInbox.padding(.horizontal, 16)
-        }
-        // 모더레이터 전용 초대코드 만들기 — 승인 우회 가입 경로라 인박스와 같은 조정 도구로 묶는다(Compose 미러)
-        if viewModel.uiState.canModerate {
-            inviteButton.padding(.horizontal, 16)
-        }
-        if !viewModel.uiState.visibleMembers.isEmpty {
-            memberStrip.padding(.horizontal, 16)
-        }
         if let error = viewModel.uiState.error {
             VStack(spacing: 8) {
                 Text(error).font(.subheadline).foregroundColor(colors.rust)
@@ -321,7 +367,7 @@ private struct GroupDetailContent: View {
                     if let post {
                         // 카드 탭 → 게시글 상세 push. 삭제·차단은 상세가 알림만 흘리고,
                         // 이 VM이 스냅샷에서 그 글을 걷어낸다(전체 재조회 없음).
-                        // 차단한 사람은 멤버 스트립에서도 빠져야 해서 재진입 시 .refresh가 다시 걸린다
+                        // 차단한 사람은 멤버 탭에서도 빠져야 해서 재진입 시 .refresh가 다시 걸린다
                         NavigationLink {
                             PostDetailView(
                                 container: container,
@@ -438,32 +484,41 @@ private struct GroupDetailContent: View {
         .buttonStyle(.plain)
     }
 
-    /// 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립(Compose MemberStrip 미러).
-    /// 타인을 탭하면 1:1 DM 확인으로 이어진다
-    private var memberStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    /// 멤버 탭 — 인박스+초대코드(멤버 관리 성격이라 여기 모음)+4열 그리드(레거시 MemberFragment·Compose GroupMembersTab 미러)
+    @ViewBuilder private var membersTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if !viewModel.uiState.joinRequests.isEmpty {
+                joinRequestInbox
+            }
+            if viewModel.uiState.canModerate {
+                inviteButton
+            }
             Text("멤버 \(viewModel.uiState.visibleMembers.count)")
                 .font(.subheadline.bold())
                 .foregroundColor(colors.ink)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(viewModel.uiState.visibleMembers, id: \.userId) { member in
-                        Button(action: { dmTargetMember = member }) {
-                            VStack(spacing: 4) {
-                                SGAvatar(name: member.name, imageUrl: member.profileImg)
-                                Text(member.name)
-                                    .font(.caption2)
-                                    .foregroundColor(colors.inkSoft)
-                                    .lineLimit(1)
-                            }
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12, alignment: .top),
+                GridItem(.flexible(), spacing: 12, alignment: .top),
+                GridItem(.flexible(), spacing: 12, alignment: .top),
+                GridItem(.flexible(), spacing: 12, alignment: .top)
+            ], spacing: 16) {
+                ForEach(viewModel.uiState.visibleMembers, id: \.userId) { member in
+                    Button(action: { dmTargetMember = member }) {
+                        VStack(spacing: 4) {
+                            SGAvatar(name: member.name, imageUrl: member.profileImg)
+                            Text(member.name)
+                                .font(.caption2)
+                                .foregroundColor(colors.inkSoft)
+                                .lineLimit(1)
                         }
-                        .buttonStyle(.plain)
-                        // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
-                        .disabled(member.userId == viewModel.uiState.myUserId)
                     }
+                    .buttonStyle(.plain)
+                    // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
+                    .disabled(member.userId == viewModel.uiState.myUserId)
                 }
             }
         }
+        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -498,11 +553,14 @@ private struct GroupDetailContent: View {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+        // 앨범 탭 — 피드와 동일 관용구, 상태에서 photosPagingData만 뽑아낸 스트림을 수집
+        let photosPublisher = viewModel.$uiState.map { $0.photosPagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
         self.chatViewModel = chatViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
+        _photoLazyPagingItems = StateObject(wrappedValue: photosPublisher.collectAsLazyPagingItems())
     }
 }
 

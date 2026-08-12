@@ -9,6 +9,7 @@ import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
 
 interface GroupRepository {
@@ -26,6 +27,9 @@ interface GroupRepository {
 
     /** 그룹 멤버 목록 — GET /api/groups/{id}/members */
     suspend fun getMembers(groupId: Long): Result<List<GroupMember>>
+
+    /** 그룹 앨범(게시글 첨부 파생 뷰) Paging 스트림 — 최신 게시글 순 */
+    fun getGroupPhotosPagingData(groupId: Long): Flow<PagingData<GroupPhoto>>
 
     /** 그룹 생성 — POST /api/groups */
     suspend fun createGroup(name: String, description: String?, image: String?, joinType: GroupJoinType): Result<Group>

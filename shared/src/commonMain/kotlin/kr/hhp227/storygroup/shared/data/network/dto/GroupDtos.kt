@@ -79,6 +79,25 @@ data class InviteResponse(
     val expiresAt: String? = null
 )
 
+// GET /api/groups/{id}/photos 응답 — 웹 lib/api.ts GroupPhoto/GroupPhotosPage와 1:1.
+// 다른 목록과 달리 {totalCount, photos} 오브젝트다 — totalCount는 앱에선 미사용(탭 구조라 "N장" 표기 없음)
+@Serializable
+data class GroupPhotoResponse(
+    val id: Long,
+    val postId: Long,
+    val image: String,
+    val mediaType: String = "image",
+    val userId: Long,
+    val authorName: String,
+    val createdAt: String
+)
+
+@Serializable
+data class GroupPhotosPageResponse(
+    val totalCount: Long = 0,
+    val photos: List<GroupPhotoResponse> = emptyList()
+)
+
 // 4xx 공통 에러 본문 — common/exception/GlobalExceptionHandler.kt ErrorResponse와 1:1
 @Serializable
 data class ErrorResponse(
