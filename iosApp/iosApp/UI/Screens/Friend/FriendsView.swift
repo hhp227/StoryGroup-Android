@@ -21,7 +21,8 @@ struct FriendsView: View {
             addFriendUseCase: container.addFriendUseCase,
             removeFriendUseCase: container.removeFriendUseCase,
             searchUsersUseCase: container.searchUsersUseCase,
-            openDirectRoomUseCase: container.openDirectRoomUseCase
+            openDirectRoomUseCase: container.openDirectRoomUseCase,
+            observePersonalEventsUseCase: container.observePersonalEventsUseCase
         ))
         self.onOpenChatRoom = onOpenChatRoom
     }
@@ -190,7 +191,18 @@ private struct FriendRow: View {
     var body: some View {
         SGCard {
             HStack(spacing: 12) {
-                SGAvatar(name: friend.name, imageUrl: friend.profileImg)
+                ZStack(alignment: .bottomTrailing) {
+                    SGAvatar(name: friend.name, imageUrl: friend.profileImg)
+                    // 온라인 도트 — 친구 탭 전용이라 공용 SGAvatar는 건드리지 않는다(Compose FriendRow 미러)
+                    if friend.online {
+                        ZStack {
+                            Circle().fill(colors.linen).frame(width: 14, height: 14)
+                            Circle()
+                                .fill(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
+                                .frame(width: 10, height: 10)
+                        }
+                    }
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(friend.name).font(.subheadline.bold()).foregroundColor(colors.ink)
                     if let statusMessage = friend.statusMessage, !statusMessage.isEmpty {

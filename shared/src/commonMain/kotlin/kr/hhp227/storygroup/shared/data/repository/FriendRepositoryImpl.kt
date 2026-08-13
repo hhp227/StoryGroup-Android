@@ -54,7 +54,8 @@ private fun FriendResponse.toDomain() = Friend(
     name = name,
     profileImg = profileImg,
     statusMessage = statusMessage,
-    friendedAt = friendedAt
+    friendedAt = friendedAt,
+    online = online
 )
 
 private fun SearchUserResponse.toDomain() = UserSearchResult(

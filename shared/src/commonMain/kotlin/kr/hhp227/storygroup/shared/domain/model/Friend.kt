@@ -9,7 +9,9 @@ data class Friend(
     val name: String,
     val profileImg: String? = null,
     val statusMessage: String? = null,
-    val friendedAt: String = ""
+    val friendedAt: String = "",
+    // 전역 프레즌스 스냅샷 — 구서버(필드 없음)는 false. 실시간 전환은 PersonalEvent PRESENCE_CHANGED
+    val online: Boolean = false
 )
 
 /** 통합검색 users 섹션 항목 — 같은 그룹 소속 사용자만 노출된다(서버 필터, 본인·차단 제외) */

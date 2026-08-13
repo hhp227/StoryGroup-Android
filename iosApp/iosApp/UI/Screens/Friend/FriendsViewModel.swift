@@ -20,6 +20,11 @@ final class FriendsViewModel: MviViewModel {
 
     private let openDirectRoomUseCase: OpenDirectRoomUseCase
 
+    private var cancellables: Set<AnyCancellable> = []
+
+    /// 재연결부터만 재조회를 걸기 위한 가드 — 첫 연결은 init의 초기 로드와 겹친다(채팅 VM 미러)
+    private var hasConnectedOnce = false
+
     func onAction(_ action: Action) {
         switch action {
         case .refresh: refresh()
@@ -88,7 +93,8 @@ final class FriendsViewModel: MviViewModel {
                     name: user.name,
                     profileImg: user.profileImg,
                     statusMessage: user.statusMessage,
-                    friendedAt: ""
+                    friendedAt: "",
+                    online: false
                 )
                 uiState.processingUserId = nil
                 uiState.friends = (uiState.friends + [added]).sorted { $0.name < $1.name }
@@ -137,18 +143,50 @@ final class FriendsViewModel: MviViewModel {
         }
     }
 
+    /// 개인 큐 이벤트 — 프레즌스 전환은 해당 친구의 online만 스냅샷 패치(재조회 없음).
+    /// Kotlin data class copy()는 ObjC로 안 나가 생성자로 재조립한다.
+    private func handlePersonalEvent(_ event: PersonalEvent) {
+        switch event.type {
+        case .connected:
+            // 재연결이면 끊김 공백에 놓친 전환을 재조회로 메꾼다(허브·알림 화면과 동일 관용구)
+            if hasConnectedOnce { refresh() }
+            hasConnectedOnce = true
+        case .presenceChanged:
+            guard let userId = event.userId?.int64Value else { return }
+            uiState.friends = uiState.friends.map { friend in
+                guard friend.userId == userId else { return friend }
+                return Friend(
+                    userId: friend.userId,
+                    name: friend.name,
+                    profileImg: friend.profileImg,
+                    statusMessage: friend.statusMessage,
+                    friendedAt: friend.friendedAt,
+                    online: event.online
+                )
+            }
+        default:
+            break
+        }
+    }
+
     init(
         getFriendsUseCase: GetFriendsUseCase,
         addFriendUseCase: AddFriendUseCase,
         removeFriendUseCase: RemoveFriendUseCase,
         searchUsersUseCase: SearchUsersUseCase,
-        openDirectRoomUseCase: OpenDirectRoomUseCase
+        openDirectRoomUseCase: OpenDirectRoomUseCase,
+        observePersonalEventsUseCase: ObservePersonalEventsUseCase
     ) {
         self.getFriendsUseCase = getFriendsUseCase
         self.addFriendUseCase = addFriendUseCase
         self.removeFriendUseCase = removeFriendUseCase
         self.searchUsersUseCase = searchUsersUseCase
         self.openDirectRoomUseCase = openDirectRoomUseCase
+        KotlinFlowPublisher<PersonalEvent> { onEach in
+            observePersonalEventsUseCase.eventsFlow().subscribe(onEach: onEach)
+        }
+        .sink { [weak self] in self?.handlePersonalEvent($0) }
+        .store(in: &cancellables)
         refresh()
     }
 

@@ -9,12 +9,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Friend
+import kr.hhp227.storygroup.shared.domain.model.PersonalEvent
+import kr.hhp227.storygroup.shared.domain.model.PersonalEventType
 import kr.hhp227.storygroup.shared.domain.model.UserSearchResult
 import kr.hhp227.storygroup.shared.domain.usecase.AddFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetFriendsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SearchUsersUseCase
@@ -32,13 +37,17 @@ class FriendsViewModel(
     private val addFriendUseCase: AddFriendUseCase,
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val searchUsersUseCase: SearchUsersUseCase,
-    private val openDirectRoomUseCase: OpenDirectRoomUseCase
+    private val openDirectRoomUseCase: OpenDirectRoomUseCase,
+    private val observePersonalEventsUseCase: ObservePersonalEventsUseCase
 ) : ViewModel(), MviViewModel<FriendsViewModel.UiState, FriendsViewModel.Action, FriendsViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val event: Flow<Event> = _event.asSharedFlow()
+
+    // 재연결부터만 재조회를 걸기 위한 가드 — 첫 연결은 init의 초기 로드와 겹친다(채팅 VM 미러)
+    private var hasConnectedOnce = false
 
     override fun onAction(action: Action) {
         when (action) {
@@ -165,8 +174,30 @@ class FriendsViewModel(
         }
     }
 
+    /** 개인 큐 이벤트 — 프레즌스 전환은 해당 친구의 online만 스냅샷 패치(재조회 없음, postUpdates 관용구) */
+    private fun handlePersonalEvent(event: PersonalEvent) {
+        when (event.type) {
+            PersonalEventType.CONNECTED -> {
+                // 재연결이면 끊김 공백에 놓친 전환을 재조회로 메꾼다(허브·알림 화면과 동일 관용구)
+                if (hasConnectedOnce) refresh()
+                hasConnectedOnce = true
+            }
+            PersonalEventType.PRESENCE_CHANGED -> {
+                val userId = event.userId ?: return
+
+                _uiState.update {
+                    it.copy(friends = it.friends.map { friend ->
+                        if (friend.userId == userId) friend.copy(online = event.online) else friend
+                    })
+                }
+            }
+            else -> Unit
+        }
+    }
+
     init {
         refresh()
+        observePersonalEventsUseCase().onEach(::handlePersonalEvent).launchIn(viewModelScope)
     }
 
     data class UiState(

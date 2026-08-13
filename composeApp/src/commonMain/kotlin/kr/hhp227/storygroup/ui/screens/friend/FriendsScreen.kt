@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -60,7 +62,8 @@ internal fun sessionFriendsViewModel(): FriendsViewModel = sessionViewModel {
         addFriendUseCase = it.addFriendUseCase,
         removeFriendUseCase = it.removeFriendUseCase,
         searchUsersUseCase = it.searchUsersUseCase,
-        openDirectRoomUseCase = it.openDirectRoomUseCase
+        openDirectRoomUseCase = it.openDirectRoomUseCase,
+        observePersonalEventsUseCase = it.observePersonalEventsUseCase
     )
 }
 
@@ -337,7 +340,20 @@ private fun FriendRow(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SgAvatar(friend.name, imageUrl = friend.profileImg)
+            Box {
+                SgAvatar(friend.name, imageUrl = friend.profileImg)
+                // 온라인 도트 — 친구 탭 전용이라 공용 SgAvatar는 건드리지 않는다(화면 로컬 오버레이)
+                if (friend.online) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(14.dp)
+                            .background(sg.linen, CircleShape)
+                            .padding(2.dp)
+                            .background(Color(0xFF34C759), CircleShape)
+                    )
+                }
+            }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(friend.name, style = SgTheme.typography.titleSmall, color = sg.ink)

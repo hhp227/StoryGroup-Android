@@ -10,7 +10,8 @@ data class FriendResponse(
     val name: String,
     val profileImg: String? = null,
     val statusMessage: String? = null,
-    val friendedAt: String = ""
+    val friendedAt: String = "",
+    val online: Boolean = false
 )
 
 // 통합검색(GET /api/search) 응답 — 친구 탭은 users 섹션만 쓴다

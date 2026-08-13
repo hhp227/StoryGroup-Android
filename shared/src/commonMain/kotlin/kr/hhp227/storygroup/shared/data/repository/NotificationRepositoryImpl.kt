@@ -124,5 +124,8 @@ private fun PersonalSocketEventResponse.toDomain(): PersonalEvent? = when (type)
                 video = video ?: true
             )
         }
+    // 친구 프레즌스 전환(휘발) — 스냅샷은 친구 목록 응답의 online 필드가 담당
+    "PRESENCE_CHANGED" -> userId
+        ?.let { PersonalEvent(PersonalEventType.PRESENCE_CHANGED, userId = it, online = online ?: false) }
     else -> null
 }
