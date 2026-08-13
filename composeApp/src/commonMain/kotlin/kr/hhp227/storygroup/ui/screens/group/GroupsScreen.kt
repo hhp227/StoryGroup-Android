@@ -68,6 +68,9 @@ fun GroupsScreen(
     onOpenNotifications: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
+    // 상세에서 나가기/삭제 후 복귀 — 셸이 소비해 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     viewModel: GroupsViewModel = sessionViewModel {
@@ -80,6 +83,8 @@ fun GroupsScreen(
         onOpenNotifications = onOpenNotifications,
         onOpenCreateGroup = onOpenCreateGroup,
         onOpenDiscoverGroups = onOpenDiscoverGroups,
+        refreshRequested = refreshRequested,
+        onRefreshHandled = onRefreshHandled,
         navigationIcon = navigationIcon,
         modifier = modifier
     )
@@ -92,6 +97,8 @@ private fun GroupsContent(
     onOpenNotifications: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
+    refreshRequested: Boolean,
+    onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
@@ -115,6 +122,13 @@ private fun GroupsContent(
             when (event) {
                 GroupsViewModel.Event.Refresh -> lazyPagingItems.refresh()
             }
+        }
+    }
+    // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+    LaunchedEffect(refreshRequested) {
+        if (refreshRequested) {
+            lazyPagingItems.refresh()
+            onRefreshHandled()
         }
     }
     // 그룹 탭은 상세(콜랩싱 헤더)와의 전환 때문에 셸이 아닌 화면이 상단바를 소유한다(홈과 동일)

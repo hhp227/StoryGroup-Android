@@ -9,6 +9,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.shared.data.network.dto.CreateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreateInviteRequest
+import kr.hhp227.storygroup.shared.data.network.dto.UpdateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DiscoverGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotoResponse
@@ -158,6 +160,38 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
                 val message = runCatching { e.response.body<ErrorResponse>().message }.getOrNull()
                 throw IllegalStateException(message ?: "유효하지 않거나 만료된 초대 코드입니다.", e)
             }
+        }
+
+    override suspend fun updateGroup(
+        groupId: Long,
+        name: String,
+        description: String?,
+        image: String?,
+        joinType: GroupJoinType?
+    ): Result<Group> = runCatching {
+        client.patch("/api/groups/$groupId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                UpdateGroupRequest(
+                    name = name,
+                    description = description,
+                    image = image,
+                    joinType = joinType?.name
+                )
+            )
+        }.body<GroupResponse>().toDomain()
+    }
+
+    override suspend fun deleteGroup(groupId: Long): Result<Unit> =
+        runCatching {
+            client.delete("/api/groups/$groupId")
+            Unit
+        }
+
+    override suspend fun leaveGroup(groupId: Long): Result<Unit> =
+        runCatching {
+            client.post("/api/groups/$groupId/leave")
+            Unit
         }
 }
 

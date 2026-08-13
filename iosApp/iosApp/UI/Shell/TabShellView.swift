@@ -27,6 +27,11 @@ struct TabShellView: View {
     /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenChatRoom: (ChatRoomRef) -> Void
 
+    /// 상세에서 나가기/삭제 후 복귀 — MainShellView groupsRefreshPending 드릴링(Compose TabShell.kt 미러)
+    let groupsRefreshRequested: Bool
+
+    let onGroupsRefreshHandled: () -> Void
+
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
@@ -50,6 +55,8 @@ struct TabShellView: View {
                         chatViewModel: chatViewModel,
                         onOpenGroup: onOpenGroup,
                         onOpenChatRoom: onOpenChatRoom,
+                        groupsRefreshRequested: groupsRefreshRequested,
+                        onGroupsRefreshHandled: onGroupsRefreshHandled,
                         onOpenSettings: { showSettings = true },
                         onOpenAccountSettings: onOpenAccountSettings,
                         onLogout: onLogout

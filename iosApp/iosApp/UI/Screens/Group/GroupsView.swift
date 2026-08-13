@@ -12,14 +12,30 @@ struct GroupsView: View {
 
     let onOpenGroup: (Group) -> Void
 
+    /// 상세에서 나가기/삭제 후 복귀 — 셸이 소비해 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+    let refreshRequested: Bool
+
+    let onRefreshHandled: () -> Void
+
     /// 화면이 자기 push 목적지를 만들 때 쓴다 — 그룹 만들기/찾기 화면이 이 인스턴스를 그대로 전달받아 갱신한다
     private let container: AppContainer
 
     var body: some View {
-        GroupsContent(viewModel: viewModel, container: container, onOpenGroup: onOpenGroup)
+        GroupsContent(
+            viewModel: viewModel,
+            container: container,
+            onOpenGroup: onOpenGroup,
+            refreshRequested: refreshRequested,
+            onRefreshHandled: onRefreshHandled
+        )
     }
 
-    init(container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
+    init(
+        container: AppContainer,
+        onOpenGroup: @escaping (Group) -> Void,
+        refreshRequested: Bool,
+        onRefreshHandled: @escaping () -> Void
+    ) {
         _viewModel = StateObject(wrappedValue: GroupsViewModel(
             getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase,
             getMyJoinRequestedGroupsUseCase: container.getMyJoinRequestedGroupsUseCase,
@@ -27,6 +43,8 @@ struct GroupsView: View {
         ))
         self.container = container
         self.onOpenGroup = onOpenGroup
+        self.refreshRequested = refreshRequested
+        self.onRefreshHandled = onRefreshHandled
     }
 }
 
@@ -36,6 +54,11 @@ private struct GroupsContent: View {
     let container: AppContainer
 
     let onOpenGroup: (Group) -> Void
+
+    /// 상세에서 나가기/삭제 후 복귀 — 셸이 소비해 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+    let refreshRequested: Bool
+
+    let onRefreshHandled: () -> Void
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Group>
@@ -104,6 +127,9 @@ private struct GroupsContent: View {
             case .refresh: lazyPagingItems.refresh()
             }
         }
+        // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러).
+        // iOS 15 타깃이라 구형 onChange(of:perform:) 시그니처 사용
+        .onChange(of: refreshRequested) { if $0 { lazyPagingItems.refresh(); onRefreshHandled() } }
     }
 
     private var createGroupDestination: some View {
@@ -230,13 +256,21 @@ private struct GroupsContent: View {
         }
     }
 
-    init(viewModel: GroupsViewModel, container: AppContainer, onOpenGroup: @escaping (Group) -> Void) {
+    init(
+        viewModel: GroupsViewModel,
+        container: AppContainer,
+        onOpenGroup: @escaping (Group) -> Void,
+        refreshRequested: Bool,
+        onRefreshHandled: @escaping () -> Void
+    ) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
         self.onOpenGroup = onOpenGroup
+        self.refreshRequested = refreshRequested
+        self.onRefreshHandled = onRefreshHandled
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }
