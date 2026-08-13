@@ -12,48 +12,142 @@ import class Shared.Group
 struct GroupDetailView: View {
     @StateObject private var viewModel: GroupDetailViewModel
 
+    @StateObject private var groupFeedViewModel: GroupFeedViewModel
+
+    @StateObject private var groupAlbumViewModel: GroupAlbumViewModel
+
+    @StateObject private var groupMembersViewModel: GroupMembersViewModel
+
+    @StateObject private var groupEventsViewModel: GroupEventsViewModel
+
+    @StateObject private var groupSettingsViewModel: GroupSettingsViewModel
+
     /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
     /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
     private let chatViewModel: ChatViewModel
 
+    /// 앱 설정 push용 테마 상태(셸 소유) — SGSettingsView가 요구한다
+    private let theme: SGThemeState
+
+    /// 유저 설정 행+계정 설정 push용 세션 VM(셸 소유) — AccountSettingsView 선례
+    private let profileViewModel: ProfileViewModel
+
+    /// 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다(Compose GroupDetailScreen onGroupClosed 미러)
+    private let onGroupClosed: () -> Void
+
+    /// 그룹 정보 수정 저장 성공 — 목록 카드의 이름·커버 갱신 신호(pop은 하지 않는다)
+    private let onGroupUpdated: () -> Void
+
     var body: some View {
-        GroupDetailContent(viewModel: viewModel, container: container, chatViewModel: chatViewModel)
+        GroupDetailContent(
+            viewModel: viewModel,
+            groupFeedViewModel: groupFeedViewModel,
+            groupAlbumViewModel: groupAlbumViewModel,
+            groupMembersViewModel: groupMembersViewModel,
+            groupEventsViewModel: groupEventsViewModel,
+            groupSettingsViewModel: groupSettingsViewModel,
+            container: container,
+            chatViewModel: chatViewModel,
+            theme: theme,
+            profileViewModel: profileViewModel,
+            onGroupClosed: onGroupClosed,
+            onGroupUpdated: onGroupUpdated
+        )
     }
 
-    init(groupId: Int64, container: AppContainer, chatViewModel: ChatViewModel) {
+    init(
+        groupId: Int64,
+        container: AppContainer,
+        chatViewModel: ChatViewModel,
+        theme: SGThemeState,
+        profileViewModel: ProfileViewModel,
+        onGroupClosed: @escaping () -> Void,
+        onGroupUpdated: @escaping () -> Void
+    ) {
         _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
             groupId: groupId,
             getGroupUseCase: container.getGroupUseCase,
+            getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase
+        ))
+        _groupFeedViewModel = StateObject(wrappedValue: GroupFeedViewModel(
+            groupId: groupId,
+            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
+            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
+            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
+            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
+            togglePostLikeUseCase: container.togglePostLikeUseCase
+        ))
+        _groupAlbumViewModel = StateObject(wrappedValue: GroupAlbumViewModel(
+            groupId: groupId,
+            getGroupPhotosPagingDataUseCase: container.getGroupPhotosPagingDataUseCase
+        ))
+        _groupMembersViewModel = StateObject(wrappedValue: GroupMembersViewModel(
+            groupId: groupId,
             getGroupMembersUseCase: container.getGroupMembersUseCase,
             getJoinRequestsUseCase: container.getJoinRequestsUseCase,
             approveJoinRequestUseCase: container.approveJoinRequestUseCase,
             rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
             createGroupInviteUseCase: container.createGroupInviteUseCase,
             openDirectRoomUseCase: container.openDirectRoomUseCase,
-            getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase,
             getBlockedUsersUseCase: container.getBlockedUsersUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase,
-            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
-            getGroupPhotosPagingDataUseCase: container.getGroupPhotosPagingDataUseCase,
-            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
-            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
-            togglePostLikeUseCase: container.togglePostLikeUseCase
+            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+        ))
+        _groupEventsViewModel = StateObject(wrappedValue: GroupEventsViewModel(
+            groupId: groupId,
+            getGroupEventsUseCase: container.getGroupEventsUseCase,
+            getEventDetailUseCase: container.getEventDetailUseCase,
+            createEventUseCase: container.createEventUseCase,
+            deleteEventUseCase: container.deleteEventUseCase,
+            rsvpEventUseCase: container.rsvpEventUseCase,
+            cancelEventRsvpUseCase: container.cancelEventRsvpUseCase,
+            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+        ))
+        _groupSettingsViewModel = StateObject(wrappedValue: GroupSettingsViewModel(
+            groupId: groupId,
+            getGroupUseCase: container.getGroupUseCase,
+            deleteGroupUseCase: container.deleteGroupUseCase,
+            leaveGroupUseCase: container.leaveGroupUseCase
         ))
         self.container = container
         self.chatViewModel = chatViewModel
+        self.theme = theme
+        self.profileViewModel = profileViewModel
+        self.onGroupClosed = onGroupClosed
+        self.onGroupUpdated = onGroupUpdated
     }
 }
 
 private struct GroupDetailContent: View {
     @ObservedObject var viewModel: GroupDetailViewModel
 
+    @ObservedObject var groupFeedViewModel: GroupFeedViewModel
+
+    @ObservedObject var groupAlbumViewModel: GroupAlbumViewModel
+
+    @ObservedObject var groupMembersViewModel: GroupMembersViewModel
+
+    @ObservedObject var groupEventsViewModel: GroupEventsViewModel
+
+    @ObservedObject var groupSettingsViewModel: GroupSettingsViewModel
+
     let container: AppContainer
 
     /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
     let chatViewModel: ChatViewModel
+
+    /// 앱 설정 push용 테마 상태(셸 소유) — SGSettingsView가 요구한다
+    let theme: SGThemeState
+
+    /// 유저 설정 행+계정 설정 push용 세션 VM(셸 소유) — AccountSettingsView 선례
+    @ObservedObject var profileViewModel: ProfileViewModel
+
+    /// 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다(Compose GroupDetailScreen onGroupClosed 미러)
+    let onGroupClosed: () -> Void
+
+    /// 그룹 정보 수정 저장 성공 — 목록 카드의 이름·커버 갱신 신호(pop은 하지 않는다)
+    let onGroupUpdated: () -> Void
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -99,12 +193,25 @@ private struct GroupDetailContent: View {
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
     @State private var shareItem: ShareItem?
 
+    /// 설정 탭 풀스크린 push 3종 — Compose GroupEditRoute/AccountSettingsRoute/AppSettingsRoute 미러
+    @State private var showGroupEdit = false
+
+    @State private var showAccountSettings = false
+
+    @State private var showAppSettings = false
+
+    /// 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, Compose APP_SHARE_TEXT 미러)
+    private static let appShareText = "StoryGroup — 그룹과 함께하는 이야기\n\(StoryGroupApi.shared.DEFAULT_BASE_URL)"
+
     /// 상세 안에서 채팅방·글쓰기를 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
             core
                 .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
                 .navigationDestination(isPresented: $showCreatePost) { createPostDestination }
+                .navigationDestination(isPresented: $showGroupEdit) { groupEditDestination }
+                .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
+                .navigationDestination(isPresented: $showAppSettings) { appSettingsDestination }
         } else {
             core
                 .background(
@@ -118,6 +225,30 @@ private struct GroupDetailContent: View {
                 .background(
                     NavigationLink(isActive: $showCreatePost) {
                         createPostDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showGroupEdit) {
+                        groupEditDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showAccountSettings) {
+                        accountSettingsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showAppSettings) {
+                        appSettingsDestination
                     } label: {
                         EmptyView()
                     }
@@ -142,7 +273,12 @@ private struct GroupDetailContent: View {
             // Compose GroupDetailScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
                 viewModel.onAction(.refresh)
-                viewModel.onAction(.refreshFeed)
+                groupMembersViewModel.onAction(.refresh)
+                groupEventsViewModel.onAction(.refresh)
+                // Compose GroupDetailScreen onRefresh 미러 — 프레젠터가 직접 paging 스트림을 무효화한다
+                // (event 경유 트리거가 없어졌으므로 awaitRefresh 전에 refresh()를 명시적으로 태운다)
+                lazyPagingItems.refresh()
+                photoLazyPagingItems.refresh()
                 await lazyPagingItems.awaitRefresh()
                 await photoLazyPagingItems.awaitRefresh()
             }
@@ -162,15 +298,15 @@ private struct GroupDetailContent: View {
         .overlay {
             if showInviteDialog {
                 InviteDialog(
-                    invite: viewModel.uiState.createdInvite,
-                    isLoading: viewModel.uiState.isCreatingInvite,
-                    error: viewModel.uiState.inviteError,
+                    invite: groupMembersViewModel.uiState.createdInvite,
+                    isLoading: groupMembersViewModel.uiState.isCreatingInvite,
+                    error: groupMembersViewModel.uiState.inviteError,
                     onDismiss: {
                         showInviteDialog = false
                         // 닫을 때 결과를 비워 다음에 열면 다시 생성 폼부터 시작한다
-                        viewModel.onAction(.dismissInvite)
+                        groupMembersViewModel.onAction(.dismissInvite)
                     },
-                    onCreate: { viewModel.onAction(.createInvite(maxUses: $0, expiresInDays: $1)) }
+                    onCreate: { groupMembersViewModel.onAction(.createInvite(maxUses: $0, expiresInDays: $1)) }
                 )
             }
         }
@@ -178,13 +314,13 @@ private struct GroupDetailContent: View {
             if let member = dmTargetMember {
                 DmConfirmDialog(
                     memberName: member.name,
-                    isLoading: viewModel.uiState.isOpeningDm,
-                    error: viewModel.uiState.dmError,
+                    isLoading: groupMembersViewModel.uiState.isOpeningDm,
+                    error: groupMembersViewModel.uiState.dmError,
                     onDismiss: {
                         dmTargetMember = nil
-                        viewModel.onAction(.dismissDm)
+                        groupMembersViewModel.onAction(.dismissDm)
                     },
-                    onConfirm: { viewModel.onAction(.openDm(userId: member.userId, userName: member.name)) }
+                    onConfirm: { groupMembersViewModel.onAction(.openDm(userId: member.userId, userName: member.name)) }
                 )
             }
         }
@@ -209,34 +345,39 @@ private struct GroupDetailContent: View {
                 }
             }
         }
-        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
-        // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
-        .onReceive(viewModel.event) { event in
+        // 멤버 탭의 일회성 이벤트 — DM 방 확보 성공 시 채팅방으로 이동(Compose LaunchedEffect(membersViewModel) 미러)
+        .onReceive(groupMembersViewModel.event) { event in
             switch event {
-            case .refreshFeed:
-                lazyPagingItems.refresh()
-                photoLazyPagingItems.refresh()
             case .dmOpened(let chatRoomId, let title):
                 dmTargetMember = nil
                 // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
                 pushedChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
             }
         }
+        // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 groupEditDestination 클로저 경로)
+        .onReceive(groupSettingsViewModel.event) { event in
+            switch event {
+            case .closed: onGroupClosed()
+            }
+        }
         .onPreferenceChange(NavigationBarScrimVisibleKey.self) { barScrimVisible = $0 }
         .navigationBarScrim(visible: barScrimVisible)
-        // 상세 진입 시 신선화 — 목록에서 받은 그룹으로 먼저 그리고 최신화한다
-        .onAppear { viewModel.onAction(.refresh) }
+        // 상세 진입 시 신선화 — 목록에서 받은 그룹으로 먼저 그리고 최신화한다(Compose LaunchedEffect(viewModel) 미러)
+        .onAppear {
+            viewModel.onAction(.refresh)
+            groupMembersViewModel.onAction(.refresh)
+        }
         // 카드 공유 버튼 — iOS 15 타깃이라 ShareLink(16+) 대신 UIActivityViewController(Compose postShareText 미러)
         .sheet(item: $shareItem) { item in
             ActivityShareSheet(text: item.text)
         }
         .alert("좋아요 처리 실패", isPresented: Binding(
-            get: { viewModel.uiState.likeError != nil },
-            set: { if !$0 { viewModel.onAction(.dismissLikeError) } }
+            get: { groupFeedViewModel.uiState.likeError != nil },
+            set: { if !$0 { groupFeedViewModel.onAction(.dismissLikeError) } }
         )) {
             Button("확인", role: .cancel) {}
         } message: {
-            Text(viewModel.uiState.likeError ?? "")
+            Text(groupFeedViewModel.uiState.likeError ?? "")
         }
     }
 
@@ -314,9 +455,16 @@ private struct GroupDetailContent: View {
         switch selectedTab {
         case 0: feedTab
         case 1: GroupAlbumTab(photoItems: photoLazyPagingItems, groupId: viewModel.groupId, container: container)
-        case 2: SGEmptyState(title: "일정", subtitle: "준비 중입니다.").padding(.vertical, 48)
+        case 2: GroupEventsTab(viewModel: groupEventsViewModel, canModerate: viewModel.uiState.canModerate)
         case 3: membersTab
-        default: SGEmptyState(title: "설정", subtitle: "준비 중입니다.").padding(.vertical, 48)
+        default: GroupSettingsTab(
+            viewModel: groupSettingsViewModel,
+            profile: profileViewModel.uiState.profile,
+            onOpenGroupEdit: { showGroupEdit = true },
+            onOpenAccountSettings: { showAccountSettings = true },
+            onOpenAppSettings: { showAppSettings = true },
+            onShareApp: { shareItem = ShareItem(text: Self.appShareText) }
+        )
         }
     }
 
@@ -394,7 +542,7 @@ private struct GroupDetailContent: View {
                         } label: {
                             SGPostCard(
                                 post: post,
-                                onToggleLike: { viewModel.onAction(.toggleLike(post)) },
+                                onToggleLike: { groupFeedViewModel.onAction(.toggleLike(post)) },
                                 onShare: { shareItem = ShareItem(text: postShareText(post)) }
                             )
                         }
@@ -414,15 +562,15 @@ private struct GroupDetailContent: View {
     /// 모더레이터용 가입 신청 인박스 — 웹 GroupMemberList의 "가입 신청 N건" 섹션(Compose JoinRequestInbox 미러)
     private var joinRequestInbox: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("가입 신청 \(viewModel.uiState.joinRequests.count)건")
+            Text("가입 신청 \(groupMembersViewModel.uiState.joinRequests.count)건")
                 .font(.subheadline.bold())
                 .foregroundColor(colors.ink)
-            if let actionError = viewModel.uiState.actionError {
+            if let actionError = groupMembersViewModel.uiState.actionError {
                 Text(actionError)
                     .font(.caption)
                     .foregroundColor(colors.rust)
             }
-            ForEach(viewModel.uiState.joinRequests, id: \.userId) { request in
+            ForEach(groupMembersViewModel.uiState.joinRequests, id: \.userId) { request in
                 joinRequestCard(request)
             }
         }
@@ -431,8 +579,8 @@ private struct GroupDetailContent: View {
 
     private func joinRequestCard(_ request: GroupJoinRequest) -> some View {
         // VM이 한 건씩만 처리하므로 처리 중엔 모든 행의 버튼을 잠근다
-        let enabled = viewModel.uiState.processingRequestUserId == nil
-        let isProcessing = viewModel.uiState.processingRequestUserId == request.userId
+        let enabled = groupMembersViewModel.uiState.processingRequestUserId == nil
+        let isProcessing = groupMembersViewModel.uiState.processingRequestUserId == request.userId
         return SGCard {
             HStack(spacing: 8) {
                 SGAvatar(name: request.name, imageUrl: request.profileImg)
@@ -447,7 +595,7 @@ private struct GroupDetailContent: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Button {
-                    viewModel.onAction(.approveJoinRequest(userId: request.userId))
+                    groupMembersViewModel.onAction(.approveJoinRequest(userId: request.userId))
                 } label: {
                     HStack(spacing: 6) {
                         if isProcessing {
@@ -467,7 +615,7 @@ private struct GroupDetailContent: View {
                 }
                 .disabled(!enabled)
                 Button {
-                    viewModel.onAction(.rejectJoinRequest(userId: request.userId))
+                    groupMembersViewModel.onAction(.rejectJoinRequest(userId: request.userId))
                 } label: {
                     Text("거절")
                         .font(.subheadline)
@@ -504,13 +652,30 @@ private struct GroupDetailContent: View {
     /// 멤버 탭 — 인박스+초대코드(멤버 관리 성격이라 여기 모음)+4열 그리드(레거시 MemberFragment·Compose GroupMembersTab 미러)
     @ViewBuilder private var membersTab: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if !viewModel.uiState.joinRequests.isEmpty {
+            // 멤버 로드 실패 — 탭 자체가 자기 로드를 소유하므로 여기서 재시도를 준다
+            // (Compose GroupDetailScreen.kt:GroupMembersTab의 "members-error" 아이템 미러)
+            if let error = groupMembersViewModel.uiState.error {
+                VStack(spacing: 8) {
+                    Text(error).font(.subheadline).foregroundColor(colors.rust)
+                    Button("다시 시도") { groupMembersViewModel.onAction(.refresh) }
+                        .font(.subheadline)
+                        .foregroundColor(colors.accent)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            // (Compose GroupDetailScreen.kt:GroupMembersTab의 "members-loading" 아이템 미러)
+            if groupMembersViewModel.uiState.isLoading, groupMembersViewModel.uiState.members.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 48)
+            }
+            if !groupMembersViewModel.uiState.joinRequests.isEmpty {
                 joinRequestInbox
             }
             if viewModel.uiState.canModerate {
                 inviteButton
             }
-            Text("멤버 \(viewModel.uiState.visibleMembers.count)")
+            Text("멤버 \(groupMembersViewModel.uiState.visibleMembers.count)")
                 .font(.subheadline.bold())
                 .foregroundColor(colors.ink)
             LazyVGrid(columns: [
@@ -519,7 +684,7 @@ private struct GroupDetailContent: View {
                 GridItem(.flexible(), spacing: 12, alignment: .top),
                 GridItem(.flexible(), spacing: 12, alignment: .top)
             ], spacing: 16) {
-                ForEach(viewModel.uiState.visibleMembers, id: \.userId) { member in
+                ForEach(groupMembersViewModel.uiState.visibleMembers, id: \.userId) { member in
                     Button(action: { dmTargetMember = member }) {
                         VStack(spacing: 4) {
                             SGAvatar(name: member.name, imageUrl: member.profileImg)
@@ -531,7 +696,7 @@ private struct GroupDetailContent: View {
                     }
                     .buttonStyle(.plain)
                     // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
-                    .disabled(member.userId == viewModel.uiState.myUserId)
+                    .disabled(member.userId == groupMembersViewModel.uiState.myUserId)
                 }
             }
         }
@@ -560,22 +725,65 @@ private struct GroupDetailContent: View {
     }
 
     private var createPostDestination: some View {
-        // 성공 시 그룹 피드를 첫 페이지부터 다시 읽는다 — Compose GroupDetailScreen refreshRequested 미러
+        // 성공 시 그룹 피드·앨범을 첫 페이지부터 다시 읽는다(Compose GroupDetailScreen
+        // LaunchedEffect(refreshRequested) 미러 — 프레젠터가 직접 paging 스트림을 무효화한다)
         CreatePostView(container: container, groupId: viewModel.groupId) {
-            viewModel.onAction(.refreshFeed)
+            lazyPagingItems.refresh()
+            photoLazyPagingItems.refresh()
         }
     }
 
-    init(viewModel: GroupDetailViewModel, container: AppContainer, chatViewModel: ChatViewModel) {
+    /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose GROUP_UPDATED_KEY 미러)
+    private var groupEditDestination: some View {
+        GroupEditView(groupId: viewModel.groupId, container: container) {
+            showGroupEdit = false
+            viewModel.onAction(.refresh)
+            groupSettingsViewModel.onAction(.refresh)
+            onGroupUpdated()
+        }
+    }
+
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다(셸 선례)
+    private var accountSettingsDestination: some View {
+        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    private var appSettingsDestination: some View {
+        SGSettingsView(theme: theme)
+    }
+
+    init(
+        viewModel: GroupDetailViewModel,
+        groupFeedViewModel: GroupFeedViewModel,
+        groupAlbumViewModel: GroupAlbumViewModel,
+        groupMembersViewModel: GroupMembersViewModel,
+        groupEventsViewModel: GroupEventsViewModel,
+        groupSettingsViewModel: GroupSettingsViewModel,
+        container: AppContainer,
+        chatViewModel: ChatViewModel,
+        theme: SGThemeState,
+        profileViewModel: ProfileViewModel,
+        onGroupClosed: @escaping () -> Void,
+        onGroupUpdated: @escaping () -> Void
+    ) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
-        // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
-        let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
+        // (Kotlin: feedViewModel.uiState.map { it.pagingData }.distinctUntilChanged())
+        let pagingDataPublisher = groupFeedViewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
         // 앨범 탭 — 피드와 동일 관용구, 상태에서 photosPagingData만 뽑아낸 스트림을 수집
-        let photosPublisher = viewModel.$uiState.map { $0.photosPagingData }.removeDuplicates { $0 === $1 }
+        let photosPublisher = groupAlbumViewModel.$uiState.map { $0.photosPagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
+        self.groupFeedViewModel = groupFeedViewModel
+        self.groupAlbumViewModel = groupAlbumViewModel
+        self.groupMembersViewModel = groupMembersViewModel
+        self.groupEventsViewModel = groupEventsViewModel
+        self.groupSettingsViewModel = groupSettingsViewModel
         self.container = container
         self.chatViewModel = chatViewModel
+        self.theme = theme
+        self.profileViewModel = profileViewModel
+        self.onGroupClosed = onGroupClosed
+        self.onGroupUpdated = onGroupUpdated
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
         _photoLazyPagingItems = StateObject(wrappedValue: photosPublisher.collectAsLazyPagingItems())
     }

@@ -56,6 +56,9 @@ fun MainShell(
     // 홈(라운지) 글쓰기 성공 신호 — HomeScreen이 소비하고 onHomeRefreshHandled로 소거한다
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
+    // 그룹 상세에서 나가기/삭제 성공 신호 — GroupsScreen이 소비하고 onGroupsRefreshHandled로 소거한다
+    groupsRefreshRequested: Boolean,
+    onGroupsRefreshHandled: () -> Unit,
     // 계정 설정/그룹 만들기/그룹 찾기는 NavHost 풀스크린 목적지(앱 설정 오버레이와 달리 App이 배선)
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
@@ -77,6 +80,8 @@ fun MainShell(
                 onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
+                groupsRefreshRequested = groupsRefreshRequested,
+                onGroupsRefreshHandled = onGroupsRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
                 onOpenCreateGroup = onOpenCreateGroup,
@@ -92,6 +97,8 @@ fun MainShell(
                 onOpenChatRoom = onOpenChatRoom,
                 homeRefreshRequested = homeRefreshRequested,
                 onHomeRefreshHandled = onHomeRefreshHandled,
+                groupsRefreshRequested = groupsRefreshRequested,
+                onGroupsRefreshHandled = onGroupsRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
                 onOpenCreateGroup = onOpenCreateGroup,
@@ -124,6 +131,8 @@ internal fun DestinationContent(
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
+    groupsRefreshRequested: Boolean,
+    onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
@@ -147,6 +156,8 @@ internal fun DestinationContent(
                             onOpenChatRoom = onOpenChatRoom,
                             homeRefreshRequested = homeRefreshRequested,
                             onHomeRefreshHandled = onHomeRefreshHandled,
+                            groupsRefreshRequested = groupsRefreshRequested,
+                            onGroupsRefreshHandled = onGroupsRefreshHandled,
                             onOpenNotifications = onOpenNotifications,
                             onOpenSettings = onOpenSettings,
                             onOpenAccountSettings = onOpenAccountSettings,
@@ -180,6 +191,8 @@ private fun DestinationScreen(
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     homeRefreshRequested: Boolean,
     onHomeRefreshHandled: () -> Unit,
+    groupsRefreshRequested: Boolean,
+    onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
@@ -204,6 +217,8 @@ private fun DestinationScreen(
             onOpenNotifications = onOpenNotifications,
             onOpenCreateGroup = onOpenCreateGroup,
             onOpenDiscoverGroups = onOpenDiscoverGroups,
+            refreshRequested = groupsRefreshRequested,
+            onRefreshHandled = onGroupsRefreshHandled,
             navigationIcon = menuNavigationIcon
         )
         MainDestination.FRIENDS -> FriendsScreen()
