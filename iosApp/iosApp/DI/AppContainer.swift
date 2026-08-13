@@ -100,6 +100,12 @@ final class AppContainer {
     let getCallRosterUseCase: GetCallRosterUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
+    // 친구 탭 — 목록/등록/해제(단방향)+사용자 검색(통합검색 users 섹션)
+    let getFriendsUseCase: GetFriendsUseCase
+    let addFriendUseCase: AddFriendUseCase
+    let removeFriendUseCase: RemoveFriendUseCase
+    let searchUsersUseCase: SearchUsersUseCase
+
     // 일정 탭(Task 10) — 월 범위 목록/단건+참석자/생성/삭제/RSVP/RSVP 취소
     let getGroupEventsUseCase: GetGroupEventsUseCase
     let getEventDetailUseCase: GetEventDetailUseCase
@@ -136,6 +142,7 @@ final class AppContainer {
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
         )
         let eventRepository = EventRepositoryImpl(client: client)
+        let friendRepository = FriendRepositoryImpl(client: client)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -212,5 +219,9 @@ final class AppContainer {
         deleteEventUseCase = DeleteEventUseCase(eventRepository: eventRepository)
         rsvpEventUseCase = RsvpEventUseCase(eventRepository: eventRepository)
         cancelEventRsvpUseCase = CancelEventRsvpUseCase(eventRepository: eventRepository)
+        getFriendsUseCase = GetFriendsUseCase(friendRepository: friendRepository)
+        addFriendUseCase = AddFriendUseCase(friendRepository: friendRepository)
+        removeFriendUseCase = RemoveFriendUseCase(friendRepository: friendRepository)
+        searchUsersUseCase = SearchUsersUseCase(friendRepository: friendRepository)
     }
 }

@@ -46,6 +46,7 @@
 		A1010040AABBCCDDEEFF0040 /* GroupSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011040AABBCCDDEEFF0040 /* GroupSettingsTab.swift */; };
 		A1010041AABBCCDDEEFF0041 /* GroupEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011041AABBCCDDEEFF0041 /* GroupEditViewModel.swift */; };
 		A1010042AABBCCDDEEFF0042 /* GroupEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011042AABBCCDDEEFF0042 /* GroupEditView.swift */; };
+		A1010043AABBCCDDEEFF0043 /* FriendsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011043AABBCCDDEEFF0043 /* FriendsViewModel.swift */; };
 		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
 		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
 		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
@@ -114,6 +115,7 @@
 		A1011040AABBCCDDEEFF0040 /* GroupSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSettingsTab.swift; sourceTree = "<group>"; };
 		A1011041AABBCCDDEEFF0041 /* GroupEditViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEditViewModel.swift; sourceTree = "<group>"; };
 		A1011042AABBCCDDEEFF0042 /* GroupEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEditView.swift; sourceTree = "<group>"; };
+		A1011043AABBCCDDEEFF0043 /* FriendsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsViewModel.swift; sourceTree = "<group>"; };
 		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
 		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
@@ -257,6 +259,7 @@
 		A1013006AABBCCDDEEFF0006 /* Friend */ = {
 			isa = PBXGroup;
 			children = (
+				A1011043AABBCCDDEEFF0043 /* FriendsViewModel.swift */,
 				A1011014AABBCCDDEEFF0014 /* FriendsView.swift */,
 			);
 			path = Friend;
@@ -544,6 +547,7 @@
 				A1010040AABBCCDDEEFF0040 /* GroupSettingsTab.swift in Sources */,
 				A1010041AABBCCDDEEFF0041 /* GroupEditViewModel.swift in Sources */,
 				A1010042AABBCCDDEEFF0042 /* GroupEditView.swift in Sources */,
+				A1010043AABBCCDDEEFF0043 /* FriendsViewModel.swift in Sources */,
 				A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */,
 				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
 				A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */,

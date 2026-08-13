@@ -4,6 +4,7 @@ import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.ChatRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.EventRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.FriendRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
@@ -16,12 +17,14 @@ import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
 import kr.hhp227.storygroup.shared.domain.repository.EventRepository
+import kr.hhp227.storygroup.shared.domain.repository.FriendRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
+import kr.hhp227.storygroup.shared.domain.usecase.AddFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.BlockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CancelEventRsvpUseCase
@@ -49,6 +52,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetEventDetailUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetFriendsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupEventsUseCase
@@ -84,9 +88,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RsvpEventUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SearchUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
@@ -116,6 +122,7 @@ class AppContainer(
     private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
     private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
     private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
+    private val friendRepository: FriendRepository = FriendRepositoryImpl(apiClient)
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
@@ -200,4 +207,9 @@ class AppContainer(
     val getCallRosterUseCase = GetCallRosterUseCase(rtcRepository)
     val getIceServersUseCase = GetIceServersUseCase(rtcRepository)
     val getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository)
+    // 친구 탭 — 목록/등록/해제(단방향)+사용자 검색(통합검색 users 섹션)
+    val getFriendsUseCase = GetFriendsUseCase(friendRepository)
+    val addFriendUseCase = AddFriendUseCase(friendRepository)
+    val removeFriendUseCase = RemoveFriendUseCase(friendRepository)
+    val searchUsersUseCase = SearchUsersUseCase(friendRepository)
 }

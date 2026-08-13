@@ -221,7 +221,8 @@ private fun DestinationScreen(
             onRefreshHandled = onGroupsRefreshHandled,
             navigationIcon = menuNavigationIcon
         )
-        MainDestination.FRIENDS -> FriendsScreen()
+        // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=null) — 채팅 허브와 같은 배선
+        MainDestination.FRIENDS -> FriendsScreen(onOpenChatRoom = onOpenChatRoom)
         MainDestination.CHAT -> ChatScreen(onOpenChatRoom = onOpenChatRoom)
         MainDestination.NOTIFICATIONS -> NotificationsScreen()
         MainDestination.PROFILE -> ProfileScreen(

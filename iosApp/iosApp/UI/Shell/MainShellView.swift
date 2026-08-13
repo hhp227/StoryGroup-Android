@@ -339,7 +339,8 @@ struct DestinationView: View {
                 onRefreshHandled: onGroupsRefreshHandled
             )
         case .friends:
-            FriendsView()
+            // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=nil) — 채팅 허브와 같은 배선
+            FriendsView(container: container, onOpenChatRoom: onOpenChatRoom)
         case .chat:
             ChatView(viewModel: chatViewModel, onOpenChatRoom: onOpenChatRoom)
         case .notifications:
