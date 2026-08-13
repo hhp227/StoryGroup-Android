@@ -66,6 +66,9 @@ struct MainShellView: View {
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
     @State private var selectedGroupId: Int64? = nil
 
+    /// 그룹 상세에서 나가기/삭제 성공 신호 — 셸의 그룹 탭이 소비해 목록을 다시 읽는다(Compose App.kt groupsRefreshPending 미러)
+    @State private var groupsRefreshPending = false
+
     /// 계정 설정 풀스크린 push — Compose NavHost(AccountSettingsRoute) 미러
     @State private var showAccountSettings = false
 
@@ -173,6 +176,8 @@ struct MainShellView: View {
                 chatViewModel: chatViewModel,
                 onOpenGroup: { selectedGroupId = $0.id },
                 onOpenChatRoom: { selectedChatRoom = $0 },
+                groupsRefreshRequested: groupsRefreshPending,
+                onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
@@ -186,6 +191,8 @@ struct MainShellView: View {
                 chatViewModel: chatViewModel,
                 onOpenGroup: { selectedGroupId = $0.id },
                 onOpenChatRoom: { selectedChatRoom = $0 },
+                groupsRefreshRequested: groupsRefreshPending,
+                onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onLogout: onLogout
             )
@@ -194,7 +201,20 @@ struct MainShellView: View {
 
     @ViewBuilder private var groupDetailDestination: some View {
         if let groupId = selectedGroupId {
-            GroupDetailView(groupId: groupId, container: container, chatViewModel: chatViewModel)
+            GroupDetailView(
+                groupId: groupId,
+                container: container,
+                chatViewModel: chatViewModel,
+                theme: theme,
+                profileViewModel: profileViewModel,
+                onGroupClosed: {
+                    // 나간/삭제한 그룹이 목록에 남지 않게 — 셸의 그룹 탭이 신호를 소비해 refresh한다(Compose App.kt onGroupClosed 미러)
+                    selectedGroupId = nil
+                    groupsRefreshPending = true
+                },
+                // 그룹 정보 수정 저장 — 목록 카드의 이름·커버 갱신(pop 없음, Compose groupsRefreshPending 미러)
+                onGroupUpdated: { groupsRefreshPending = true }
+            )
         }
     }
 
@@ -295,6 +315,11 @@ struct DestinationView: View {
     /// 채팅방 풀스크린 push — Compose onOpenChatRoom 미러(MainShellView selectedChatRoom)
     let onOpenChatRoom: (ChatRoomRef) -> Void
 
+    /// 상세에서 나가기/삭제 후 복귀 — 그룹 탭이 소비해 목록을 첫 페이지부터 다시 읽는다(Compose groupsRefreshRequested 미러)
+    let groupsRefreshRequested: Bool
+
+    let onGroupsRefreshHandled: () -> Void
+
     let onOpenSettings: () -> Void
 
     /// 계정 설정 풀스크린 push — Compose onOpenAccountSettings 미러(MainShellView showAccountSettings)
@@ -307,7 +332,12 @@ struct DestinationView: View {
         case .home:
             HomeView(container: container)
         case .groups:
-            GroupsView(container: container, onOpenGroup: onOpenGroup)
+            GroupsView(
+                container: container,
+                onOpenGroup: onOpenGroup,
+                refreshRequested: groupsRefreshRequested,
+                onRefreshHandled: onGroupsRefreshHandled
+            )
         case .friends:
             FriendsView()
         case .chat:

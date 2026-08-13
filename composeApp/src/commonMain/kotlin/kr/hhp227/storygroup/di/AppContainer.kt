@@ -3,6 +3,7 @@ package kr.hhp227.storygroup.di
 import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.ChatRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.EventRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
@@ -14,6 +15,7 @@ import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
+import kr.hhp227.storygroup.shared.domain.repository.EventRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
@@ -21,15 +23,19 @@ import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.BlockUserUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CancelEventRsvpUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateCommentUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.CreateEventUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.CreateCommentUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeleteCommentUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeleteEventUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeleteGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeletePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostDetailUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
@@ -42,11 +48,13 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetEventDetailUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
@@ -60,6 +68,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseC
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.LeaveGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
@@ -74,14 +83,16 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
-import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.RsvpEventUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
@@ -104,6 +115,7 @@ class AppContainer(
     private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
     private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
     private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
+    private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
@@ -156,6 +168,15 @@ class AppContainer(
     val approveJoinRequestUseCase = ApproveJoinRequestUseCase(groupRepository)
     val rejectJoinRequestUseCase = RejectJoinRequestUseCase(groupRepository)
     val createGroupInviteUseCase = CreateGroupInviteUseCase(groupRepository)
+    val updateGroupUseCase = UpdateGroupUseCase(groupRepository)
+    val deleteGroupUseCase = DeleteGroupUseCase(groupRepository)
+    val leaveGroupUseCase = LeaveGroupUseCase(groupRepository)
+    val getGroupEventsUseCase = GetGroupEventsUseCase(eventRepository)
+    val getEventDetailUseCase = GetEventDetailUseCase(eventRepository)
+    val createEventUseCase = CreateEventUseCase(eventRepository)
+    val deleteEventUseCase = DeleteEventUseCase(eventRepository)
+    val rsvpEventUseCase = RsvpEventUseCase(eventRepository)
+    val cancelEventRsvpUseCase = CancelEventRsvpUseCase(eventRepository)
     val getNotificationsPagingDataUseCase = GetNotificationsPagingDataUseCase(notificationRepository)
     val getUnreadNotificationCountUseCase = GetUnreadNotificationCountUseCase(notificationRepository)
     val markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository)

@@ -35,6 +35,17 @@ data class CreateGroupRequest(
     val joinType: String = "AUTO_APPROVE"
 )
 
+// PATCH /api/groups/{id} 요청 본문 — group/dto/GroupDtos.kt UpdateGroupRequest와 1:1.
+// ⚠️name/description/image는 전체 교체 계약(null=null로 덮어씀) — 호출부가 기존 값을 실어 보낸다.
+// joinType만 null=기존 유지(배포 전 클라이언트 하위호환용 서버 시맨틱).
+@Serializable
+data class UpdateGroupRequest(
+    val name: String,
+    val description: String? = null,
+    val image: String? = null,
+    val joinType: String? = null
+)
+
 // GET /api/groups/discover 응답 — group/dto/GroupDtos.kt DiscoverGroupResponse와 1:1
 @Serializable
 data class DiscoverGroupResponse(

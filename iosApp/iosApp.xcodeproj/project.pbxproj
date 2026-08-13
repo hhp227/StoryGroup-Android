@@ -37,6 +37,15 @@
 		A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101DAABBCCDDEEFF001D /* MviViewModel.swift */; };
 		A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */; };
 		A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */; };
+		A101003AAABBCCDDEEFF003A /* GroupFeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103AAABBCCDDEEFF003A /* GroupFeedViewModel.swift */; };
+		A101003BAABBCCDDEEFF003B /* GroupAlbumViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103BAABBCCDDEEFF003B /* GroupAlbumViewModel.swift */; };
+		A101003CAABBCCDDEEFF003C /* GroupMembersViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103CAABBCCDDEEFF003C /* GroupMembersViewModel.swift */; };
+		A101003DAABBCCDDEEFF003D /* GroupEventsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103DAABBCCDDEEFF003D /* GroupEventsViewModel.swift */; };
+		A101003EAABBCCDDEEFF003E /* GroupEventsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103EAABBCCDDEEFF003E /* GroupEventsTab.swift */; };
+		A101003FAABBCCDDEEFF003F /* GroupSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101103FAABBCCDDEEFF003F /* GroupSettingsViewModel.swift */; };
+		A1010040AABBCCDDEEFF0040 /* GroupSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011040AABBCCDDEEFF0040 /* GroupSettingsTab.swift */; };
+		A1010041AABBCCDDEEFF0041 /* GroupEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011041AABBCCDDEEFF0041 /* GroupEditViewModel.swift */; };
+		A1010042AABBCCDDEEFF0042 /* GroupEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011042AABBCCDDEEFF0042 /* GroupEditView.swift */; };
 		A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */; };
 		A1010020AABBCCDDEEFF0020 /* KmpPagingBridgeAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */; };
 		A1010022AABBCCDDEEFF0022 /* KmpInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */; };
@@ -96,6 +105,15 @@
 		A101101EAABBCCDDEEFF001E /* GroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewModel.swift; sourceTree = "<group>"; };
 		A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailViewModel.swift; sourceTree = "<group>"; };
 		A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
+		A101103AAABBCCDDEEFF003A /* GroupFeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupFeedViewModel.swift; sourceTree = "<group>"; };
+		A101103BAABBCCDDEEFF003B /* GroupAlbumViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupAlbumViewModel.swift; sourceTree = "<group>"; };
+		A101103CAABBCCDDEEFF003C /* GroupMembersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupMembersViewModel.swift; sourceTree = "<group>"; };
+		A101103DAABBCCDDEEFF003D /* GroupEventsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEventsViewModel.swift; sourceTree = "<group>"; };
+		A101103EAABBCCDDEEFF003E /* GroupEventsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEventsTab.swift; sourceTree = "<group>"; };
+		A101103FAABBCCDDEEFF003F /* GroupSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSettingsViewModel.swift; sourceTree = "<group>"; };
+		A1011040AABBCCDDEEFF0040 /* GroupSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSettingsTab.swift; sourceTree = "<group>"; };
+		A1011041AABBCCDDEEFF0041 /* GroupEditViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEditViewModel.swift; sourceTree = "<group>"; };
+		A1011042AABBCCDDEEFF0042 /* GroupEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupEditView.swift; sourceTree = "<group>"; };
 		A1011021AABBCCDDEEFF0021 /* KmpPagingBridgeAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpPagingBridgeAdapter.swift; sourceTree = "<group>"; };
 		A1011022AABBCCDDEEFF0022 /* KmpInterop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KmpInterop.swift; sourceTree = "<group>"; };
 		A1011023AABBCCDDEEFF0023 /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
@@ -252,6 +270,15 @@
 				A1011020AABBCCDDEEFF0020 /* GroupDetailView.swift */,
 				A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */,
 				A101101FAABBCCDDEEFF001F /* GroupDetailViewModel.swift */,
+				A101103AAABBCCDDEEFF003A /* GroupFeedViewModel.swift */,
+				A101103BAABBCCDDEEFF003B /* GroupAlbumViewModel.swift */,
+				A101103CAABBCCDDEEFF003C /* GroupMembersViewModel.swift */,
+				A101103DAABBCCDDEEFF003D /* GroupEventsViewModel.swift */,
+				A101103EAABBCCDDEEFF003E /* GroupEventsTab.swift */,
+				A101103FAABBCCDDEEFF003F /* GroupSettingsViewModel.swift */,
+				A1011040AABBCCDDEEFF0040 /* GroupSettingsTab.swift */,
+				A1011041AABBCCDDEEFF0041 /* GroupEditViewModel.swift */,
+				A1011042AABBCCDDEEFF0042 /* GroupEditView.swift */,
 				A1011028AABBCCDDEEFF0028 /* CreateGroupView.swift */,
 				A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */,
 				A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */,
@@ -508,6 +535,15 @@
 				A101001DAABBCCDDEEFF001D /* GroupsViewModel.swift in Sources */,
 				A101001EAABBCCDDEEFF001E /* GroupDetailViewModel.swift in Sources */,
 				A101001FAABBCCDDEEFF001F /* GroupDetailView.swift in Sources */,
+				A101003AAABBCCDDEEFF003A /* GroupFeedViewModel.swift in Sources */,
+				A101003BAABBCCDDEEFF003B /* GroupAlbumViewModel.swift in Sources */,
+				A101003CAABBCCDDEEFF003C /* GroupMembersViewModel.swift in Sources */,
+				A101003DAABBCCDDEEFF003D /* GroupEventsViewModel.swift in Sources */,
+				A101003EAABBCCDDEEFF003E /* GroupEventsTab.swift in Sources */,
+				A101003FAABBCCDDEEFF003F /* GroupSettingsViewModel.swift in Sources */,
+				A1010040AABBCCDDEEFF0040 /* GroupSettingsTab.swift in Sources */,
+				A1010041AABBCCDDEEFF0041 /* GroupEditViewModel.swift in Sources */,
+				A1010042AABBCCDDEEFF0042 /* GroupEditView.swift in Sources */,
 				A1010023AABBCCDDEEFF0023 /* CreatePostView.swift in Sources */,
 				A1010024AABBCCDDEEFF0024 /* CreatePostViewModel.swift in Sources */,
 				A1010035AABBCCDDEEFF0035 /* PostDetailView.swift in Sources */,

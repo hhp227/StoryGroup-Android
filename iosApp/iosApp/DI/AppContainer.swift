@@ -14,6 +14,10 @@ final class AppContainer {
     let getMyGroupsUseCase: GetMyGroupsUseCase
     let getMyGroupsPagingDataUseCase: GetMyGroupsPagingDataUseCase
     let getGroupUseCase: GetGroupUseCase
+    // 설정 탭(Task 11) — 수정(전체 교체 계약)/삭제/나가기
+    let updateGroupUseCase: UpdateGroupUseCase
+    let deleteGroupUseCase: DeleteGroupUseCase
+    let leaveGroupUseCase: LeaveGroupUseCase
     let getGroupMembersUseCase: GetGroupMembersUseCase
     let getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase
     let getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase
@@ -96,6 +100,14 @@ final class AppContainer {
     let getCallRosterUseCase: GetCallRosterUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
+    // 일정 탭(Task 10) — 월 범위 목록/단건+참석자/생성/삭제/RSVP/RSVP 취소
+    let getGroupEventsUseCase: GetGroupEventsUseCase
+    let getEventDetailUseCase: GetEventDetailUseCase
+    let createEventUseCase: CreateEventUseCase
+    let deleteEventUseCase: DeleteEventUseCase
+    let rsvpEventUseCase: RsvpEventUseCase
+    let cancelEventRsvpUseCase: CancelEventRsvpUseCase
+
     init() {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
         let client = ApiClientKt.createApiClient(
@@ -123,6 +135,7 @@ final class AppContainer {
             tokenStorage: tokenStorage,
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
         )
+        let eventRepository = EventRepositoryImpl(client: client)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -134,6 +147,9 @@ final class AppContainer {
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
         getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository: groupRepository)
         getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
+        updateGroupUseCase = UpdateGroupUseCase(groupRepository: groupRepository)
+        deleteGroupUseCase = DeleteGroupUseCase(groupRepository: groupRepository)
+        leaveGroupUseCase = LeaveGroupUseCase(groupRepository: groupRepository)
         getGroupMembersUseCase = GetGroupMembersUseCase(groupRepository: groupRepository)
         getLoungePostsPagingDataUseCase = GetLoungePostsPagingDataUseCase(postRepository: postRepository)
         getGroupPostsPagingDataUseCase = GetGroupPostsPagingDataUseCase(postRepository: postRepository)
@@ -190,5 +206,11 @@ final class AppContainer {
         getIceServersUseCase = GetIceServersUseCase(rtcRepository: rtcRepository)
         getCallRosterUseCase = GetCallRosterUseCase(rtcRepository: rtcRepository)
         getCurrentUserIdUseCase = GetCurrentUserIdUseCase(authRepository: authRepository)
+        getGroupEventsUseCase = GetGroupEventsUseCase(eventRepository: eventRepository)
+        getEventDetailUseCase = GetEventDetailUseCase(eventRepository: eventRepository)
+        createEventUseCase = CreateEventUseCase(eventRepository: eventRepository)
+        deleteEventUseCase = DeleteEventUseCase(eventRepository: eventRepository)
+        rsvpEventUseCase = RsvpEventUseCase(eventRepository: eventRepository)
+        cancelEventRsvpUseCase = CancelEventRsvpUseCase(eventRepository: eventRepository)
     }
 }
