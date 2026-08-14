@@ -35,6 +35,9 @@ struct TabShellView: View {
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
+    /// 홈 통합검색 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenSearch: () -> Void
+
     let onLogout: () -> Void
 
     /// 홈 헤더가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
@@ -97,7 +100,7 @@ struct TabShellView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if current == .home {
-                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
+                    Button(action: onOpenSearch) { Image(systemName: "magnifyingglass") }
                 }
                 // 알림은 탭에서 빠지고 내비바 종 아이콘으로 진입(알림 화면에서는 숨김)
                 if current != .notifications {

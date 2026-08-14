@@ -10,6 +10,7 @@ import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.SearchRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
@@ -23,6 +24,7 @@ import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
+import kr.hhp227.storygroup.shared.domain.repository.SearchRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.AddFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
@@ -92,6 +94,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RsvpEventUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SearchUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SearchUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
@@ -124,6 +127,7 @@ class AppContainer(
     private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
     private val friendRepository: FriendRepository = FriendRepositoryImpl(apiClient)
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
+    private val searchRepository: SearchRepository = SearchRepositoryImpl(apiClient)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -212,4 +216,6 @@ class AppContainer(
     val addFriendUseCase = AddFriendUseCase(friendRepository)
     val removeFriendUseCase = RemoveFriendUseCase(friendRepository)
     val searchUsersUseCase = SearchUsersUseCase(friendRepository)
+    // 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
+    val searchUseCase = SearchUseCase(searchRepository)
 }

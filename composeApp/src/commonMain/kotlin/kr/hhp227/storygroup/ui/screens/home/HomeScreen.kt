@@ -66,6 +66,7 @@ fun HomeScreen(
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
     viewModel: HomeViewModel = sessionViewModel {
@@ -85,6 +86,7 @@ fun HomeScreen(
         refreshRequested = refreshRequested,
         onRefreshHandled = onRefreshHandled,
         onOpenNotifications = onOpenNotifications,
+        onOpenSearch = onOpenSearch,
         navigationIcon = navigationIcon,
         modifier = modifier
     )
@@ -99,6 +101,7 @@ private fun HomeContent(
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
@@ -136,7 +139,7 @@ private fun HomeContent(
         title = "우리들의 이야기",
         navigationIcon = navigationIcon,
         actions = {
-            IconButton(onClick = { /* TODO: 검색 */ }) {
+            IconButton(onClick = onOpenSearch) {
                 Icon(Icons.Default.Search, contentDescription = "검색")
             }
             SgBellAction(

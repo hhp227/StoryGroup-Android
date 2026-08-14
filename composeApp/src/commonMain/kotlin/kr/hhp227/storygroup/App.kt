@@ -44,6 +44,7 @@ import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupEditScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
 import kr.hhp227.storygroup.ui.screens.post.PostDetailScreen
+import kr.hhp227.storygroup.ui.screens.search.SearchScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.screens.settings.AppSettingsScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
@@ -102,6 +103,10 @@ internal data object CreateGroupRoute
 /** 그룹 찾기 — 검색+정렬, 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 그룹 찾기 탭 미러) */
 @Serializable
 internal data object DiscoverGroupsRoute
+
+/** 홈 통합검색 — 웹 /search 미러(5섹션). 홈 상단바 검색 아이콘으로 진입 */
+@Serializable
+internal data object SearchRoute
 
 /**
  * 방 통화 — DM 1:1·그룹 방 공용(페이스톡 미러, 채팅방 세션에 통화가 붙는다).
@@ -194,6 +199,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
                 onOpenCreateGroup = { navController.navigate(CreateGroupRoute) },
                 onOpenDiscoverGroups = { navController.navigate(DiscoverGroupsRoute) },
+                onOpenSearch = { navController.navigate(SearchRoute) },
                 onLogout = onLogout
             )
             NavHost(navController = navController, startDestination = ShellRoute) {
@@ -319,6 +325,20 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                     Surface(color = SgTheme.colors.paper) {
                         DiscoverGroupsScreen(
                             onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<SearchRoute> {
+                    Surface(color = SgTheme.colors.paper) {
+                        SearchScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenGroupDetail = { groupId -> navController.navigate(GroupDetailRoute(groupId)) },
+                            onOpenPostDetail = { groupId, postId -> navController.navigate(PostDetailRoute(groupId, postId)) },
+                            onOpenChatRoom = { chatRoomId, groupId, title ->
+                                navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                            },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )

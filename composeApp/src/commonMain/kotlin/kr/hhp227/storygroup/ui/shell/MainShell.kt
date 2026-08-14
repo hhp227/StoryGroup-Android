@@ -63,6 +63,7 @@ fun MainShell(
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
+    onOpenSearch: () -> Unit,
     onLogout: () -> Unit
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
@@ -86,6 +87,7 @@ fun MainShell(
                 onOpenAccountSettings = onOpenAccountSettings,
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
+                onOpenSearch = onOpenSearch,
                 onLogout = onLogout
             )
             NavStyle.DRAWER -> DrawerShell(
@@ -103,6 +105,7 @@ fun MainShell(
                 onOpenAccountSettings = onOpenAccountSettings,
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
+                onOpenSearch = onOpenSearch,
                 onLogout = onLogout
             )
         }
@@ -134,6 +137,7 @@ internal fun DestinationContent(
     groupsRefreshRequested: Boolean,
     onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
@@ -159,6 +163,7 @@ internal fun DestinationContent(
                             groupsRefreshRequested = groupsRefreshRequested,
                             onGroupsRefreshHandled = onGroupsRefreshHandled,
                             onOpenNotifications = onOpenNotifications,
+                            onOpenSearch = onOpenSearch,
                             onOpenSettings = onOpenSettings,
                             onOpenAccountSettings = onOpenAccountSettings,
                             onOpenCreateGroup = onOpenCreateGroup,
@@ -194,6 +199,7 @@ private fun DestinationScreen(
     groupsRefreshRequested: Boolean,
     onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
@@ -209,6 +215,7 @@ private fun DestinationScreen(
             refreshRequested = homeRefreshRequested,
             onRefreshHandled = onHomeRefreshHandled,
             onOpenNotifications = onOpenNotifications,
+            onOpenSearch = onOpenSearch,
             navigationIcon = menuNavigationIcon
         )
         // 그룹 탭도 화면이 상단바를 소유(홈과 동일) — 상세는 NavHost 풀스크린 목적지로 승격됨

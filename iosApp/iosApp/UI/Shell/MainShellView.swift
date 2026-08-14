@@ -63,6 +63,9 @@ struct MainShellView: View {
     /// 앱 설정 풀스크린 push — Compose 셸 위 풀스크린 오버레이(AppSettingsScreen) 미러
     @State private var showSettings = false
 
+    /// 홈 통합검색 풀스크린 push — Compose NavHost(SearchRoute) 미러
+    @State private var showSearch = false
+
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
     @State private var selectedGroupId: Int64? = nil
 
@@ -116,6 +119,7 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
                     .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
                     .navigationDestination(isPresented: $showSettings) { settingsDestination }
+                    .navigationDestination(isPresented: $showSearch) { searchDestination }
             }
         } else {
             NavigationView {
@@ -160,6 +164,14 @@ struct MainShellView: View {
                         }
                         .hidden()
                     )
+                    .background(
+                        NavigationLink(isActive: $showSearch) {
+                            searchDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
             }
             .navigationViewStyle(.stack)
         }
@@ -179,6 +191,7 @@ struct MainShellView: View {
                 groupsRefreshRequested: groupsRefreshPending,
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
+                onOpenSearch: { showSearch = true },
                 onLogout: onLogout
             )
         } else {
@@ -194,6 +207,7 @@ struct MainShellView: View {
                 groupsRefreshRequested: groupsRefreshPending,
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
+                onOpenSearch: { showSearch = true },
                 onLogout: onLogout
             )
         }
@@ -237,6 +251,16 @@ struct MainShellView: View {
 
     private var settingsDestination: some View {
         SGSettingsView(theme: theme)
+    }
+
+    private var searchDestination: some View {
+        SearchView(
+            container: container,
+            chatViewModel: chatViewModel,
+            theme: theme,
+            profileViewModel: profileViewModel,
+            onGroupsRefreshNeeded: { groupsRefreshPending = true }
+        )
     }
 
     /// pop(백 버튼/스와이프) 시 selectedGroupId를 nil로 되돌리는 브리지

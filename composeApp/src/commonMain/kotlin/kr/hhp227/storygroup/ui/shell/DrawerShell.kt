@@ -69,6 +69,7 @@ internal fun DrawerShell(
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
+    onOpenSearch: () -> Unit,
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
@@ -162,6 +163,7 @@ internal fun DrawerShell(
                 groupsRefreshRequested = groupsRefreshRequested,
                 onGroupsRefreshHandled = onGroupsRefreshHandled,
                 onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
+                onOpenSearch = onOpenSearch,
                 onOpenSettings = onOpenSettings,
                 onOpenAccountSettings = onOpenAccountSettings,
                 onOpenCreateGroup = onOpenCreateGroup,

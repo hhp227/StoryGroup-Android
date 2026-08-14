@@ -35,6 +35,9 @@ struct DrawerShellView: View {
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
+    /// 홈 통합검색 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenSearch: () -> Void
+
     let onLogout: () -> Void
 
     @State private var drawerOpen = false
@@ -87,7 +90,7 @@ struct DrawerShellView: View {
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if current == .home {
-                    Button(action: { /* TODO: 검색 */ }) { Image(systemName: "magnifyingglass") }
+                    Button(action: onOpenSearch) { Image(systemName: "magnifyingglass") }
                 }
                 // 탭 쉘과 동일하게 내비바 우측에서도 알림 진입(알림 화면에서는 숨김)
                 if current != .notifications {

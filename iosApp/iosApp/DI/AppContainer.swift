@@ -105,6 +105,8 @@ final class AppContainer {
     let addFriendUseCase: AddFriendUseCase
     let removeFriendUseCase: RemoveFriendUseCase
     let searchUsersUseCase: SearchUsersUseCase
+    /// 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
+    let searchUseCase: SearchUseCase
 
     // 일정 탭(Task 10) — 월 범위 목록/단건+참석자/생성/삭제/RSVP/RSVP 취소
     let getGroupEventsUseCase: GetGroupEventsUseCase
@@ -223,5 +225,7 @@ final class AppContainer {
         addFriendUseCase = AddFriendUseCase(friendRepository: friendRepository)
         removeFriendUseCase = RemoveFriendUseCase(friendRepository: friendRepository)
         searchUsersUseCase = SearchUsersUseCase(friendRepository: friendRepository)
+        let searchRepository = SearchRepositoryImpl(client: client)
+        searchUseCase = SearchUseCase(searchRepository: searchRepository)
     }
 }
