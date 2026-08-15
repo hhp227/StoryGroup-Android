@@ -70,22 +70,29 @@ internal fun sessionFriendsViewModel(): FriendsViewModel = sessionViewModel {
 /**
  * 친구 탭 — 웹 /search 미러(검색 전=친구 목록, 검색 후=사용자 검색 결과, 카카오톡 친구 탭 패턴).
  * 검색바는 콘텐츠 상단 인라인(웹의 페이지 내 검색 폼 미러 — 상단바는 쉘 소유라 제목 자리가 없다).
- * 행 탭은 무동작(공개 프로필 화면은 범위 제외) — 액션은 메시지(DM)/해제 버튼 2개.
+ * 행 탭 → 공개 프로필(웹 /users/[id] 미러) — 액션은 메시지(DM)/해제 버튼 2개.
  * iosApp FriendsView.swift와 1:1 미러
  */
 @Composable
 fun FriendsScreen(
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: FriendsViewModel = sessionFriendsViewModel()
 ) {
-    FriendsContent(viewModel = viewModel, onOpenChatRoom = onOpenChatRoom, modifier = modifier)
+    FriendsContent(
+        viewModel = viewModel,
+        onOpenChatRoom = onOpenChatRoom,
+        onOpenUserProfile = onOpenUserProfile,
+        modifier = modifier
+    )
 }
 
 @Composable
 private fun FriendsContent(
     viewModel: FriendsViewModel,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -173,7 +180,8 @@ private fun FriendsContent(
                         friend = friend,
                         isBusy = uiState.isOpeningDm || uiState.processingUserId != null,
                         onOpenDm = { onAction(FriendsViewModel.Action.OpenDm(friend.userId, friend.name)) },
-                        onRemove = { removeTarget = friend }
+                        onRemove = { removeTarget = friend },
+                        onOpenProfile = { onOpenUserProfile(friend.userId) }
                     )
                 }
             }
@@ -324,18 +332,19 @@ private fun SearchResultRow(
     }
 }
 
-/** 친구 행 — 웹 친구 카드 미러(이름+상태메시지, 메시지/해제 버튼 2개). 행 탭은 무동작 */
+/** 친구 행 — 웹 친구 카드 미러(이름+상태메시지, 메시지/해제 버튼 2개). 행 탭=공개 프로필(버튼 영역은 버튼이 우선) */
 @Composable
 private fun FriendRow(
     friend: Friend,
     isBusy: Boolean,
+    onOpenProfile: () -> Unit,
     onOpenDm: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
 
-    SgCard(modifier = modifier.fillMaxWidth()) {
+    SgCard(modifier = modifier.fillMaxWidth(), onClick = onOpenProfile) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically

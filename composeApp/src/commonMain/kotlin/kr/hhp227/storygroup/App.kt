@@ -47,6 +47,7 @@ import kr.hhp227.storygroup.ui.screens.post.PostDetailScreen
 import kr.hhp227.storygroup.ui.screens.search.SearchScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.screens.settings.AppSettingsScreen
+import kr.hhp227.storygroup.ui.screens.user.UserProfileScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
 import kr.hhp227.storygroup.ui.theme.NightMode
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -107,6 +108,10 @@ internal data object DiscoverGroupsRoute
 /** 홈 통합검색 — 웹 /search 미러(5섹션). 홈 상단바 검색 아이콘으로 진입 */
 @Serializable
 internal data object SearchRoute
+
+/** 공개 프로필 — 게시글 작성자·검색 users·친구 행에서 진입(웹 /users/[userId] 미러) */
+@Serializable
+internal data class UserProfileRoute(val userId: Long)
 
 /**
  * 방 통화 — DM 1:1·그룹 방 공용(페이스톡 미러, 채팅방 세션에 통화가 붙는다).
@@ -200,6 +205,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 onOpenCreateGroup = { navController.navigate(CreateGroupRoute) },
                 onOpenDiscoverGroups = { navController.navigate(DiscoverGroupsRoute) },
                 onOpenSearch = { navController.navigate(SearchRoute) },
+                onOpenUserProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                 onLogout = onLogout
             )
             NavHost(navController = navController, startDestination = ShellRoute) {
@@ -339,6 +345,23 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onOpenChatRoom = { chatRoomId, groupId, title ->
                                 navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
                             },
+                            onOpenUserProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<UserProfileRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<UserProfileRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        UserProfileScreen(
+                            userId = route.userId,
+                            onBack = { navController.popBackStack() },
+                            onOpenChatRoom = { chatRoomId, groupId, title ->
+                                navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                            },
+                            onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )
@@ -357,6 +380,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             postId = route.postId,
                             onBack = { navController.popBackStack() },
                             onEdit = { navController.navigate(CreatePostRoute(route.groupId, route.postId)) },
+                            onOpenUserProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                             refreshRequested = postUpdated,
                             onRefreshHandled = { backStackEntry.savedStateHandle[POST_CREATED_KEY] = false },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화

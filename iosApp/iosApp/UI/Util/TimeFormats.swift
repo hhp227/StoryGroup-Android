@@ -30,4 +30,13 @@ enum TimeFormats {
     private static func dateOnly(_ isoDateTime: String) -> String {
         String(isoDateTime.prefix(while: { $0 != "T" })).replacingOccurrences(of: "-", with: ".")
     }
+
+    /// 가입일 표기 — 웹 공개 프로필의 toLocaleDateString("ko-KR") 미러("2026. 7. 1." — 선행 0 없음).
+    /// " 가입" 접미는 화면 몫. composeApp formatJoinDate와 1:1 미러
+    static func joinDate(_ isoDateTime: String) -> String {
+        let parts = String(isoDateTime.prefix(while: { $0 != "T" })).split(separator: "-").compactMap { Int($0) }
+
+        guard parts.count == 3 else { return dateOnly(isoDateTime) }
+        return "\(parts[0]). \(parts[1]). \(parts[2])."
+    }
 }

@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.ui.screens.post
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,6 +96,9 @@ fun PostDetailScreen(
     postId: Long,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    // 본문·댓글 작성자 탭 → 공개 프로필(웹 작성자 메뉴의 "프로필 보기"만 직행으로 미러 —
+    // 신고·차단은 기존 더보기 메뉴, DM은 프로필 화면 버튼이 담당해 중복이 없다)
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
     // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
     refreshRequested: Boolean = false,
@@ -245,6 +249,7 @@ fun PostDetailScreen(
                         PostBody(
                             uiState = uiState,
                             onAction = onAction,
+                            onOpenUserProfile = onOpenUserProfile,
                             playingVideoUrl = playingVideoUrl,
                             onPlayVideo = { playingVideoUrl = it }
                         )
@@ -270,7 +275,8 @@ fun PostDetailScreen(
                                 },
                                 onBlock = {
                                     confirmAction = ConfirmAction.BlockComment(comment.userId, comment.authorName)
-                                }
+                                },
+                                onOpenAuthor = { onOpenUserProfile(comment.userId) }
                             )
                             // 답글은 한 단계만 들여쓴다(서버가 답글의 답글을 허용하지 않는다)
                             uiState.repliesOf(comment.id).forEach { reply ->
@@ -285,6 +291,7 @@ fun PostDetailScreen(
                                     onBlock = {
                                         confirmAction = ConfirmAction.BlockComment(reply.userId, reply.authorName)
                                     },
+                                    onOpenAuthor = { onOpenUserProfile(reply.userId) },
                                     modifier = Modifier.padding(start = 40.dp)
                                 )
                             }
@@ -400,6 +407,7 @@ private fun ActionConfirmDialog(
 private fun PostBody(
     uiState: PostDetailViewModel.UiState,
     onAction: (PostDetailViewModel.Action) -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     playingVideoUrl: String?,
     onPlayVideo: (String) -> Unit
 ) {
@@ -412,7 +420,11 @@ private fun PostBody(
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            // 작성자 영역만 탭 타깃(본문·첨부 제외) — 본인 글이면 본인 프로필(프로필 수정 버튼)로 간다
+            modifier = Modifier.clickable { onOpenUserProfile(post.userId) }
+        ) {
             SgAvatar(post.authorName, size = 40.dp, imageUrl = post.authorProfileImg)
             Spacer(Modifier.width(10.dp))
             Column {
@@ -468,17 +480,29 @@ private fun CommentRow(
     onDelete: () -> Unit,
     onReport: () -> Unit,
     onBlock: () -> Unit,
+    onOpenAuthor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
     var menuExpanded by remember { mutableStateOf(false) }
 
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        SgAvatar(comment.authorName, size = 28.dp, imageUrl = comment.authorProfileImg)
+        SgAvatar(
+            comment.authorName,
+            size = 28.dp,
+            imageUrl = comment.authorProfileImg,
+            modifier = Modifier.clickable(onClick = onOpenAuthor)
+        )
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.authorName, style = SgTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = sg.ink)
+                Text(
+                    comment.authorName,
+                    style = SgTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = sg.ink,
+                    modifier = Modifier.clickable(onClick = onOpenAuthor)
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(formatRelativeTime(comment.createdAt), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
             }

@@ -62,6 +62,7 @@ internal fun TabShell(
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     onLogout: () -> Unit
 ) {
     val sg = SgTheme.colors
@@ -159,6 +160,7 @@ internal fun TabShell(
                     onGroupsRefreshHandled = onGroupsRefreshHandled,
                     onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
                     onOpenSearch = onOpenSearch,
+                    onOpenUserProfile = onOpenUserProfile,
                     onOpenSettings = onOpenSettings,
                     onOpenAccountSettings = onOpenAccountSettings,
                     onOpenCreateGroup = onOpenCreateGroup,

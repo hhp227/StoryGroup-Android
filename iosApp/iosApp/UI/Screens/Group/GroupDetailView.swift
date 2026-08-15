@@ -454,7 +454,13 @@ private struct GroupDetailContent: View {
     @ViewBuilder private var tabContent: some View {
         switch selectedTab {
         case 0: feedTab
-        case 1: GroupAlbumTab(photoItems: photoLazyPagingItems, groupId: viewModel.groupId, container: container)
+        case 1: GroupAlbumTab(
+            photoItems: photoLazyPagingItems,
+            groupId: viewModel.groupId,
+            container: container,
+            chatViewModel: chatViewModel,
+            profileViewModel: profileViewModel
+        )
         case 2: GroupEventsTab(viewModel: groupEventsViewModel, canModerate: viewModel.uiState.canModerate)
         case 3: membersTab
         default: GroupSettingsTab(
@@ -537,7 +543,9 @@ private struct GroupDetailContent: View {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id
+                                postId: post.id,
+                                chatViewModel: chatViewModel,
+                                profileViewModel: profileViewModel
                             )
                         } label: {
                             SGPostCard(

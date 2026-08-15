@@ -66,6 +66,9 @@ struct MainShellView: View {
     /// 홈 통합검색 풀스크린 push — Compose NavHost(SearchRoute) 미러
     @State private var showSearch = false
 
+    /// 공개 프로필 풀스크린 push — Compose NavHost(UserProfileRoute) 미러(친구 탭 행 발 진입)
+    @State private var selectedUserId: Int64? = nil
+
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
     @State private var selectedGroupId: Int64? = nil
 
@@ -120,6 +123,7 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
                     .navigationDestination(isPresented: $showSettings) { settingsDestination }
                     .navigationDestination(isPresented: $showSearch) { searchDestination }
+                    .navigationDestination(isPresented: showUserProfile) { userProfileDestination }
             }
         } else {
             NavigationView {
@@ -172,6 +176,14 @@ struct MainShellView: View {
                         }
                         .hidden()
                     )
+                    .background(
+                        NavigationLink(isActive: showUserProfile) {
+                            userProfileDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
             }
             .navigationViewStyle(.stack)
         }
@@ -192,6 +204,8 @@ struct MainShellView: View {
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onOpenSearch: { showSearch = true },
+                onOpenUserProfile: { selectedUserId = $0 },
+                profileViewModel: profileViewModel,
                 onLogout: onLogout
             )
         } else {
@@ -208,6 +222,8 @@ struct MainShellView: View {
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
                 onOpenSearch: { showSearch = true },
+                onOpenUserProfile: { selectedUserId = $0 },
+                profileViewModel: profileViewModel,
                 onLogout: onLogout
             )
         }
@@ -260,6 +276,25 @@ struct MainShellView: View {
             theme: theme,
             profileViewModel: profileViewModel,
             onGroupsRefreshNeeded: { groupsRefreshPending = true }
+        )
+    }
+
+    @ViewBuilder private var userProfileDestination: some View {
+        if let userId = selectedUserId {
+            UserProfileView(
+                userId: userId,
+                container: container,
+                chatViewModel: chatViewModel,
+                profileViewModel: profileViewModel
+            )
+        }
+    }
+
+    /// pop(백 버튼/스와이프) 시 selectedUserId를 nil로 되돌리는 브리지
+    private var showUserProfile: Binding<Bool> {
+        Binding(
+            get: { selectedUserId != nil },
+            set: { if !$0 { selectedUserId = nil } }
         )
     }
 
@@ -327,6 +362,9 @@ struct DestinationView: View {
 
     let profile: Profile?
 
+    /// 홈 체인(게시글 상세→작성자 프로필→계정 설정)이 쓴다 — 셸 소유 세션 VM
+    let profileViewModel: ProfileViewModel
+
     /// 셸 소유 세션 VM — 알림 화면이 종 뱃지와 같은 인스턴스를 쓴다(ProfileViewModel 주입 선례)
     let notificationsViewModel: NotificationsViewModel
 
@@ -338,6 +376,9 @@ struct DestinationView: View {
 
     /// 채팅방 풀스크린 push — Compose onOpenChatRoom 미러(MainShellView selectedChatRoom)
     let onOpenChatRoom: (ChatRoomRef) -> Void
+
+    /// 친구 탭 행 탭 → 공개 프로필(웹 /users/[id] 미러) — MainShellView로 위임
+    let onOpenUserProfile: (Int64) -> Void
 
     /// 상세에서 나가기/삭제 후 복귀 — 그룹 탭이 소비해 목록을 첫 페이지부터 다시 읽는다(Compose groupsRefreshRequested 미러)
     let groupsRefreshRequested: Bool
@@ -354,7 +395,7 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView(container: container)
+            HomeView(container: container, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
         case .groups:
             GroupsView(
                 container: container,
@@ -363,8 +404,8 @@ struct DestinationView: View {
                 onRefreshHandled: onGroupsRefreshHandled
             )
         case .friends:
-            // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=nil) — 채팅 허브와 같은 배선
-            FriendsView(container: container, onOpenChatRoom: onOpenChatRoom)
+            // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=nil), 행 탭 → 공개 프로필(웹 /users/[id] 미러)
+            FriendsView(container: container, onOpenChatRoom: onOpenChatRoom, onOpenUserProfile: onOpenUserProfile)
         case .chat:
             ChatView(viewModel: chatViewModel, onOpenChatRoom: onOpenChatRoom)
         case .notifications:

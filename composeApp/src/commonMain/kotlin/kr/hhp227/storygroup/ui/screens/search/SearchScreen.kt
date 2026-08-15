@@ -90,6 +90,7 @@ fun SearchScreen(
     onOpenGroupDetail: (groupId: Long) -> Unit,
     onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
+    onOpenUserProfile: (userId: Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = searchViewModel()
 ) {
@@ -152,6 +153,7 @@ fun SearchScreen(
                 onOpenGroupDetail = onOpenGroupDetail,
                 onOpenPostDetail = onOpenPostDetail,
                 onOpenChatRoom = onOpenChatRoom,
+                onOpenUserProfile = onOpenUserProfile,
                 onOpenUrl = { uriHandler.openUri(it) },
                 onAddFriend = { onAction(SearchViewModel.Action.AddFriend(it)) },
                 onRemoveFriend = { onAction(SearchViewModel.Action.RemoveFriend(it)) }
@@ -218,6 +220,7 @@ private fun ResultList(
     onOpenGroupDetail: (Long) -> Unit,
     onOpenPostDetail: (Long, Long) -> Unit,
     onOpenChatRoom: (Long, Long?, String) -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     onOpenUrl: (String) -> Unit,
     onAddFriend: (UserSearchResult) -> Unit,
     onRemoveFriend: (Long) -> Unit,
@@ -245,7 +248,8 @@ private fun ResultList(
                     isProcessing = processingUserId == user.id,
                     enabled = processingUserId == null,
                     onAddFriend = { onAddFriend(user) },
-                    onRemoveFriend = { onRemoveFriend(user.id) }
+                    onRemoveFriend = { onRemoveFriend(user.id) },
+                    onOpenProfile = { onOpenUserProfile(user.id) }
                 )
             }
         }
@@ -280,7 +284,7 @@ private fun ResultList(
     }
 }
 
-/** 사용자 행 — 친구 탭 SearchResultRow 미러(행 탭 무동작, 친구 추가/해제 버튼만) */
+/** 사용자 행 — 친구 탭 SearchResultRow 미러(행 탭=공개 프로필(버튼 영역은 버튼이 우선), 친구 추가/해제 버튼) */
 @Composable
 private fun UserRow(
     user: UserSearchResult,
@@ -289,11 +293,12 @@ private fun UserRow(
     enabled: Boolean,
     onAddFriend: () -> Unit,
     onRemoveFriend: () -> Unit,
+    onOpenProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
 
-    SgCard(modifier = modifier.fillMaxWidth()) {
+    SgCard(modifier = modifier.fillMaxWidth(), onClick = onOpenProfile) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically

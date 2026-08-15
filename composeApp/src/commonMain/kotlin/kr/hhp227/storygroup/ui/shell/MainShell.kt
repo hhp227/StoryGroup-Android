@@ -64,6 +64,7 @@ fun MainShell(
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     onLogout: () -> Unit
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.HOME) }
@@ -88,6 +89,7 @@ fun MainShell(
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onOpenSearch = onOpenSearch,
+                onOpenUserProfile = onOpenUserProfile,
                 onLogout = onLogout
             )
             NavStyle.DRAWER -> DrawerShell(
@@ -106,6 +108,7 @@ fun MainShell(
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onOpenSearch = onOpenSearch,
+                onOpenUserProfile = onOpenUserProfile,
                 onLogout = onLogout
             )
         }
@@ -138,6 +141,7 @@ internal fun DestinationContent(
     onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
@@ -164,6 +168,7 @@ internal fun DestinationContent(
                             onGroupsRefreshHandled = onGroupsRefreshHandled,
                             onOpenNotifications = onOpenNotifications,
                             onOpenSearch = onOpenSearch,
+                            onOpenUserProfile = onOpenUserProfile,
                             onOpenSettings = onOpenSettings,
                             onOpenAccountSettings = onOpenAccountSettings,
                             onOpenCreateGroup = onOpenCreateGroup,
@@ -200,6 +205,7 @@ private fun DestinationScreen(
     onGroupsRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenCreateGroup: () -> Unit,
@@ -228,8 +234,11 @@ private fun DestinationScreen(
             onRefreshHandled = onGroupsRefreshHandled,
             navigationIcon = menuNavigationIcon
         )
-        // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=null) — 채팅 허브와 같은 배선
-        MainDestination.FRIENDS -> FriendsScreen(onOpenChatRoom = onOpenChatRoom)
+        // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=null), 행 탭 → 공개 프로필(웹 /users/[id] 미러)
+        MainDestination.FRIENDS -> FriendsScreen(
+            onOpenChatRoom = onOpenChatRoom,
+            onOpenUserProfile = onOpenUserProfile
+        )
         MainDestination.CHAT -> ChatScreen(onOpenChatRoom = onOpenChatRoom)
         MainDestination.NOTIFICATIONS -> NotificationsScreen()
         MainDestination.PROFILE -> ProfileScreen(

@@ -8,8 +8,8 @@ private struct PostRef: Equatable {
 }
 
 /// 홈 통합검색 — composeApp SearchScreen.kt와 1:1 미러(제출 기반, 5섹션 원페이지).
-/// 결과 push 3종(그룹 상세·게시글 상세·채팅방)은 자체 소유(GroupDetailView 선례),
-/// 파일은 시스템 브라우저(openURL), 사용자는 친구 추가/해제 버튼만(행 탭 무동작).
+/// 결과 push 4종(그룹 상세·게시글 상세·채팅방·사용자 프로필)은 자체 소유(GroupDetailView 선례),
+/// 파일은 시스템 브라우저(openURL), 사용자는 행 탭=공개 프로필(친구 추가/해제는 내부 버튼).
 struct SearchView: View {
     let container: AppContainer
 
@@ -35,6 +35,8 @@ struct SearchView: View {
 
     @State private var selectedChatRoom: ChatRoomRef? = nil
 
+    @State private var selectedUserId: Int64? = nil
+
     @Environment(\.sgColors) private var colors
 
     @Environment(\.openURL) private var openURL
@@ -45,13 +47,14 @@ struct SearchView: View {
             .navigationBarTitleDisplayMode(.inline)
     }
 
-    /// 자체 push 3종 — iOS 16 navigationDestination / iOS 15 숨김 NavigationLink 폴백(GroupDetailView 선례)
+    /// 자체 push 4종 — iOS 16 navigationDestination / iOS 15 숨김 NavigationLink 폴백(GroupDetailView 선례)
     @ViewBuilder private var pushContainer: some View {
         if #available(iOS 16.0, *) {
             content
                 .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                 .navigationDestination(isPresented: showPostDetail) { postDetailDestination }
                 .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                .navigationDestination(isPresented: showUserProfile) { userProfileDestination }
         } else {
             content
                 .background(
@@ -62,6 +65,9 @@ struct SearchView: View {
                 )
                 .background(
                     NavigationLink(isActive: showChatRoom) { chatRoomDestination } label: { EmptyView() }.hidden()
+                )
+                .background(
+                    NavigationLink(isActive: showUserProfile) { userProfileDestination } label: { EmptyView() }.hidden()
                 )
         }
     }
@@ -194,57 +200,60 @@ struct SearchView: View {
         }
     }
 
-    /// 사용자 행 — 친구 탭 SearchResultRow 미러(행 탭 무동작, 버튼만)
+    /// 사용자 행 — 친구 탭 SearchResultRow 미러(행 탭=공개 프로필, 친구 추가/해제는 내부 버튼)
     private func userRow(_ user: UserSearchResult) -> some View {
-        SGCard {
-            HStack(spacing: 12) {
-                SGAvatar(name: user.name, imageUrl: user.profileImg)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(user.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(colors.ink)
-                    if let status = user.statusMessage, !status.isEmpty {
-                        Text(status)
-                            .font(.footnote)
-                            .foregroundColor(colors.inkFaint)
+        Button(action: { selectedUserId = user.id }) {
+            SGCard {
+                HStack(spacing: 12) {
+                    SGAvatar(name: user.name, imageUrl: user.profileImg)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(user.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(colors.ink)
+                        if let status = user.statusMessage, !status.isEmpty {
+                            Text(status)
+                                .font(.footnote)
+                                .foregroundColor(colors.inkFaint)
+                        }
+                    }
+                    Spacer()
+                    if searchViewModel.uiState.processingUserId == user.id {
+                        ProgressView().tint(colors.accent)
+                    } else if searchViewModel.uiState.friendIds.contains(user.id) {
+                        Button(action: { searchViewModel.onAction(.removeFriend(userId: user.id)) }) {
+                            Text("친구 해제")
+                                .font(.subheadline.bold())
+                                .foregroundColor(colors.inkSoft)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
+                                        .stroke(colors.stoneBorder, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(searchViewModel.uiState.processingUserId != nil)
+                    } else {
+                        Button(action: { searchViewModel.onAction(.addFriend(user: user)) }) {
+                            Text("친구 추가")
+                                .font(.subheadline.bold())
+                                .foregroundColor(colors.onAccent)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
+                                        .fill(colors.accent)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(searchViewModel.uiState.processingUserId != nil)
                     }
                 }
-                Spacer()
-                if searchViewModel.uiState.processingUserId == user.id {
-                    ProgressView().tint(colors.accent)
-                } else if searchViewModel.uiState.friendIds.contains(user.id) {
-                    Button(action: { searchViewModel.onAction(.removeFriend(userId: user.id)) }) {
-                        Text("친구 해제")
-                            .font(.subheadline.bold())
-                            .foregroundColor(colors.inkSoft)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
-                                    .stroke(colors.stoneBorder, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(searchViewModel.uiState.processingUserId != nil)
-                } else {
-                    Button(action: { searchViewModel.onAction(.addFriend(user: user)) }) {
-                        Text("친구 추가")
-                            .font(.subheadline.bold())
-                            .foregroundColor(colors.onAccent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous)
-                                    .fill(colors.accent)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(searchViewModel.uiState.processingUserId != nil)
-                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
+        .buttonStyle(.plain)
     }
 
     private func groupRow(_ group: GroupSearchHit) -> some View {
@@ -364,7 +373,13 @@ struct SearchView: View {
 
     @ViewBuilder private var postDetailDestination: some View {
         if let post = selectedPost {
-            PostDetailView(container: container, groupId: post.groupId, postId: post.postId)
+            PostDetailView(
+                container: container,
+                groupId: post.groupId,
+                postId: post.postId,
+                chatViewModel: chatViewModel,
+                profileViewModel: profileViewModel
+            )
         }
     }
 
@@ -376,6 +391,17 @@ struct SearchView: View {
                 title: room.title,
                 container: container,
                 chatViewModel: chatViewModel
+            )
+        }
+    }
+
+    @ViewBuilder private var userProfileDestination: some View {
+        if let userId = selectedUserId {
+            UserProfileView(
+                userId: userId,
+                container: container,
+                chatViewModel: chatViewModel,
+                profileViewModel: profileViewModel
             )
         }
     }
@@ -399,6 +425,13 @@ struct SearchView: View {
         Binding(
             get: { selectedChatRoom != nil },
             set: { if !$0 { selectedChatRoom = nil } }
+        )
+    }
+
+    private var showUserProfile: Binding<Bool> {
+        Binding(
+            get: { selectedUserId != nil },
+            set: { if !$0 { selectedUserId = nil } }
         )
     }
 

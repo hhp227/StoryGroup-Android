@@ -15,10 +15,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kr.hhp227.storygroup.shared.data.network.dto.BlockedUserResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChangePasswordRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ProfileResponse
+import kr.hhp227.storygroup.shared.data.network.dto.PublicProfileResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ReportUserRequest
 import kr.hhp227.storygroup.shared.data.network.dto.UpdateProfileRequest
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
+import kr.hhp227.storygroup.shared.domain.model.PublicProfile
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 
 class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
@@ -75,6 +77,9 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
         runCatching {
             client.get("/api/users/me/blocks").body<List<BlockedUserResponse>>().map { it.toDomain() }
         }
+
+    override suspend fun getPublicProfile(userId: Long): Result<PublicProfile> =
+        runCatching { client.get("/api/users/$userId").body<PublicProfileResponse>().toDomain() }
 }
 
 private fun ProfileResponse.toDomain() = Profile(
@@ -92,4 +97,13 @@ private fun BlockedUserResponse.toDomain() = BlockedUser(
     name = name,
     profileImg = profileImg,
     blockedAt = blockedAt
+)
+
+private fun PublicProfileResponse.toDomain() = PublicProfile(
+    id = id,
+    name = name,
+    profileImg = profileImg,
+    bio = bio,
+    statusMessage = statusMessage,
+    createdAt = createdAt
 )

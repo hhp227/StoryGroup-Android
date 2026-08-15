@@ -25,4 +25,15 @@ fun formatRelativeTime(isoDateTime: String): String {
     }
 }
 
+/**
+ * 가입일 표기 — 웹 공개 프로필의 toLocaleDateString("ko-KR") 미러("2026. 7. 1." — 선행 0 없음).
+ * " 가입" 접미는 화면 몫. iosApp TimeFormats.swift joinDate와 1:1 미러
+ */
+fun formatJoinDate(isoDateTime: String): String {
+    val parts = isoDateTime.substringBefore('T').split('-').mapNotNull { it.toIntOrNull() }
+
+    if (parts.size != 3) return isoDateTime.dateOnly()
+    return "${parts[0]}. ${parts[1]}. ${parts[2]}."
+}
+
 private fun String.dateOnly(): String = substringBefore('T').replace('-', '.')

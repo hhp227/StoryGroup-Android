@@ -3,6 +3,7 @@ package kr.hhp227.storygroup.shared.domain.repository
 import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
+import kr.hhp227.storygroup.shared.domain.model.PublicProfile
 
 interface UserRepository {
     suspend fun getMyProfile(): Result<Profile>
@@ -51,4 +52,10 @@ interface UserRepository {
      * 멤버를 그리는 화면이 이 목록으로 직접 걸러낸다.
      */
     suspend fun getBlockedUsers(): Result<List<BlockedUser>>
+
+    /**
+     * 공개 프로필 — GET /api/users/{userId}. 게시글 작성자·검색·친구 행에서 진입하는 화면용.
+     * 404(없는 사용자)는 예외로 떨어져 화면 로드 에러 문구가 된다
+     */
+    suspend fun getPublicProfile(userId: Long): Result<PublicProfile>
 }

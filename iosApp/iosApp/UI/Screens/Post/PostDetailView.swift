@@ -12,6 +12,11 @@ struct PostDetailView: View {
 
     private let postId: Int64
 
+    /// 작성자 프로필 push 체인(프로필→채팅방/계정 설정)에 필요 — 셸 소유 세션 VM pass-through
+    private let chatViewModel: ChatViewModel
+
+    private let profileViewModel: ProfileViewModel
+
     @Environment(\.sgColors) private var colors
 
     @Environment(\.dismiss) private var dismiss
@@ -23,6 +28,9 @@ struct PostDetailView: View {
     /// 더보기 메뉴에서 고른 "수정" — 메뉴 안에서는 NavigationLink가 동작하지 않아 상태로 push한다
     @State private var showEdit = false
 
+    /// 본문·댓글 작성자 탭 → 공개 프로필 push(웹 작성자 메뉴의 "프로필 보기" 직행 미러)
+    @State private var selectedAuthorId: Int64? = nil
+
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
 
@@ -33,16 +41,27 @@ struct PostDetailView: View {
     /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
-            core.navigationDestination(isPresented: $showEdit) { editDestination }
+            core
+                .navigationDestination(isPresented: $showEdit) { editDestination }
+                .navigationDestination(isPresented: showAuthorProfile) { authorProfileDestination }
         } else {
-            core.background(
-                NavigationLink(isActive: $showEdit) {
-                    editDestination
-                } label: {
-                    EmptyView()
-                }
-                .hidden()
-            )
+            core
+                .background(
+                    NavigationLink(isActive: $showEdit) {
+                        editDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: showAuthorProfile) {
+                        authorProfileDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
         }
     }
 
@@ -97,6 +116,25 @@ struct PostDetailView: View {
             // 자기 스냅샷에서 그 항목만 갈아끼운다(refresh를 태우면 첫 페이지부터 전체 재조회가 된다)
             postDetailViewModel.onAction(.reload)
         }
+    }
+
+    @ViewBuilder private var authorProfileDestination: some View {
+        if let authorId = selectedAuthorId {
+            UserProfileView(
+                userId: authorId,
+                container: container,
+                chatViewModel: chatViewModel,
+                profileViewModel: profileViewModel
+            )
+        }
+    }
+
+    /// pop(백 버튼/스와이프) 시 selectedAuthorId를 nil로 되돌리는 브리지
+    private var showAuthorProfile: Binding<Bool> {
+        Binding(
+            get: { selectedAuthorId != nil },
+            set: { if !$0 { selectedAuthorId = nil } }
+        )
     }
 
     @ViewBuilder private var core: some View {
@@ -236,12 +274,18 @@ struct PostDetailView: View {
     private func postBody(_ uiState: PostDetailViewModel.UiState) -> some View {
         if let post = uiState.post {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                // 작성자 영역만 탭 타깃(본문·첨부 제외) — 본인 글이면 본인 프로필(프로필 수정)로 간다
+                HStack(spacing: 0) {
+                    Button(action: { selectedAuthorId = post.userId }) {
+                        HStack(spacing: 10) {
+                            SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
+                                Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                     Spacer()
                 }
                 if !post.text.isEmpty {
@@ -287,10 +331,16 @@ struct PostDetailView: View {
 
     private func commentRow(_ comment: Comment, isMine: Bool, canReply: Bool) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            SGAvatar(name: comment.authorName, size: 28, imageUrl: comment.authorProfileImg)
+            Button(action: { selectedAuthorId = comment.userId }) {
+                SGAvatar(name: comment.authorName, size: 28, imageUrl: comment.authorProfileImg)
+            }
+            .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(comment.authorName).font(.caption.bold()).foregroundColor(colors.ink)
+                    Button(action: { selectedAuthorId = comment.userId }) {
+                        Text(comment.authorName).font(.caption.bold()).foregroundColor(colors.ink)
+                    }
+                    .buttonStyle(.plain)
                     Text(TimeFormats.relative(comment.createdAt)).font(.caption2).foregroundColor(colors.inkFaint)
                 }
                 Text(comment.text).font(.subheadline).foregroundColor(colors.ink)
@@ -372,10 +422,12 @@ struct PostDetailView: View {
         .background(colors.paper)
     }
     
-    init(container: AppContainer, groupId: Int64, postId: Int64) {
+    init(container: AppContainer, groupId: Int64, postId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         self.container = container
         self.groupId = groupId
         self.postId = postId
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
         _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
             groupId: groupId,
             postId: postId,

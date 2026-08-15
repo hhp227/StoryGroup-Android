@@ -3,7 +3,7 @@ import Shared
 
 /// 친구 탭 — 웹 /search(검색 전=친구 목록, 검색 후=사용자 검색 결과, 카카오톡 친구 탭 패턴)·Compose FriendsScreen 미러.
 /// 검색바는 콘텐츠 상단 인라인 — keep-alive ZStack에서 .searchable은 숨은 탭의 것까지 내비바에 새서 쓰지 않는다.
-/// 행 탭은 무동작(공개 프로필 화면은 범위 제외) — 액션은 메시지(DM)/해제 버튼 2개.
+/// 행 탭 → 공개 프로필(웹 /users/[id] 미러) — 액션은 메시지(DM)/해제 버튼 2개.
 /// 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct FriendsView: View {
     @StateObject private var viewModel: FriendsViewModel
@@ -11,11 +11,14 @@ struct FriendsView: View {
     /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenChatRoom: (ChatRoomRef) -> Void
 
+    /// 공개 프로필 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenUserProfile: (Int64) -> Void
+
     var body: some View {
-        FriendsContent(viewModel: viewModel, onOpenChatRoom: onOpenChatRoom)
+        FriendsContent(viewModel: viewModel, onOpenChatRoom: onOpenChatRoom, onOpenUserProfile: onOpenUserProfile)
     }
 
-    init(container: AppContainer, onOpenChatRoom: @escaping (ChatRoomRef) -> Void) {
+    init(container: AppContainer, onOpenChatRoom: @escaping (ChatRoomRef) -> Void, onOpenUserProfile: @escaping (Int64) -> Void) {
         _viewModel = StateObject(wrappedValue: FriendsViewModel(
             getFriendsUseCase: container.getFriendsUseCase,
             addFriendUseCase: container.addFriendUseCase,
@@ -25,6 +28,7 @@ struct FriendsView: View {
             observePersonalEventsUseCase: container.observePersonalEventsUseCase
         ))
         self.onOpenChatRoom = onOpenChatRoom
+        self.onOpenUserProfile = onOpenUserProfile
     }
 }
 
@@ -32,6 +36,9 @@ private struct FriendsContent: View {
     @ObservedObject var viewModel: FriendsViewModel
 
     let onOpenChatRoom: (ChatRoomRef) -> Void
+
+    /// 공개 프로필 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenUserProfile: (Int64) -> Void
 
     @Environment(\.sgColors) private var colors
 
@@ -141,6 +148,7 @@ private struct FriendsContent: View {
                         FriendRow(
                             friend: friend,
                             isBusy: uiState.isOpeningDm || uiState.processingUserId != nil,
+                            onOpenProfile: { onOpenUserProfile(friend.userId) },
                             onOpenDm: { viewModel.onAction(.openDm(userId: friend.userId, userName: friend.name)) },
                             onRemove: { removeTarget = friend }
                         )
@@ -176,11 +184,14 @@ private struct FriendsContent: View {
     }
 }
 
-/// 친구 행 — 웹 친구 카드 미러(이름+상태메시지, 메시지/해제 버튼 2개). 행 탭은 무동작
+/// 친구 행 — 웹 친구 카드 미러(이름+상태메시지, 메시지/해제 버튼 2개). 행 탭=공개 프로필(버튼 영역은 버튼이 우선)
 private struct FriendRow: View {
     let friend: Friend
 
     let isBusy: Bool
+
+    /// 행 탭 → 공개 프로필(웹 /users/[id] 미러) — 메시지/해제 버튼은 안쪽 버튼이라 SwiftUI가 우선 처리
+    let onOpenProfile: () -> Void
 
     let onOpenDm: () -> Void
 
@@ -189,39 +200,42 @@ private struct FriendRow: View {
     @Environment(\.sgColors) private var colors
 
     var body: some View {
-        SGCard {
-            HStack(spacing: 12) {
-                ZStack(alignment: .bottomTrailing) {
-                    SGAvatar(name: friend.name, imageUrl: friend.profileImg)
-                    // 온라인 도트 — 친구 탭 전용이라 공용 SGAvatar는 건드리지 않는다(Compose FriendRow 미러)
-                    if friend.online {
-                        ZStack {
-                            Circle().fill(colors.linen).frame(width: 14, height: 14)
-                            Circle()
-                                .fill(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
-                                .frame(width: 10, height: 10)
+        Button(action: onOpenProfile) {
+            SGCard {
+                HStack(spacing: 12) {
+                    ZStack(alignment: .bottomTrailing) {
+                        SGAvatar(name: friend.name, imageUrl: friend.profileImg)
+                        // 온라인 도트 — 친구 탭 전용이라 공용 SGAvatar는 건드리지 않는다(Compose FriendRow 미러)
+                        if friend.online {
+                            ZStack {
+                                Circle().fill(colors.linen).frame(width: 14, height: 14)
+                                Circle()
+                                    .fill(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
+                                    .frame(width: 10, height: 10)
+                            }
                         }
                     }
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(friend.name).font(.subheadline.bold()).foregroundColor(colors.ink)
-                    if let statusMessage = friend.statusMessage, !statusMessage.isEmpty {
-                        Text(statusMessage).font(.caption).foregroundColor(colors.inkFaint)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(friend.name).font(.subheadline.bold()).foregroundColor(colors.ink)
+                        if let statusMessage = friend.statusMessage, !statusMessage.isEmpty {
+                            Text(statusMessage).font(.caption).foregroundColor(colors.inkFaint)
+                        }
                     }
+                    Spacer()
+                    Button("메시지", action: onOpenDm)
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.accent)
+                        .disabled(isBusy)
+                    Button("해제", action: onRemove)
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.inkSoft)
+                        .disabled(isBusy)
                 }
-                Spacer()
-                Button("메시지", action: onOpenDm)
-                    .font(.subheadline.bold())
-                    .foregroundColor(colors.accent)
-                    .disabled(isBusy)
-                Button("해제", action: onRemove)
-                    .font(.subheadline.bold())
-                    .foregroundColor(colors.inkSoft)
-                    .disabled(isBusy)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
+        .buttonStyle(.plain)
     }
 }
 

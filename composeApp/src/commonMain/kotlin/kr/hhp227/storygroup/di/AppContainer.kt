@@ -70,6 +70,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyJoinRequestedGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPublicProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
@@ -136,6 +137,8 @@ class AppContainer(
     val getMyProfileUseCase = GetMyProfileUseCase(userRepository)
     val updateMyProfileUseCase = UpdateMyProfileUseCase(userRepository)
     val changePasswordUseCase = ChangePasswordUseCase(userRepository)
+    // 공개 프로필 — 게시글 작성자·검색·친구 행에서 진입(웹 /users/[id] 미러)
+    val getPublicProfileUseCase = GetPublicProfileUseCase(userRepository)
     val getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository)
     val getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository)
     val getGroupUseCase = GetGroupUseCase(groupRepository)

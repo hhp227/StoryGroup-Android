@@ -38,6 +38,12 @@ struct TabShellView: View {
     /// 홈 통합검색 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenSearch: () -> Void
 
+    /// 공개 프로필 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
+    let onOpenUserProfile: (Int64) -> Void
+
+    /// 홈→게시글 상세→작성자 프로필 체인이 계정 설정 push에 쓴다 — 셸 소유 세션 VM 전달
+    let profileViewModel: ProfileViewModel
+
     let onLogout: () -> Void
 
     /// 홈 헤더가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
@@ -54,10 +60,12 @@ struct TabShellView: View {
                         destination: destination,
                         container: container,
                         profile: profile,
+                        profileViewModel: profileViewModel,
                         notificationsViewModel: notificationsViewModel,
                         chatViewModel: chatViewModel,
                         onOpenGroup: onOpenGroup,
                         onOpenChatRoom: onOpenChatRoom,
+                        onOpenUserProfile: onOpenUserProfile,
                         groupsRefreshRequested: groupsRefreshRequested,
                         onGroupsRefreshHandled: onGroupsRefreshHandled,
                         onOpenSettings: { showSettings = true },

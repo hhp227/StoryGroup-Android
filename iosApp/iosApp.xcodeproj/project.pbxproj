@@ -74,6 +74,8 @@
 		A1010034AABBCCDDEEFF0034 /* RtcVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011034AABBCCDDEEFF0034 /* RtcVideoView.swift */; };
 		A1010044AABBCCDDEEFF0044 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011044AABBCCDDEEFF0044 /* SearchView.swift */; };
 		A1010045AABBCCDDEEFF0045 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011045AABBCCDDEEFF0045 /* SearchViewModel.swift */; };
+		A1010046AABBCCDDEEFF0046 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011046AABBCCDDEEFF0046 /* UserProfileView.swift */; };
+		A1010047AABBCCDDEEFF0047 /* UserProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011047AABBCCDDEEFF0047 /* UserProfileViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -144,6 +146,8 @@
 		A1011034AABBCCDDEEFF0034 /* RtcVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtcVideoView.swift; sourceTree = "<group>"; };
 		A1011044AABBCCDDEEFF0044 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		A1011045AABBCCDDEEFF0045 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		A1011046AABBCCDDEEFF0046 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
+		A1011047AABBCCDDEEFF0047 /* UserProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -231,6 +235,7 @@
 				A1013008AABBCCDDEEFF0008 /* Home */,
 				A1013013AABBCCDDEEFF0013 /* Call */,
 				A1013014AABBCCDDEEFF0014 /* Search */,
+				A1013015AABBCCDDEEFF0015 /* User */,
 				A1013009AABBCCDDEEFF0009 /* Notification */,
 				A1013012AABBCCDDEEFF0012 /* Post */,
 				A101300AAABBCCDDEEFF000A /* Profile */,
@@ -323,6 +328,15 @@
 				A1011045AABBCCDDEEFF0045 /* SearchViewModel.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		A1013015AABBCCDDEEFF0015 /* User */ = {
+			isa = PBXGroup;
+			children = (
+				A1011046AABBCCDDEEFF0046 /* UserProfileView.swift */,
+				A1011047AABBCCDDEEFF0047 /* UserProfileViewModel.swift */,
+			);
+			path = User;
 			sourceTree = "<group>";
 		};
 		A1013009AABBCCDDEEFF0009 /* Notification */ = {
@@ -590,6 +604,8 @@
 				A1010017AABBCCDDEEFF0017 /* SGSettingsView.swift in Sources */,
 				A1010044AABBCCDDEEFF0044 /* SearchView.swift in Sources */,
 				A1010045AABBCCDDEEFF0045 /* SearchViewModel.swift in Sources */,
+				A1010046AABBCCDDEEFF0046 /* UserProfileView.swift in Sources */,
+				A1010047AABBCCDDEEFF0047 /* UserProfileViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

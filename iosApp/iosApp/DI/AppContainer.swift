@@ -11,6 +11,8 @@ final class AppContainer {
     let getMyProfileUseCase: GetMyProfileUseCase
     let updateMyProfileUseCase: UpdateMyProfileUseCase
     let changePasswordUseCase: ChangePasswordUseCase
+    /// 공개 프로필 — 게시글 작성자·검색·친구 행에서 진입(웹 /users/[id] 미러)
+    let getPublicProfileUseCase: GetPublicProfileUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
     let getMyGroupsPagingDataUseCase: GetMyGroupsPagingDataUseCase
     let getGroupUseCase: GetGroupUseCase
@@ -153,6 +155,7 @@ final class AppContainer {
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
         updateMyProfileUseCase = UpdateMyProfileUseCase(userRepository: userRepository)
         changePasswordUseCase = ChangePasswordUseCase(userRepository: userRepository)
+        getPublicProfileUseCase = GetPublicProfileUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
         getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository: groupRepository)
         getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
