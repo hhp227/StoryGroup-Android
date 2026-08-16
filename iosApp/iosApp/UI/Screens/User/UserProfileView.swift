@@ -2,51 +2,54 @@ import SwiftUI
 import Shared
 
 /// 공개 프로필 — composeApp UserProfileScreen.kt와 1:1 미러(웹 /users/[userId]).
-/// 자체 push 2종: DM 성공 → 채팅방, 본인 "프로필 수정" → 계정 설정(GroupDetailView 자체 push 선례).
+/// push가 아니라 시트로 뜬다(Compose는 카드 다이얼로그). 후속 이동 2종(DM 성공→채팅방,
+/// 본인 "프로필 수정"→계정 설정)은 콜백으로 부모에 넘기고, 부모가 시트를 닫은 뒤 push한다
 struct UserProfileView: View {
     let container: AppContainer
 
-    /// 채팅방 push에 필요 — 셸 소유 세션 VM 전달(pass-through라 plain let, GroupDetailView 선례)
-    let chatViewModel: ChatViewModel
+    /// DM 성공 — 부모가 시트를 닫고(onDismiss 완료 후) 채팅방을 push한다
+    let onOpenChatRoom: (ChatRoomRef) -> Void
 
-    /// 계정 설정 push에 필요 — 셸 소유 세션 VM(저장 성공 시 셸 헤더 갱신 공유)
-    let profileViewModel: ProfileViewModel
+    /// 본인 "프로필 수정" — 부모가 시트를 닫고 계정 설정을 push한다
+    let onOpenAccountSettings: () -> Void
 
     @StateObject private var userProfileViewModel: UserProfileViewModel
 
-    @State private var selectedChatRoom: ChatRoomRef? = nil
-
-    @State private var showAccountSettings = false
-
     @Environment(\.sgColors) private var colors
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        pushContainer
-            .navigationTitle("프로필")
-            .navigationBarTitleDisplayMode(.inline)
-            .onReceive(userProfileViewModel.event) { event in
-                switch event {
-                case .dmOpened(let chatRoomId, let title):
-                    selectedChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
-                }
+        VStack(spacing: 0) {
+            header
+            content
+        }
+        .background(colors.paper.ignoresSafeArea())
+        .onReceive(userProfileViewModel.event) { event in
+            switch event {
+            case .dmOpened(let chatRoomId, let title):
+                onOpenChatRoom(ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title))
             }
+        }
     }
 
-    /// 자체 push 2종 — iOS 16 navigationDestination / iOS 15 숨김 NavigationLink 폴백(GroupDetailView 선례)
-    @ViewBuilder private var pushContainer: some View {
-        if #available(iOS 16.0, *) {
-            content
-                .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
-                .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
-        } else {
-            content
-                .background(
-                    NavigationLink(isActive: showChatRoom) { chatRoomDestination } label: { EmptyView() }.hidden()
-                )
-                .background(
-                    NavigationLink(isActive: $showAccountSettings) { accountSettingsDestination } label: { EmptyView() }.hidden()
-                )
+    /// 시트라 내비바가 없다 — 제목+닫기(X)를 직접 그린다
+    private var header: some View {
+        HStack {
+            Text("프로필")
+                .font(.headline)
+                .foregroundColor(colors.ink)
+            Spacer()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.subheadline.bold())
+                    .foregroundColor(colors.inkSoft)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 4)
     }
 
     @ViewBuilder private var content: some View {
@@ -56,7 +59,6 @@ struct UserProfileView: View {
             ProgressView()
                 .tint(colors.accent)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(colors.paper.ignoresSafeArea())
         } else if let profile = uiState.profile {
             profileBody(profile, uiState: uiState)
         } else {
@@ -69,7 +71,6 @@ struct UserProfileView: View {
                     .foregroundColor(colors.accent)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(colors.paper.ignoresSafeArea())
         }
     }
 
@@ -101,7 +102,7 @@ struct UserProfileView: View {
                     }
                     HStack(spacing: 8) {
                         if uiState.isSelf {
-                            Button("프로필 수정") { showAccountSettings = true }
+                            Button("프로필 수정") { onOpenAccountSettings() }
                                 .font(.subheadline.bold())
                                 .foregroundColor(colors.inkSoft)
                                 .padding(.horizontal, 12)
@@ -150,34 +151,14 @@ struct UserProfileView: View {
             }
             .padding(16)
         }
-        .background(colors.paper.ignoresSafeArea())
     }
 
-    @ViewBuilder private var chatRoomDestination: some View {
-        if let room = selectedChatRoom {
-            ChatRoomView(
-                chatRoomId: room.chatRoomId,
-                groupId: room.groupId,
-                title: room.title,
-                container: container,
-                chatViewModel: chatViewModel
-            )
-        }
-    }
-
-    private var accountSettingsDestination: some View {
-        AccountSettingsView(container: container, profileViewModel: profileViewModel)
-    }
-
-    /// pop(백 버튼/스와이프) 시 상태를 nil로 되돌리는 브리지(MainShellView 선례)
-    private var showChatRoom: Binding<Bool> {
-        Binding(
-            get: { selectedChatRoom != nil },
-            set: { if !$0 { selectedChatRoom = nil } }
-        )
-    }
-
-    init(userId: Int64, container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(
+        userId: Int64,
+        container: AppContainer,
+        onOpenChatRoom: @escaping (ChatRoomRef) -> Void,
+        onOpenAccountSettings: @escaping () -> Void
+    ) {
         _userProfileViewModel = StateObject(wrappedValue: UserProfileViewModel(
             userId: userId,
             getPublicProfileUseCase: container.getPublicProfileUseCase,
@@ -188,7 +169,7 @@ struct UserProfileView: View {
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
         self.container = container
-        self.chatViewModel = chatViewModel
-        self.profileViewModel = profileViewModel
+        self.onOpenChatRoom = onOpenChatRoom
+        self.onOpenAccountSettings = onOpenAccountSettings
     }
 }

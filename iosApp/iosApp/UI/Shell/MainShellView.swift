@@ -37,6 +37,12 @@ enum SGDestination: String, CaseIterable, Identifiable {
     var inTabs: Bool { self != .notifications }
 }
 
+/// 공개 프로필 시트에서 고른 후속 push 대상 — 시트가 완전히 닫힌 뒤(onDismiss) 실행해야 유실되지 않는다
+private enum ProfileFollowUp {
+    case chatRoom(ChatRoomRef)
+    case accountSettings
+}
+
 struct MainShellView: View {
     @ObservedObject var theme: SGThemeState
 
@@ -66,8 +72,11 @@ struct MainShellView: View {
     /// 홈 통합검색 풀스크린 push — Compose NavHost(SearchRoute) 미러
     @State private var showSearch = false
 
-    /// 공개 프로필 풀스크린 push — Compose NavHost(UserProfileRoute) 미러(친구 탭 행 발 진입)
+    /// 공개 프로필 시트 — Compose dialog<UserProfileRoute> 미러(친구 탭 행 발 진입)
     @State private var selectedUserId: Int64? = nil
+
+    /// 프로필 시트의 후속 이동(채팅방/계정 설정) — 시트 dismiss 완료 후 push한다
+    @State private var profileFollowUp: ProfileFollowUp? = nil
 
     /// 풀스크린 push 대상 — Compose NavHost(GroupDetailRoute(groupId)) 미러. nil이 아니면 상세가 셸을 통째로 덮는다
     @State private var selectedGroupId: Int64? = nil
@@ -86,6 +95,9 @@ struct MainShellView: View {
 
     var body: some View {
         navigationRoot
+            // 공개 프로필 시트 — Compose dialog<UserProfileRoute> 미러. 후속 이동(채팅방/계정 설정)은
+            // 시트가 완전히 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
+            .sheet(isPresented: showUserProfile, onDismiss: runProfileFollowUp) { userProfileDestination }
             // 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Compose Box 최상단 오버레이 미러)
             .overlay(alignment: .top) {
                 if let call = incomingCallViewModel.uiState.incomingCall {
@@ -123,7 +135,6 @@ struct MainShellView: View {
                     .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
                     .navigationDestination(isPresented: $showSettings) { settingsDestination }
                     .navigationDestination(isPresented: $showSearch) { searchDestination }
-                    .navigationDestination(isPresented: showUserProfile) { userProfileDestination }
             }
         } else {
             NavigationView {
@@ -171,14 +182,6 @@ struct MainShellView: View {
                     .background(
                         NavigationLink(isActive: $showSearch) {
                             searchDestination
-                        } label: {
-                            EmptyView()
-                        }
-                        .hidden()
-                    )
-                    .background(
-                        NavigationLink(isActive: showUserProfile) {
-                            userProfileDestination
                         } label: {
                             EmptyView()
                         }
@@ -284,13 +287,29 @@ struct MainShellView: View {
             UserProfileView(
                 userId: userId,
                 container: container,
-                chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                onOpenChatRoom: { room in
+                    profileFollowUp = .chatRoom(room)
+                    selectedUserId = nil
+                },
+                onOpenAccountSettings: {
+                    profileFollowUp = .accountSettings
+                    selectedUserId = nil
+                }
             )
         }
     }
 
-    /// pop(백 버튼/스와이프) 시 selectedUserId를 nil로 되돌리는 브리지
+    /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        switch profileFollowUp {
+        case .chatRoom(let room): selectedChatRoom = room
+        case .accountSettings: showAccountSettings = true
+        case nil: break
+        }
+        profileFollowUp = nil
+    }
+
+    /// 시트를 닫으면(X·드래그) selectedUserId를 nil로 되돌리는 브리지
     private var showUserProfile: Binding<Bool> {
         Binding(
             get: { selectedUserId != nil },

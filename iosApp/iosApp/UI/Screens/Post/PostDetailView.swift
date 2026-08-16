@@ -1,6 +1,12 @@
 import Shared
 import SwiftUI
 
+/// 공개 프로필 시트에서 고른 후속 push 대상 — 시트가 완전히 닫힌 뒤(onDismiss) 실행해야 유실되지 않는다
+private enum ProfileFollowUp {
+    case chatRoom(ChatRoomRef)
+    case accountSettings
+}
+
 /// 게시글 상세 — composeApp PostDetailScreen.kt와 1:1 미러.
 /// 본문·이미지·좋아요·댓글(답글 포함). 삭제·차단 성공은 화면을 닫기만 하고,
 /// 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
@@ -12,7 +18,7 @@ struct PostDetailView: View {
 
     private let postId: Int64
 
-    /// 작성자 프로필 push 체인(프로필→채팅방/계정 설정)에 필요 — 셸 소유 세션 VM pass-through
+    /// 작성자 프로필 시트의 후속 push(채팅방/계정 설정)에 필요 — 셸 소유 세션 VM pass-through
     private let chatViewModel: ChatViewModel
 
     private let profileViewModel: ProfileViewModel
@@ -28,8 +34,17 @@ struct PostDetailView: View {
     /// 더보기 메뉴에서 고른 "수정" — 메뉴 안에서는 NavigationLink가 동작하지 않아 상태로 push한다
     @State private var showEdit = false
 
-    /// 본문·댓글 작성자 탭 → 공개 프로필 push(웹 작성자 메뉴의 "프로필 보기" 직행 미러)
+    /// 본문·댓글 작성자 탭 → 공개 프로필 시트(웹 작성자 메뉴의 "프로필 보기" 직행 미러)
     @State private var selectedAuthorId: Int64? = nil
+
+    /// 프로필 시트에서 DM 성공 후속 push — MainShellView 채팅방 미러
+    @State private var selectedChatRoom: ChatRoomRef? = nil
+
+    /// 프로필 시트에서 본인 "프로필 수정" 후속 push — MainShellView 계정 설정 미러
+    @State private var showAccountSettings = false
+
+    /// 프로필 시트의 후속 이동(채팅방/계정 설정) — 시트 dismiss 완료 후 push한다
+    @State private var profileFollowUp: ProfileFollowUp? = nil
 
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
@@ -38,12 +53,16 @@ struct PostDetailView: View {
     /// 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(Compose playingVideoUrl 미러)
     @State private var playingVideoUrl: String?
 
-    /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
+    /// 수정·후속 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러).
+    /// 작성자 프로필은 push가 아니라 시트 — 후속 이동(채팅방/계정 설정)은 시트가 완전히
+    /// 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
     var body: some View {
         if #available(iOS 16.0, *) {
             core
                 .navigationDestination(isPresented: $showEdit) { editDestination }
-                .navigationDestination(isPresented: showAuthorProfile) { authorProfileDestination }
+                .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
+                .sheet(isPresented: showAuthorProfile, onDismiss: runProfileFollowUp) { authorProfileDestination }
         } else {
             core
                 .background(
@@ -55,13 +74,22 @@ struct PostDetailView: View {
                     .hidden()
                 )
                 .background(
-                    NavigationLink(isActive: showAuthorProfile) {
-                        authorProfileDestination
+                    NavigationLink(isActive: showChatRoom) {
+                        chatRoomDestination
                     } label: {
                         EmptyView()
                     }
                     .hidden()
                 )
+                .background(
+                    NavigationLink(isActive: $showAccountSettings) {
+                        accountSettingsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .sheet(isPresented: showAuthorProfile, onDismiss: runProfileFollowUp) { authorProfileDestination }
         }
     }
 
@@ -123,17 +151,58 @@ struct PostDetailView: View {
             UserProfileView(
                 userId: authorId,
                 container: container,
-                chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                onOpenChatRoom: { room in
+                    profileFollowUp = .chatRoom(room)
+                    selectedAuthorId = nil
+                },
+                onOpenAccountSettings: {
+                    profileFollowUp = .accountSettings
+                    selectedAuthorId = nil
+                }
             )
         }
     }
 
-    /// pop(백 버튼/스와이프) 시 selectedAuthorId를 nil로 되돌리는 브리지
+    @ViewBuilder private var chatRoomDestination: some View {
+        if let room = selectedChatRoom {
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
+        }
+    }
+
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
+    private var accountSettingsDestination: some View {
+        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        switch profileFollowUp {
+        case .chatRoom(let room): selectedChatRoom = room
+        case .accountSettings: showAccountSettings = true
+        case nil: break
+        }
+        profileFollowUp = nil
+    }
+
+    /// 시트를 닫으면(X·드래그) selectedAuthorId를 nil로 되돌리는 브리지
     private var showAuthorProfile: Binding<Bool> {
         Binding(
             get: { selectedAuthorId != nil },
             set: { if !$0 { selectedAuthorId = nil } }
+        )
+    }
+
+    /// pop(백 버튼/스와이프) 시 selectedChatRoom을 nil로 되돌리는 브리지(MainShellView 선례)
+    private var showChatRoom: Binding<Bool> {
+        Binding(
+            get: { selectedChatRoom != nil },
+            set: { if !$0 { selectedChatRoom = nil } }
         )
     }
 

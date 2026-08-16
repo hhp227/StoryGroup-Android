@@ -3,9 +3,11 @@ package kr.hhp227.storygroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
@@ -19,11 +21,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
@@ -351,21 +355,23 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                         )
                     }
                 }
-                composable<UserProfileRoute> { backStackEntry ->
+                // 풀스크린이 아니라 카드 다이얼로그 — 뒤 화면이 스크림 너머로 남는다(iOS 시트 미러).
+                // DM·프로필 수정으로 navigate하면 Navigation이 다이얼로그를 자동 pop하고 목적지를 연다
+                dialog<UserProfileRoute>(
+                    dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
+                ) { backStackEntry ->
                     val route = backStackEntry.toRoute<UserProfileRoute>()
 
-                    Surface(color = SgTheme.colors.paper) {
-                        UserProfileScreen(
-                            userId = route.userId,
-                            onBack = { navController.popBackStack() },
-                            onOpenChatRoom = { chatRoomId, groupId, title ->
-                                navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
-                            },
-                            onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
-                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
-                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-                        )
-                    }
+                    UserProfileScreen(
+                        userId = route.userId,
+                        onClose = { navController.popBackStack() },
+                        onOpenChatRoom = { chatRoomId, groupId, title ->
+                            navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                        },
+                        onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
+                        // usePlatformDefaultWidth=false라 폭은 화면이 직접 잡는다(폰=92%, 데스크탑=최대 420dp)
+                        modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(0.92f)
+                    )
                 }
                 composable<PostDetailRoute> { backStackEntry ->
                     val route = backStackEntry.toRoute<PostDetailRoute>()

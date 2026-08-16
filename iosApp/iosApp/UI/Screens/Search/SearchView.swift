@@ -7,9 +7,15 @@ private struct PostRef: Equatable {
     let postId: Int64
 }
 
+/// 공개 프로필 시트에서 고른 후속 push 대상 — 시트가 완전히 닫힌 뒤(onDismiss) 실행해야 유실되지 않는다
+private enum ProfileFollowUp {
+    case chatRoom(ChatRoomRef)
+    case accountSettings
+}
+
 /// 홈 통합검색 — composeApp SearchScreen.kt와 1:1 미러(제출 기반, 5섹션 원페이지).
-/// 결과 push 4종(그룹 상세·게시글 상세·채팅방·사용자 프로필)은 자체 소유(GroupDetailView 선례),
-/// 파일은 시스템 브라우저(openURL), 사용자는 행 탭=공개 프로필(친구 추가/해제는 내부 버튼).
+/// 결과 push(그룹 상세·게시글 상세·채팅방)는 자체 소유(GroupDetailView 선례),
+/// 파일은 시스템 브라우저(openURL), 사용자는 행 탭=공개 프로필 시트(친구 추가/해제는 내부 버튼).
 struct SearchView: View {
     let container: AppContainer
 
@@ -37,6 +43,12 @@ struct SearchView: View {
 
     @State private var selectedUserId: Int64? = nil
 
+    /// 프로필 시트에서 본인 "프로필 수정" 후속 push — MainShellView 계정 설정 미러
+    @State private var showAccountSettings = false
+
+    /// 프로필 시트의 후속 이동(채팅방/계정 설정) — 시트 dismiss 완료 후 push한다
+    @State private var profileFollowUp: ProfileFollowUp? = nil
+
     @Environment(\.sgColors) private var colors
 
     @Environment(\.openURL) private var openURL
@@ -45,16 +57,20 @@ struct SearchView: View {
         pushContainer
             .navigationTitle("검색")
             .navigationBarTitleDisplayMode(.inline)
+            // 공개 프로필 시트 — Compose dialog<UserProfileRoute> 미러. 후속 이동(채팅방/계정 설정)은
+            // 시트가 완전히 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
+            .sheet(isPresented: showUserProfile, onDismiss: runProfileFollowUp) { userProfileDestination }
     }
 
-    /// 자체 push 4종 — iOS 16 navigationDestination / iOS 15 숨김 NavigationLink 폴백(GroupDetailView 선례)
+    /// 자체 push 4종(그룹·게시글·채팅방·계정 설정) — iOS 16 navigationDestination /
+    /// iOS 15 숨김 NavigationLink 폴백(GroupDetailView 선례). 공개 프로필은 push가 아니라 시트
     @ViewBuilder private var pushContainer: some View {
         if #available(iOS 16.0, *) {
             content
                 .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                 .navigationDestination(isPresented: showPostDetail) { postDetailDestination }
                 .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
-                .navigationDestination(isPresented: showUserProfile) { userProfileDestination }
+                .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
         } else {
             content
                 .background(
@@ -67,7 +83,7 @@ struct SearchView: View {
                     NavigationLink(isActive: showChatRoom) { chatRoomDestination } label: { EmptyView() }.hidden()
                 )
                 .background(
-                    NavigationLink(isActive: showUserProfile) { userProfileDestination } label: { EmptyView() }.hidden()
+                    NavigationLink(isActive: $showAccountSettings) { accountSettingsDestination } label: { EmptyView() }.hidden()
                 )
         }
     }
@@ -400,10 +416,31 @@ struct SearchView: View {
             UserProfileView(
                 userId: userId,
                 container: container,
-                chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                onOpenChatRoom: { room in
+                    profileFollowUp = .chatRoom(room)
+                    selectedUserId = nil
+                },
+                onOpenAccountSettings: {
+                    profileFollowUp = .accountSettings
+                    selectedUserId = nil
+                }
             )
         }
+    }
+
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
+    private var accountSettingsDestination: some View {
+        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        switch profileFollowUp {
+        case .chatRoom(let room): selectedChatRoom = room
+        case .accountSettings: showAccountSettings = true
+        case nil: break
+        }
+        profileFollowUp = nil
     }
 
     /// pop(백 버튼/스와이프) 시 상태를 nil로 되돌리는 브리지(MainShellView 선례)
