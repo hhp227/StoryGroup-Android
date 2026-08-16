@@ -262,6 +262,8 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
                             onOpenAppSettings = { navController.navigate(AppSettingsRoute) },
                             onOpenGroupReports = { navController.navigate(GroupReportsRoute(route.groupId)) },
+                            // 멤버 탭 셀 탭 → 프로필 다이얼로그가 상세 위에 뜬다(DM은 프로필의 버튼 몫)
+                            onOpenUserProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )

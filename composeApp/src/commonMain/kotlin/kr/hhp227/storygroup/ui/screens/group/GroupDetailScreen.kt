@@ -139,7 +139,6 @@ private fun groupMembersViewModel(groupId: Long): GroupMembersViewModel {
             approveJoinRequestUseCase = container.approveJoinRequestUseCase,
             rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
             createGroupInviteUseCase = container.createGroupInviteUseCase,
-            openDirectRoomUseCase = container.openDirectRoomUseCase,
             getBlockedUsersUseCase = container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
@@ -204,6 +203,8 @@ fun GroupDetailScreen(
     onOpenAccountSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenGroupReports: () -> Unit,
+    // 멤버 탭 셀 탭 → 공개 프로필 다이얼로그(DM은 프로필의 버튼 몫)
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
     // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴).
     // 탭 상태는 레거시(탭 Fragment마다 VM)처럼 탭별 VM이 각자 소유한다
@@ -237,6 +238,7 @@ fun GroupDetailScreen(
         onOpenAccountSettings = onOpenAccountSettings,
         onOpenAppSettings = onOpenAppSettings,
         onOpenGroupReports = onOpenGroupReports,
+        onOpenUserProfile = onOpenUserProfile,
         modifier = modifier
     )
 }
@@ -264,6 +266,7 @@ private fun GroupDetailContent(
     onOpenAccountSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenGroupReports: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -288,8 +291,6 @@ private fun GroupDetailContent(
     val tabs = remember { listOf("소식", "앨범", "일정", "멤버", "설정") }
     val pagerState = rememberPagerState { tabs.size }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
-    // DM 확인 다이얼로그 대상 — 멤버 탭에서 타인을 탭하면 채워진다
-    var dmTargetMember by remember { mutableStateOf<GroupMember?>(null) }
     // 컴포지션에서 한 번만 선언해 카드마다 재사용한다
     val share = rememberShareLauncher()
 
@@ -312,18 +313,6 @@ private fun GroupDetailContent(
             viewModel.onAction(GroupDetailViewModel.Action.Refresh)
             settingsViewModel.onAction(GroupSettingsViewModel.Action.Refresh)
             onGroupUpdateHandled()
-        }
-    }
-    // 멤버 탭의 일회성 이벤트 — DM 방 확보 성공 시 채팅방으로 이동
-    LaunchedEffect(membersViewModel) {
-        membersViewModel.event.collect { event ->
-            when (event) {
-                is GroupMembersViewModel.Event.DmOpened -> {
-                    dmTargetMember = null
-                    // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
-                    onOpenChatRoom(event.chatRoomId, null, event.title)
-                }
-            }
         }
     }
     // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 GROUP_UPDATED_KEY 경로)
@@ -464,7 +453,8 @@ private fun GroupDetailContent(
                 onApprove = { membersViewModel.onAction(GroupMembersViewModel.Action.ApproveJoinRequest(it)) },
                 onReject = { membersViewModel.onAction(GroupMembersViewModel.Action.RejectJoinRequest(it)) },
                 onShowInvite = { showInviteDialog = true },
-                onMemberClick = { dmTargetMember = it }
+                // 멤버 탭=프로필 다이얼로그 진입 — DM은 프로필의 버튼 몫(검색·친구 탭과 동일 규칙)
+                onMemberClick = { onOpenUserProfile(it.userId) }
             )
             else -> GroupSettingsTab(
                 uiState = settingsUiState,
@@ -489,20 +479,6 @@ private fun GroupDetailContent(
             },
             onCreate = { maxUses, expiresInDays ->
                 membersViewModel.onAction(GroupMembersViewModel.Action.CreateInvite(maxUses, expiresInDays))
-            }
-        )
-    }
-    dmTargetMember?.let { member ->
-        DmConfirmDialog(
-            memberName = member.name,
-            isLoading = membersUiState.isOpeningDm,
-            error = membersUiState.dmError,
-            onDismiss = {
-                dmTargetMember = null
-                membersViewModel.onAction(GroupMembersViewModel.Action.DismissDm)
-            },
-            onConfirm = {
-                membersViewModel.onAction(GroupMembersViewModel.Action.OpenDm(member.userId, member.name))
             }
         )
     }
@@ -618,7 +594,7 @@ private fun GroupFeedTab(
 /**
  * 멤버 탭 — 가입 신청 인박스+초대코드(모더레이터, 멤버 관리 성격이라 여기 모음) 위에
  * 4열 멤버 그리드(레거시 MemberFragment 미러 — 기존 수평 MemberStrip 대체).
- * 타인을 탭하면 1:1 DM 확인으로 이어진다. iosApp membersTab 미러.
+ * 멤버를 탭하면 공개 프로필로 이어진다(DM은 프로필의 버튼 몫). iosApp membersTab 미러.
  */
 @Composable
 private fun GroupMembersTab(
@@ -686,12 +662,10 @@ private fun GroupMembersTab(
             Text("멤버 ${uiState.visibleMembers.size}", style = SgTheme.typography.titleSmall, color = sg.ink)
         }
         items(uiState.visibleMembers, key = GroupMember::userId) { member ->
-            // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
-            val isSelf = member.userId == uiState.myUserId
-
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = if (isSelf) Modifier else Modifier.clickable { onMemberClick(member) }
+                // 본인 포함 전원 탭 가능 — 프로필 진입(본인=프로필 수정, DM 버튼은 타인에게만 보인다)
+                modifier = Modifier.clickable { onMemberClick(member) }
             ) {
                 SgAvatar(member.name, imageUrl = member.profileImg)
                 Spacer(Modifier.height(4.dp))
@@ -702,54 +676,6 @@ private fun GroupMembersTab(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-        }
-    }
-}
-
-/** 멤버 탭 → 1:1 DM 확인 다이얼로그 — 성공 시 DmOpened 이벤트로 채팅방으로 이동한다 */
-@Composable
-private fun DmConfirmDialog(
-    memberName: String,
-    isLoading: Boolean,
-    error: String?,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    val sg = SgTheme.colors
-
-    Dialog(onDismissRequest = onDismiss) {
-        SgCard(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "1:1 DM",
-                    style = SgTheme.typography.titleMedium,
-                    color = sg.ink,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "${memberName}님과 1:1 DM을 시작할까요?",
-                    style = SgTheme.typography.bodyMedium,
-                    color = sg.ink
-                )
-                error?.let {
-                    Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        shape = SgTheme.shapes.button,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("취소", color = sg.ink)
-                    }
-                    SgPrimaryButton(
-                        text = "DM 시작",
-                        onClick = onConfirm,
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
             }
         }
     }
