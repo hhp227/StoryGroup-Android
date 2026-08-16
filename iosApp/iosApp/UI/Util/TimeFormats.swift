@@ -10,10 +10,7 @@ enum TimeFormats {
     }()
 
     static func relative(_ isoDateTime: String) -> String {
-        // 서버는 마이크로초 소수부를 내려주는데 ISO8601DateFormatter는 3자리 초과를 못 읽는다
-        // — 초 단위 정밀도면 충분하니 소수부를 떼고 파싱한다
-        let secondsOnly = isoDateTime.replacingOccurrences(of: "\\.\\d+", with: "", options: .regularExpression)
-        guard let date = iso.date(from: secondsOnly) else { return dateOnly(isoDateTime) }
+        guard let date = parse(isoDateTime) else { return dateOnly(isoDateTime) }
         let elapsed = Date().timeIntervalSince(date)
         let minutes = Int(elapsed / 60)
         let hours = Int(elapsed / 3600)
@@ -27,8 +24,44 @@ enum TimeFormats {
         return dateOnly(isoDateTime)
     }
 
+    // 서버는 마이크로초 소수부를 내려주는데 ISO8601DateFormatter는 3자리 초과를 못 읽는다
+    // — 초 단위 정밀도면 충분하니 소수부를 떼고 파싱한다
+    private static func parse(_ isoDateTime: String) -> Date? {
+        let secondsOnly = isoDateTime.replacingOccurrences(of: "\\.\\d+", with: "", options: .regularExpression)
+
+        return iso.date(from: secondsOnly)
+    }
+
     private static func dateOnly(_ isoDateTime: String) -> String {
         String(isoDateTime.prefix(while: { $0 != "T" })).replacingOccurrences(of: "-", with: ".")
+    }
+
+    private static let chatDateKeyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private static let chatDateLabelFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 M월 d일 EEEE"
+        return formatter
+    }()
+
+    /// 채팅 날짜 구분 그룹 키 — 기기 로컬 기준 yyyy-MM-dd(파싱 실패 시 서버 오프셋 날짜부 폴백).
+    /// composeApp chatDateKey와 1:1 미러
+    static func chatDateKey(_ isoDateTime: String) -> String {
+        guard let date = parse(isoDateTime) else { return String(isoDateTime.prefix(while: { $0 != "T" })) }
+        return chatDateKeyFormatter.string(from: date)
+    }
+
+    /// 채팅 날짜 구분 버블 라벨 — "2026년 8월 16일 토요일"(카카오톡 관례, 기기 로컬 기준).
+    /// composeApp formatChatDate와 1:1 미러
+    static func chatDate(_ isoDateTime: String) -> String {
+        guard let date = parse(isoDateTime) else { return dateOnly(isoDateTime) }
+        return chatDateLabelFormatter.string(from: date)
     }
 
     /// 가입일 표기 — 웹 공개 프로필의 toLocaleDateString("ko-KR") 미러("2026. 7. 1." — 선행 0 없음).

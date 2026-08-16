@@ -126,18 +126,26 @@ struct ChatRoomView: View {
 
                                     ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
                                         let isMine = message.userId == uiState.myUserId
+                                        // 최신순 목록이라 시간상 직전 메시지는 다음 인덱스(Compose 미러)
+                                        let previous = index == messages.count - 1 ? nil : messages[index + 1]
 
-                                        MessageRow(
-                                            message: message,
-                                            isMine: isMine,
-                                            // 최신순 목록이라 시간상 직전 메시지는 다음 인덱스(Compose 미러)
-                                            showAuthor: index == messages.count - 1
-                                                || messages[index + 1].userId != message.userId,
-                                            // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
-                                            readCount: isMine
-                                                ? otherReadPositions.filter { $0 >= message.id }.count
-                                                : 0
-                                        )
+                                        VStack(spacing: 4) {
+                                            // 날짜가 바뀌는 첫 메시지 위에 날짜 버블 — 별도 행이 아니라 행 안에
+                                            // 합성한다(행을 끼우면 플립 위치 유지가 흔들린다 — Compose 키 앵커 미러).
+                                            // 이전 페이지가 위로 끼면 판정이 다시 돌아 버블이 더 오래된 첫 메시지로 옮겨 붙는다
+                                            if previous.map({ TimeFormats.chatDateKey($0.createdAt) }) != TimeFormats.chatDateKey(message.createdAt) {
+                                                dateBubble(message.createdAt)
+                                            }
+                                            MessageRow(
+                                                message: message,
+                                                isMine: isMine,
+                                                showAuthor: previous?.userId != message.userId,
+                                                // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
+                                                readCount: isMine
+                                                    ? otherReadPositions.filter { $0 >= message.id }.count
+                                                    : 0
+                                            )
+                                        }
                                         .scaleEffect(x: 1, y: -1)
                                         .id(message.id)
                                         // 화면 위(가장 오래된 쪽) 근처 행이 나타나면 이전 페이지 자동 로드 —
@@ -286,6 +294,26 @@ struct ChatRoomView: View {
         }
     }
 
+    /// 날짜 구분 버블 — 그날 첫 메시지 위 가로 중앙 pill(카카오톡 관례, 기기 로컬 기준).
+    /// Compose ChatDateBubble과 1:1 미러
+    private func dateBubble(_ isoDateTime: String) -> some View {
+        Text(TimeFormats.chatDate(isoDateTime))
+            .font(.caption2)
+            .foregroundColor(colors.inkSoft)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(colors.linen)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .stroke(colors.stoneBorder, lineWidth: 1)
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+    }
+
     private func scrollToLatest(_ proxy: ScrollViewProxy, duration: Double? = nil) {
         if let latest = viewModel.uiState.messages.first?.id {
             withAnimation(duration.map { Animation.easeOut(duration: $0) } ?? .default) {
@@ -295,17 +323,31 @@ struct ChatRoomView: View {
         }
     }
 
-    /// 전송 대기 첨부 칩(웹 pending chip 미러) — 취소하면 업로드 없이 그냥 버려진다
-    private func pendingAttachmentChip(_ pending: ChatRoomViewModel.PendingAttachment) -> some View {
+    /// 전송 대기 첨부(웹 pending chip 미러) — 이미지는 썸네일, 파일은 이름 칩. 취소하면 업로드 없이 그냥 버려진다
+    @ViewBuilder private func pendingAttachmentChip(_ pending: ChatRoomViewModel.PendingAttachment) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: pending.isImage ? "photo" : "doc")
-                .font(.system(size: 14))
-                .foregroundColor(colors.inkSoft)
-            Text("\(pending.fileName) (\(formatFileSize(pending.data.count)))")
-                .font(.caption)
-                .foregroundColor(colors.ink)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // 이미지면 썸네일로 — 깨진 데이터는 UIImage가 nil이라 이름 칩 폴백(Compose 미러)
+            if pending.isImage, let thumbnail = UIImage(data: pending.data) {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .scaledToFill()
+                    // 높이 기준 원본 비율 폭 — 파노라마는 200pt에서 잘라낸다(Compose 미러)
+                    .frame(
+                        width: min(200, 64 * thumbnail.size.width / max(thumbnail.size.height, 1)),
+                        height: 64
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Spacer()
+            } else {
+                Image(systemName: pending.isImage ? "photo" : "doc")
+                    .font(.system(size: 14))
+                    .foregroundColor(colors.inkSoft)
+                Text("\(pending.fileName) (\(formatFileSize(pending.data.count)))")
+                    .font(.caption)
+                    .foregroundColor(colors.ink)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             Button(action: { viewModel.onAction(.clearAttachment) }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12))
