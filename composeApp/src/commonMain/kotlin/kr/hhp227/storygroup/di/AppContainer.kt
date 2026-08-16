@@ -62,6 +62,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupReportsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
@@ -89,6 +90,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ProcessGroupReportUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
@@ -102,6 +104,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UnblockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
@@ -166,6 +169,11 @@ class AppContainer(
     val blockUserUseCase = BlockUserUseCase(userRepository)
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
+    // 차단 해제 — 설정의 차단 사용자 관리 화면 전용(웹 /settings/blocked 미러)
+    val unblockUserUseCase = UnblockUserUseCase(userRepository)
+    // 그룹 신고함(모더레이터) — 목록·확인/기각 처리(웹 /groups/[id]/reports 미러)
+    val getGroupReportsUseCase = GetGroupReportsUseCase(groupRepository)
+    val processGroupReportUseCase = ProcessGroupReportUseCase(groupRepository)
     // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
     val observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository)
     // 삭제 알림 — 목록이 재조회 없이 그 글만 걷어낸다

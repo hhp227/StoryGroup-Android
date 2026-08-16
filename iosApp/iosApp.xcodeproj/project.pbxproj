@@ -76,6 +76,10 @@
 		A1010045AABBCCDDEEFF0045 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011045AABBCCDDEEFF0045 /* SearchViewModel.swift */; };
 		A1010046AABBCCDDEEFF0046 /* UserProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011046AABBCCDDEEFF0046 /* UserProfileView.swift */; };
 		A1010047AABBCCDDEEFF0047 /* UserProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011047AABBCCDDEEFF0047 /* UserProfileViewModel.swift */; };
+		A1010048AABBCCDDEEFF0048 /* BlockedUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011048AABBCCDDEEFF0048 /* BlockedUsersView.swift */; };
+		A1010049AABBCCDDEEFF0049 /* BlockedUsersViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011049AABBCCDDEEFF0049 /* BlockedUsersViewModel.swift */; };
+		A101004AAABBCCDDEEFF004A /* GroupReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101104AAABBCCDDEEFF004A /* GroupReportsView.swift */; };
+		A101004BAABBCCDDEEFF004B /* GroupReportsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101104BAABBCCDDEEFF004B /* GroupReportsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -148,6 +152,10 @@
 		A1011045AABBCCDDEEFF0045 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		A1011046AABBCCDDEEFF0046 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		A1011047AABBCCDDEEFF0047 /* UserProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileViewModel.swift; sourceTree = "<group>"; };
+		A1011048AABBCCDDEEFF0048 /* BlockedUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedUsersView.swift; sourceTree = "<group>"; };
+		A1011049AABBCCDDEEFF0049 /* BlockedUsersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedUsersViewModel.swift; sourceTree = "<group>"; };
+		A101104AAABBCCDDEEFF004A /* GroupReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupReportsView.swift; sourceTree = "<group>"; };
+		A101104BAABBCCDDEEFF004B /* GroupReportsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupReportsViewModel.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -296,6 +304,8 @@
 				A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */,
 				A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */,
 				A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */,
+				A101104AAABBCCDDEEFF004A /* GroupReportsView.swift */,
+				A101104BAABBCCDDEEFF004B /* GroupReportsViewModel.swift */,
 			);
 			path = Group;
 			sourceTree = "<group>";
@@ -373,6 +383,8 @@
 			children = (
 				A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */,
 				A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */,
+				A1011048AABBCCDDEEFF0048 /* BlockedUsersView.swift */,
+				A1011049AABBCCDDEEFF0049 /* BlockedUsersViewModel.swift */,
 				A1011018AABBCCDDEEFF0018 /* SGSettingsView.swift */,
 			);
 			path = Settings;
@@ -606,6 +618,10 @@
 				A1010045AABBCCDDEEFF0045 /* SearchViewModel.swift in Sources */,
 				A1010046AABBCCDDEEFF0046 /* UserProfileView.swift in Sources */,
 				A1010047AABBCCDDEEFF0047 /* UserProfileViewModel.swift in Sources */,
+				A1010048AABBCCDDEEFF0048 /* BlockedUsersView.swift in Sources */,
+				A1010049AABBCCDDEEFF0049 /* BlockedUsersViewModel.swift in Sources */,
+				A101004AAABBCCDDEEFF004A /* GroupReportsView.swift in Sources */,
+				A101004BAABBCCDDEEFF004B /* GroupReportsViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

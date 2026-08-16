@@ -49,11 +49,14 @@ private const val APP_SHARE_TEXT = "StoryGroup — 그룹과 함께하는 이야
 /** 레거시 privacy_policy 미러 — 웹 개인정보처리방침(웹·API 같은 서비스) */
 private const val PRIVACY_POLICY_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/privacy"
 
+private const val TERMS_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/terms"
+
 /**
  * 설정 탭 — 레거시 SettingsFragment(item_settings.xml) 미러의 섹션별 메뉴 리스트:
- * 유저 설정(내 프로필→계정 설정)/그룹 설정(정보 수정→풀스크린, 삭제·나가기→확인 다이얼로그)/
- * 어플리케이션 정보(앱 설정/공유하기/개인정보처리방침). 수정 폼은 GroupEditScreen으로 분리.
- * 라운지: OWNER=정보 수정만, 비OWNER=그룹 설정 섹션 숨김(웹 미러 — 나가기도 서버가 거부).
+ * 유저 설정(내 프로필→계정 설정)/그룹 설정(신고함=모더레이터, 정보 수정→풀스크린,
+ * 삭제·나가기→확인 다이얼로그)/어플리케이션 정보(앱 설정/공유하기/이용약관/개인정보처리방침).
+ * 수정 폼은 GroupEditScreen으로 분리.
+ * 라운지: OWNER=신고함+정보 수정, 비OWNER=그룹 설정 섹션 숨김(웹 미러 — 나가기도 서버가 거부).
  * iosApp GroupSettingsTab.swift와 1:1 미러
  */
 @Composable
@@ -64,6 +67,7 @@ internal fun GroupSettingsTab(
     onOpenGroupEdit: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onOpenGroupReports: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -126,7 +130,13 @@ internal fun GroupSettingsTab(
                 SgSectionTitle("그룹 설정")
                 SgCard(Modifier.fillMaxWidth()) {
                     Column {
+                        // 신고함 — 웹 커버 "신고함" 버튼의 KMP 대응(모더레이터 기능은 탭 메뉴에 모은다)
+                        if (uiState.canModerate) {
+                            SettingsMenuRow("신고함", onClick = onOpenGroupReports, showChevron = true)
+                        }
                         if (uiState.isOwner) {
+                            // OWNER는 항상 canModerate — 위에 신고함 행이 있어 구분선이 필요하다
+                            Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                             SettingsMenuRow("그룹 정보 수정", onClick = onOpenGroupEdit, showChevron = true)
                         }
                         // 라운지는 삭제·나가기 불가(웹 미러)
@@ -135,6 +145,9 @@ internal fun GroupSettingsTab(
                                 Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                                 SettingsMenuRow("그룹 삭제", onClick = { confirmingDelete = true }, tint = sg.rust)
                             } else {
+                                if (uiState.canModerate) {
+                                    Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+                                }
                                 // 비OWNER — 그룹 나가기(레거시 설정 탭 ll_withdrawal 미러, POST /leave 소비)
                                 SettingsMenuRow("그룹 나가기", onClick = { confirmingLeave = true }, tint = sg.rust)
                             }
@@ -150,6 +163,9 @@ internal fun GroupSettingsTab(
                     SettingsMenuRow("앱 설정", onClick = onOpenAppSettings, showChevron = true)
                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsMenuRow("공유하기", onClick = { share(APP_SHARE_TEXT) })
+                    Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+                    // 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 미러)
+                    SettingsMenuRow("이용약관", onClick = { uriHandler.openUri(TERMS_URL) })
                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsMenuRow("개인정보처리방침", onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) })
                 }

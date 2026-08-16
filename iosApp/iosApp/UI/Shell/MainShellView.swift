@@ -87,6 +87,9 @@ struct MainShellView: View {
     /// 계정 설정 풀스크린 push — Compose NavHost(AccountSettingsRoute) 미러
     @State private var showAccountSettings = false
 
+    /// 차단 사용자 관리 풀스크린 push — Compose NavHost(BlockedUsersRoute) 미러(프로필 탭 메뉴 진입)
+    @State private var showBlockedUsers = false
+
     /// 채팅방 풀스크린 push — Compose NavHost(ChatRoomRoute) 미러
     @State private var selectedChatRoom: ChatRoomRef? = nil
 
@@ -131,6 +134,7 @@ struct MainShellView: View {
                 shellContent
                     .navigationDestination(isPresented: showGroupDetail) { groupDetailDestination }
                     .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
+                    .navigationDestination(isPresented: $showBlockedUsers) { blockedUsersDestination }
                     .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
                     .navigationDestination(isPresented: showAcceptedCall) { acceptedCallDestination }
                     .navigationDestination(isPresented: $showSettings) { settingsDestination }
@@ -150,6 +154,14 @@ struct MainShellView: View {
                     .background(
                         NavigationLink(isActive: $showAccountSettings) {
                             accountSettingsDestination
+                        } label: {
+                            EmptyView()
+                        }
+                        .hidden()
+                    )
+                    .background(
+                        NavigationLink(isActive: $showBlockedUsers) {
+                            blockedUsersDestination
                         } label: {
                             EmptyView()
                         }
@@ -206,6 +218,7 @@ struct MainShellView: View {
                 groupsRefreshRequested: groupsRefreshPending,
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
+                onOpenBlockedUsers: { showBlockedUsers = true },
                 onOpenSearch: { showSearch = true },
                 onOpenUserProfile: { selectedUserId = $0 },
                 profileViewModel: profileViewModel,
@@ -224,6 +237,7 @@ struct MainShellView: View {
                 groupsRefreshRequested: groupsRefreshPending,
                 onGroupsRefreshHandled: { groupsRefreshPending = false },
                 onOpenAccountSettings: { showAccountSettings = true },
+                onOpenBlockedUsers: { showBlockedUsers = true },
                 onOpenSearch: { showSearch = true },
                 onOpenUserProfile: { selectedUserId = $0 },
                 profileViewModel: profileViewModel,
@@ -266,6 +280,11 @@ struct MainShellView: View {
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다
     private var accountSettingsDestination: some View {
         AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    /// 차단 사용자 관리 — 프로필 탭 메뉴 진입(웹 /settings/blocked 미러)
+    private var blockedUsersDestination: some View {
+        BlockedUsersView(container: container)
     }
 
     private var settingsDestination: some View {
@@ -409,6 +428,9 @@ struct DestinationView: View {
     /// 계정 설정 풀스크린 push — Compose onOpenAccountSettings 미러(MainShellView showAccountSettings)
     let onOpenAccountSettings: () -> Void
 
+    /// 차단 사용자 관리 풀스크린 push — Compose onOpenBlockedUsers 미러(MainShellView showBlockedUsers)
+    let onOpenBlockedUsers: () -> Void
+
     let onLogout: () -> Void
 
     var body: some View {
@@ -434,6 +456,7 @@ struct DestinationView: View {
                 profile: profile,
                 onOpenAccountSettings: onOpenAccountSettings,
                 onOpenSettings: onOpenSettings,
+                onOpenBlockedUsers: onOpenBlockedUsers,
                 onLogout: onLogout
             )
         }

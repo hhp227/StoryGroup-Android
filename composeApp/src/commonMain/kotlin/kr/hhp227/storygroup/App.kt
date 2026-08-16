@@ -46,11 +46,13 @@ import kr.hhp227.storygroup.ui.screens.group.CreateGroupScreen
 import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupEditScreen
+import kr.hhp227.storygroup.ui.screens.group.GroupReportsScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
 import kr.hhp227.storygroup.ui.screens.post.PostDetailScreen
 import kr.hhp227.storygroup.ui.screens.search.SearchScreen
 import kr.hhp227.storygroup.ui.screens.settings.AccountSettingsScreen
 import kr.hhp227.storygroup.ui.screens.settings.AppSettingsScreen
+import kr.hhp227.storygroup.ui.screens.settings.BlockedUsersScreen
 import kr.hhp227.storygroup.ui.screens.user.UserProfileScreen
 import kr.hhp227.storygroup.ui.shell.MainShell
 import kr.hhp227.storygroup.ui.theme.NightMode
@@ -116,6 +118,14 @@ internal data object SearchRoute
 /** 공개 프로필 — 게시글 작성자·검색 users·친구 행에서 진입(웹 /users/[userId] 미러) */
 @Serializable
 internal data class UserProfileRoute(val userId: Long)
+
+/** 차단 사용자 관리 — 셸 프로필 탭 메뉴에서 진입(웹 /settings/blocked 미러) */
+@Serializable
+internal data object BlockedUsersRoute
+
+/** 그룹 신고함(모더레이터) — 그룹 설정 탭 메뉴에서 진입(웹 /groups/[id]/reports 미러) */
+@Serializable
+internal data class GroupReportsRoute(val groupId: Long)
 
 /**
  * 방 통화 — DM 1:1·그룹 방 공용(페이스톡 미러, 채팅방 세션에 통화가 붙는다).
@@ -206,6 +216,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                 groupsRefreshRequested = groupsRefreshPending,
                 onGroupsRefreshHandled = { groupsRefreshPending = false },
                 onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
+                onOpenBlockedUsers = { navController.navigate(BlockedUsersRoute) },
                 onOpenCreateGroup = { navController.navigate(CreateGroupRoute) },
                 onOpenDiscoverGroups = { navController.navigate(DiscoverGroupsRoute) },
                 onOpenSearch = { navController.navigate(SearchRoute) },
@@ -249,6 +260,7 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onOpenGroupEdit = { navController.navigate(GroupEditRoute(route.groupId)) },
                             onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
                             onOpenAppSettings = { navController.navigate(AppSettingsRoute) },
+                            onOpenGroupReports = { navController.navigate(GroupReportsRoute(route.groupId)) },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )
@@ -292,6 +304,31 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                     Surface(color = SgTheme.colors.paper) {
                         AccountSettingsScreen(
                             onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<BlockedUsersRoute> {
+                    Surface(color = SgTheme.colors.paper) {
+                        BlockedUsersScreen(
+                            onBack = { navController.popBackStack() },
+                            // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        )
+                    }
+                }
+                composable<GroupReportsRoute> { backStackEntry ->
+                    val route = backStackEntry.toRoute<GroupReportsRoute>()
+
+                    Surface(color = SgTheme.colors.paper) {
+                        GroupReportsScreen(
+                            groupId = route.groupId,
+                            onBack = { navController.popBackStack() },
+                            // 신고된 게시글 탭 — 조치(삭제 등)는 상세의 기존 기능으로 한다
+                            onOpenPostDetail = { postId ->
+                                navController.navigate(PostDetailRoute(route.groupId, postId))
+                            },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )

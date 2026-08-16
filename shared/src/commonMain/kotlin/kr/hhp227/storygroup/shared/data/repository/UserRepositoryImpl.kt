@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.data.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
@@ -71,6 +72,12 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
             // 목록은 이 알림으로 그 작성자의 글만 걷어낸다 — 재조회(refresh)는 첫 페이지부터
             // 다시 읽어 이미 쌓아둔 페이지와 스크롤 위치를 잃는다
             _userBlocks.tryEmit(userId)
+        }
+
+    override suspend fun unblockUser(userId: Long): Result<Unit> =
+        runCatching {
+            client.delete("/api/users/$userId/block")
+            Unit
         }
 
     override suspend fun getBlockedUsers(): Result<List<BlockedUser>> =

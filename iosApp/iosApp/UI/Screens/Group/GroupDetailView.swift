@@ -193,12 +193,14 @@ private struct GroupDetailContent: View {
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
     @State private var shareItem: ShareItem?
 
-    /// 설정 탭 풀스크린 push 3종 — Compose GroupEditRoute/AccountSettingsRoute/AppSettingsRoute 미러
+    /// 설정 탭 풀스크린 push 4종 — Compose GroupEditRoute/AccountSettingsRoute/AppSettingsRoute/GroupReportsRoute 미러
     @State private var showGroupEdit = false
 
     @State private var showAccountSettings = false
 
     @State private var showAppSettings = false
+
+    @State private var showGroupReports = false
 
     /// 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, Compose APP_SHARE_TEXT 미러)
     private static let appShareText = "StoryGroup — 그룹과 함께하는 이야기\n\(StoryGroupApi.shared.DEFAULT_BASE_URL)"
@@ -212,6 +214,7 @@ private struct GroupDetailContent: View {
                 .navigationDestination(isPresented: $showGroupEdit) { groupEditDestination }
                 .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
                 .navigationDestination(isPresented: $showAppSettings) { appSettingsDestination }
+                .navigationDestination(isPresented: $showGroupReports) { groupReportsDestination }
         } else {
             core
                 .background(
@@ -249,6 +252,14 @@ private struct GroupDetailContent: View {
                 .background(
                     NavigationLink(isActive: $showAppSettings) {
                         appSettingsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showGroupReports) {
+                        groupReportsDestination
                     } label: {
                         EmptyView()
                     }
@@ -469,6 +480,7 @@ private struct GroupDetailContent: View {
             onOpenGroupEdit: { showGroupEdit = true },
             onOpenAccountSettings: { showAccountSettings = true },
             onOpenAppSettings: { showAppSettings = true },
+            onOpenGroupReports: { showGroupReports = true },
             onShareApp: { shareItem = ShareItem(text: Self.appShareText) }
         )
         }
@@ -758,6 +770,16 @@ private struct GroupDetailContent: View {
 
     private var appSettingsDestination: some View {
         SGSettingsView(theme: theme)
+    }
+
+    /// 신고함(모더레이터) — 신고된 게시글 탭 시 상세 push 체인에 세션 VM 2종이 필요해 전달한다
+    private var groupReportsDestination: some View {
+        GroupReportsView(
+            groupId: groupId,
+            container: container,
+            chatViewModel: chatViewModel,
+            profileViewModel: profileViewModel
+        )
     }
 
     init(

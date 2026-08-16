@@ -61,6 +61,7 @@ fun MainShell(
     onGroupsRefreshHandled: () -> Unit,
     // 계정 설정/그룹 만들기/그룹 찾기는 NavHost 풀스크린 목적지(앱 설정 오버레이와 달리 App이 배선)
     onOpenAccountSettings: () -> Unit,
+    onOpenBlockedUsers: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
     onOpenSearch: () -> Unit,
@@ -86,6 +87,7 @@ fun MainShell(
                 onGroupsRefreshHandled = onGroupsRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
+                onOpenBlockedUsers = onOpenBlockedUsers,
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onOpenSearch = onOpenSearch,
@@ -105,6 +107,7 @@ fun MainShell(
                 onGroupsRefreshHandled = onGroupsRefreshHandled,
                 onOpenSettings = { showSettings = true },
                 onOpenAccountSettings = onOpenAccountSettings,
+                onOpenBlockedUsers = onOpenBlockedUsers,
                 onOpenCreateGroup = onOpenCreateGroup,
                 onOpenDiscoverGroups = onOpenDiscoverGroups,
                 onOpenSearch = onOpenSearch,
@@ -144,6 +147,7 @@ internal fun DestinationContent(
     onOpenUserProfile: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
+    onOpenBlockedUsers: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit,
@@ -171,6 +175,7 @@ internal fun DestinationContent(
                             onOpenUserProfile = onOpenUserProfile,
                             onOpenSettings = onOpenSettings,
                             onOpenAccountSettings = onOpenAccountSettings,
+                onOpenBlockedUsers = onOpenBlockedUsers,
                             onOpenCreateGroup = onOpenCreateGroup,
                             onOpenDiscoverGroups = onOpenDiscoverGroups,
                             onLogout = onLogout,
@@ -208,6 +213,7 @@ private fun DestinationScreen(
     onOpenUserProfile: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAccountSettings: () -> Unit,
+    onOpenBlockedUsers: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
     onLogout: () -> Unit,
@@ -244,6 +250,7 @@ private fun DestinationScreen(
         MainDestination.PROFILE -> ProfileScreen(
             onOpenAccountSettings = onOpenAccountSettings,
             onOpenSettings = onOpenSettings,
+            onOpenBlockedUsers = onOpenBlockedUsers,
             onLogout = onLogout
         )
     }

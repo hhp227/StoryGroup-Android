@@ -14,7 +14,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ManageAccounts
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -26,23 +29,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.di.sessionViewModel
+import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-/** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴. VM은 드로어 헤더와 공유하는 세션 스코프 */
+// 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 섹션 미러)
+private const val TERMS_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/terms"
+
+private const val PRIVACY_POLICY_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/privacy"
+
+/** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴(웹 /settings 허브 대응). VM은 드로어 헤더와 공유하는 세션 스코프 */
 @Composable
 fun ProfileScreen(
     onOpenAccountSettings: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenBlockedUsers: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val profile = uiState.profile
+    val uriHandler = LocalUriHandler.current
 
     Column(
         modifier = modifier
@@ -87,6 +99,25 @@ fun ProfileScreen(
                 icon = Icons.Default.Settings,
                 label = "앱 설정",
                 onClick = onOpenSettings
+            )
+            Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            // 개인정보 보호 — 웹 설정 허브 /settings/blocked 미러
+            ProfileMenuRow(
+                icon = Icons.Default.Block,
+                label = "차단 사용자 관리",
+                onClick = onOpenBlockedUsers
+            )
+            Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuRow(
+                icon = Icons.Default.Description,
+                label = "이용약관",
+                onClick = { uriHandler.openUri(TERMS_URL) }
+            )
+            Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuRow(
+                icon = Icons.Default.PrivacyTip,
+                label = "개인정보처리방침",
+                onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(

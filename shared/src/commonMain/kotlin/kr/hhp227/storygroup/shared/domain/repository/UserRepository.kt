@@ -47,6 +47,12 @@ interface UserRepository {
     val userBlocks: Flow<Long>
 
     /**
+     * 차단 해제 — DELETE /api/users/{userId}/block. 설정의 차단 목록에서만 쓴다.
+     * 해제해도 이미 걸러낸 화면(피드 스냅샷)은 되돌리지 않는다 — 다음 새로고침부터 다시 보인다.
+     */
+    suspend fun unblockUser(userId: Long): Result<Unit>
+
+    /**
      * 내가 차단한 사용자 목록 — GET /api/users/me/blocks.
      * 서버는 게시글·댓글·채팅만 걸러줄 뿐 그룹 멤버 목록에는 차단 사용자가 그대로 있어서,
      * 멤버를 그리는 화면이 이 목록으로 직접 걸러낸다.

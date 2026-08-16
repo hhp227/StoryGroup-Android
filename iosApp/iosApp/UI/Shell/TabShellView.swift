@@ -35,6 +35,8 @@ struct TabShellView: View {
     /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenAccountSettings: () -> Void
 
+    let onOpenBlockedUsers: () -> Void
+
     /// 홈 통합검색 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenSearch: () -> Void
 
@@ -70,6 +72,7 @@ struct TabShellView: View {
                         onGroupsRefreshHandled: onGroupsRefreshHandled,
                         onOpenSettings: { showSettings = true },
                         onOpenAccountSettings: onOpenAccountSettings,
+                        onOpenBlockedUsers: onOpenBlockedUsers,
                         onLogout: onLogout
                     )
                     .opacity(destination == current ? 1 : 0)

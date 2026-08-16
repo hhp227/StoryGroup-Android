@@ -199,10 +199,11 @@ fun GroupDetailScreen(
     // 그룹 정보 수정 화면에서 돌아온 결과 — 상세·설정 탭을 다시 읽는다(GROUP_UPDATED_KEY)
     groupUpdateRequested: Boolean,
     onGroupUpdateHandled: () -> Unit,
-    // 설정 탭 메뉴의 풀스크린 진입 3종 — 라우트는 App.kt가 배선한다
+    // 설정 탭 메뉴의 풀스크린 진입 4종 — 라우트는 App.kt가 배선한다
     onOpenGroupEdit: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onOpenGroupReports: () -> Unit,
     modifier: Modifier = Modifier,
     // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴).
     // 탭 상태는 레거시(탭 Fragment마다 VM)처럼 탭별 VM이 각자 소유한다
@@ -235,6 +236,7 @@ fun GroupDetailScreen(
         onOpenGroupEdit = onOpenGroupEdit,
         onOpenAccountSettings = onOpenAccountSettings,
         onOpenAppSettings = onOpenAppSettings,
+        onOpenGroupReports = onOpenGroupReports,
         modifier = modifier
     )
 }
@@ -261,6 +263,7 @@ private fun GroupDetailContent(
     onOpenGroupEdit: () -> Unit,
     onOpenAccountSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onOpenGroupReports: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -469,7 +472,8 @@ private fun GroupDetailContent(
                 onAction = settingsViewModel::onAction,
                 onOpenGroupEdit = onOpenGroupEdit,
                 onOpenAccountSettings = onOpenAccountSettings,
-                onOpenAppSettings = onOpenAppSettings
+                onOpenAppSettings = onOpenAppSettings,
+                onOpenGroupReports = onOpenGroupReports
             )
         }
     }
