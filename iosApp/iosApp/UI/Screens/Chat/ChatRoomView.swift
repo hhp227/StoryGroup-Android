@@ -25,6 +25,16 @@ struct ChatRoomView: View {
     /// 통화 화면 push — Compose CallRoute(ring=true) 미러(발신=입장+벨울림)
     @State private var showCall = false
 
+    /// 타인 아바타 탭 → 공개 프로필 시트 — Compose UserProfileRoute 다이얼로그 미러
+    @State private var selectedProfileUserId: Int64? = nil
+
+    /// 프로필 시트에서 DM 성공 후속 push 대상 — 시트 dismiss 완료 후 push한다(PostDetailView 선례).
+    /// 본인 "프로필 수정" 후속은 없다 — 채팅방 아바타는 타인 전용(내 메시지엔 아바타가 없다)
+    @State private var profileFollowUpRoom: ChatRoomRef? = nil
+
+    /// 프로필 시트에서 연 DM 방 push — 채팅방 위에 새 채팅방이 쌓인다(Compose navigate 미러)
+    @State private var pushedChatRoom: ChatRoomRef? = nil
+
     /// false면 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바·참가는 페이스톡
     @State private var callVideo = true
 
@@ -45,24 +55,94 @@ struct ChatRoomView: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 통화 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
+    /// 통화·DM 방 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러).
+    /// 공개 프로필은 push가 아니라 시트 — DM 후속 push는 시트가 완전히 닫힌 뒤(onDismiss)에 한다
     var body: some View {
         if #available(iOS 16.0, *) {
-            core.navigationDestination(isPresented: $showCall) { callDestination }
+            core
+                .navigationDestination(isPresented: $showCall) { callDestination }
+                .navigationDestination(isPresented: showPushedChatRoom) { pushedChatRoomDestination }
+                .sheet(isPresented: showProfile, onDismiss: runProfileFollowUp) { profileDestination }
         } else {
-            core.background(
-                NavigationLink(isActive: $showCall) {
-                    callDestination
-                } label: {
-                    EmptyView()
-                }
-                .hidden()
-            )
+            core
+                .background(
+                    NavigationLink(isActive: $showCall) {
+                        callDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: showPushedChatRoom) {
+                        pushedChatRoomDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .sheet(isPresented: showProfile, onDismiss: runProfileFollowUp) { profileDestination }
         }
     }
 
     private var callDestination: some View {
         CallView(chatRoomId: chatRoomId, title: title, ring: true, video: callVideo, container: container)
+    }
+
+    /// 타인 아바타 탭 → 공개 프로필 시트(그룹 상세 멤버 스트립·게시글 작성자 탭과 같은 진입 규칙)
+    @ViewBuilder private var profileDestination: some View {
+        if let userId = selectedProfileUserId {
+            UserProfileView(
+                userId: userId,
+                container: container,
+                onOpenChatRoom: { room in
+                    // 이미 이 방이면(멱등 DM 열기가 같은 id를 돌려준다) 또 쌓지 않는다 —
+                    // 시트만 닫아 복귀(카카오톡 방식, Compose App.kt 미러)
+                    if room.chatRoomId != chatRoomId {
+                        profileFollowUpRoom = room
+                    }
+                    selectedProfileUserId = nil
+                },
+                // 채팅방 아바타는 타인 전용 — 본인 "프로필 수정"은 도달 불가라 배선하지 않는다
+                onOpenAccountSettings: {}
+            )
+        }
+    }
+
+    @ViewBuilder private var pushedChatRoomDestination: some View {
+        if let room = pushedChatRoom {
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
+        }
+    }
+
+    /// 프로필 시트 dismiss 완료 후 DM 방 push — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        if let room = profileFollowUpRoom {
+            pushedChatRoom = room
+            profileFollowUpRoom = nil
+        }
+    }
+
+    /// 시트를 닫으면(X·드래그) selectedProfileUserId를 nil로 되돌리는 브리지(MainShellView 선례)
+    private var showProfile: Binding<Bool> {
+        Binding(
+            get: { selectedProfileUserId != nil },
+            set: { if !$0 { selectedProfileUserId = nil } }
+        )
+    }
+
+    /// pop(백 버튼/스와이프) 시 pushedChatRoom을 nil로 되돌리는 브리지(MainShellView 선례)
+    private var showPushedChatRoom: Binding<Bool> {
+        Binding(
+            get: { pushedChatRoom != nil },
+            set: { if !$0 { pushedChatRoom = nil } }
+        )
     }
 
     @ViewBuilder private var core: some View {
@@ -143,7 +223,8 @@ struct ChatRoomView: View {
                                                 // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
                                                 readCount: isMine
                                                     ? otherReadPositions.filter { $0 >= message.id }.count
-                                                    : 0
+                                                    : 0,
+                                                onAuthorTap: { selectedProfileUserId = message.userId }
                                             )
                                         }
                                         .scaleEffect(x: 1, y: -1)
@@ -540,6 +621,9 @@ private struct MessageRow: View {
 
     let readCount: Int
 
+    /// 타인 아바타 탭 → 공개 프로필 시트(내 메시지엔 아바타가 없다)
+    let onAuthorTap: () -> Void
+
     @Environment(\.sgColors) private var colors
 
     var body: some View {
@@ -549,7 +633,11 @@ private struct MessageRow: View {
                 Spacer(minLength: 48)
             } else {
                 if showAuthor {
-                    SGAvatar(name: message.authorName, size: 32, imageUrl: message.authorProfileImg)
+                    // 아바타 탭 → 공개 프로필(그룹 상세 멤버 스트립·게시글 작성자 탭과 같은 진입 규칙)
+                    Button(action: onAuthorTap) {
+                        SGAvatar(name: message.authorName, size: 32, imageUrl: message.authorProfileImg)
+                    }
+                    .buttonStyle(.plain)
                 } else {
                     // 같은 작성자 연속 메시지는 아바타 없이 자리만 맞춘다(웹 spacer 미러)
                     Spacer().frame(width: 32)
@@ -562,9 +650,13 @@ private struct MessageRow: View {
                 }
                 VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
                     if !isMine && showAuthor {
-                        Text(message.authorName)
-                            .font(.caption.bold())
-                            .foregroundColor(colors.inkSoft)
+                        // 이름 탭도 아바타와 같은 프로필 진입
+                        Button(action: onAuthorTap) {
+                            Text(message.authorName)
+                                .font(.caption.bold())
+                                .foregroundColor(colors.inkSoft)
+                        }
+                        .buttonStyle(.plain)
                     }
                     if let attachment = message.attachment {
                         attachmentContent(attachment)

@@ -100,6 +100,8 @@ fun ChatRoomScreen(
     onBack: () -> Unit,
     // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
     onStartCall: (video: Boolean) -> Unit,
+    // 타인 메시지 아바타 탭 → 공개 프로필 다이얼로그(내 메시지엔 아바타가 없다)
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
 ) {
@@ -319,7 +321,8 @@ fun ChatRoomScreen(
                                 isMine = isMine,
                                 showAuthor = previous?.userId != message.userId,
                                 // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
-                                readCount = if (isMine) otherReadPositions.count { it >= message.id } else 0
+                                readCount = if (isMine) otherReadPositions.count { it >= message.id } else 0,
+                                onAuthorClick = { onOpenUserProfile(message.userId) }
                             )
                         }
                     }
@@ -460,6 +463,7 @@ private fun MessageRow(
     isMine: Boolean,
     showAuthor: Boolean,
     readCount: Int,
+    onAuthorClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -470,7 +474,13 @@ private fun MessageRow(
     ) {
         if (!isMine) {
             if (showAuthor) {
-                SgAvatar(message.authorName, size = 32.dp, imageUrl = message.authorProfileImg)
+                // 아바타 탭 → 공개 프로필(그룹 상세 멤버 스트립·게시글 작성자 탭과 같은 진입 규칙)
+                SgAvatar(
+                    message.authorName,
+                    size = 32.dp,
+                    imageUrl = message.authorProfileImg,
+                    modifier = Modifier.clip(CircleShape).clickable(onClick = onAuthorClick)
+                )
             } else {
                 // 같은 작성자 연속 메시지는 아바타 없이 자리만 맞춘다(웹 spacer 미러)
                 Spacer(Modifier.width(32.dp))
@@ -491,7 +501,8 @@ private fun MessageRow(
                     style = SgTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = sg.inkSoft,
-                    modifier = Modifier.padding(bottom = 2.dp)
+                    // 이름 탭도 아바타와 같은 프로필 진입(clickable을 padding 밖에 둬 탭 영역 확보)
+                    modifier = Modifier.clickable(onClick = onAuthorClick).padding(bottom = 2.dp)
                 )
             }
             message.attachment?.let { attachment ->

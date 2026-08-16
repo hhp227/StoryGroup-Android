@@ -535,6 +535,18 @@ private fun GroupFeedTab(
     val refreshState = lazyPagingItems.loadState.refresh
     val appendState = lazyPagingItems.loadState.append
 
+    // 첫 로드·복귀 재표출 중엔 리스트를 컴포즈하지 않는다 — 빈 리스트로 한 프레임이라도
+    // 측정되면 복원된 LazyListState 인덱스가 0으로 클램프돼, 채팅방·게시글 상세 등을
+    // 다녀올 때 스크롤 위치가 사라진다(캐시 표출 전 itemCount=0 프레임이 원인)
+    if (lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading) {
+        Box(
+            modifier.fillMaxSize().padding(top = 48.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            CircularProgressIndicator(color = sg.accent)
+        }
+        return
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
@@ -555,14 +567,6 @@ private fun GroupFeedTab(
             }
         }
         when {
-            lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "feed-loading") {
-                Box(
-                    Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = sg.accent)
-                }
-            }
             lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "feed-error") {
                 Column(
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),

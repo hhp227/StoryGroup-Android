@@ -25,6 +25,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
@@ -280,6 +281,8 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                             onStartCall = { video ->
                                 navController.navigate(CallRoute(route.chatRoomId, route.title, ring = true, video = video))
                             },
+                            // 타인 아바타 탭 → 프로필 다이얼로그가 채팅방 위에 뜬다(1:1 DM은 자동 pop 후 새 방)
+                            onOpenUserProfile = { userId -> navController.navigate(UserProfileRoute(userId)) },
                             // 풀스크린이라 하단 시스템 내비바 인셋을 화면이 직접 소화
                             modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                         )
@@ -403,7 +406,17 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
                         userId = route.userId,
                         onClose = { navController.popBackStack() },
                         onOpenChatRoom = { chatRoomId, groupId, title ->
-                            navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                            // 그 방 위에서 연 프로필(채팅방 아바타 진입)이면 같은 방을 또 쌓지 않는다 —
+                            // 다이얼로그만 닫아 복귀(카카오톡 방식, DM 열기는 멱등이라 id 비교가 정확)
+                            val under = navController.previousBackStackEntry
+
+                            if (under != null && under.destination.hasRoute<ChatRoomRoute>() &&
+                                under.toRoute<ChatRoomRoute>().chatRoomId == chatRoomId
+                            ) {
+                                navController.popBackStack()
+                            } else {
+                                navController.navigate(ChatRoomRoute(chatRoomId, groupId, title))
+                            }
                         },
                         onOpenAccountSettings = { navController.navigate(AccountSettingsRoute) },
                         // usePlatformDefaultWidth=false라 폭은 화면이 직접 잡는다(폰=92%, 데스크탑=최대 420dp)
