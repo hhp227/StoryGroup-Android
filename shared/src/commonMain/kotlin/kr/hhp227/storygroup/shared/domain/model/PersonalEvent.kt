@@ -7,7 +7,7 @@ package kr.hhp227.storygroup.shared.domain.model
  */
 enum class PersonalEventType {
     CONNECTED, DISCONNECTED,
-    NOTIFICATION, CHAT_MESSAGE, CALL_INVITE
+    NOTIFICATION, CHAT_MESSAGE, CALL_INVITE, PRESENCE_CHANGED
 }
 
 /**
@@ -28,5 +28,9 @@ data class PersonalEvent(
     val groupId: Long? = null,
     val roomName: String? = null,
     // CALL_INVITE 전용 — false면 보이스톡(수신 측이 배너 표시·카메라 OFF 입장을 결정한다)
-    val video: Boolean = true
+    val video: Boolean = true,
+    // PRESENCE_CHANGED 전용 — 전환한 친구의 id. 스냅샷 복구는 친구 목록 응답 online이 담당
+    val userId: Long? = null,
+    // PRESENCE_CHANGED 전용 — true=온라인 전환, false=오프라인 전환(서버 10초 유예 후 확정)
+    val online: Boolean = false
 )

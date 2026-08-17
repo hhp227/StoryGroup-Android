@@ -11,6 +11,8 @@ final class AppContainer {
     let getMyProfileUseCase: GetMyProfileUseCase
     let updateMyProfileUseCase: UpdateMyProfileUseCase
     let changePasswordUseCase: ChangePasswordUseCase
+    /// 공개 프로필 — 게시글 작성자·검색·친구 행에서 진입(웹 /users/[id] 미러)
+    let getPublicProfileUseCase: GetPublicProfileUseCase
     let getMyGroupsUseCase: GetMyGroupsUseCase
     let getMyGroupsPagingDataUseCase: GetMyGroupsPagingDataUseCase
     let getGroupUseCase: GetGroupUseCase
@@ -57,6 +59,14 @@ final class AppContainer {
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     let getBlockedUsersUseCase: GetBlockedUsersUseCase
 
+    // 차단 해제 — 설정의 차단 사용자 관리 화면 전용(웹 /settings/blocked 미러)
+    let unblockUserUseCase: UnblockUserUseCase
+
+    // 그룹 신고함(모더레이터) — 목록·확인/기각 처리(웹 /groups/[id]/reports 미러)
+    let getGroupReportsUseCase: GetGroupReportsUseCase
+
+    let processGroupReportUseCase: ProcessGroupReportUseCase
+
     // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
     let observeUserBlocksUseCase: ObserveUserBlocksUseCase
 
@@ -100,6 +110,14 @@ final class AppContainer {
     let getCallRosterUseCase: GetCallRosterUseCase
     let getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 
+    // 친구 탭 — 목록/등록/해제(단방향)+사용자 검색(통합검색 users 섹션)
+    let getFriendsUseCase: GetFriendsUseCase
+    let addFriendUseCase: AddFriendUseCase
+    let removeFriendUseCase: RemoveFriendUseCase
+    let searchUsersUseCase: SearchUsersUseCase
+    /// 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
+    let searchUseCase: SearchUseCase
+
     // 일정 탭(Task 10) — 월 범위 목록/단건+참석자/생성/삭제/RSVP/RSVP 취소
     let getGroupEventsUseCase: GetGroupEventsUseCase
     let getEventDetailUseCase: GetEventDetailUseCase
@@ -136,6 +154,7 @@ final class AppContainer {
             baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
         )
         let eventRepository = EventRepositoryImpl(client: client)
+        let friendRepository = FriendRepositoryImpl(client: client)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -144,6 +163,7 @@ final class AppContainer {
         getMyProfileUseCase = GetMyProfileUseCase(userRepository: userRepository)
         updateMyProfileUseCase = UpdateMyProfileUseCase(userRepository: userRepository)
         changePasswordUseCase = ChangePasswordUseCase(userRepository: userRepository)
+        getPublicProfileUseCase = GetPublicProfileUseCase(userRepository: userRepository)
         getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository: groupRepository)
         getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository: groupRepository)
         getGroupUseCase = GetGroupUseCase(groupRepository: groupRepository)
@@ -168,6 +188,9 @@ final class AppContainer {
         reportUserUseCase = ReportUserUseCase(userRepository: userRepository)
         blockUserUseCase = BlockUserUseCase(userRepository: userRepository)
         getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository: userRepository)
+        unblockUserUseCase = UnblockUserUseCase(userRepository: userRepository)
+        getGroupReportsUseCase = GetGroupReportsUseCase(groupRepository: groupRepository)
+        processGroupReportUseCase = ProcessGroupReportUseCase(groupRepository: groupRepository)
         observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository: userRepository)
         observePostDeletionsUseCase = ObservePostDeletionsUseCase(postRepository: postRepository)
         createLoungePostUseCase = CreateLoungePostUseCase(postRepository: postRepository)
@@ -212,5 +235,11 @@ final class AppContainer {
         deleteEventUseCase = DeleteEventUseCase(eventRepository: eventRepository)
         rsvpEventUseCase = RsvpEventUseCase(eventRepository: eventRepository)
         cancelEventRsvpUseCase = CancelEventRsvpUseCase(eventRepository: eventRepository)
+        getFriendsUseCase = GetFriendsUseCase(friendRepository: friendRepository)
+        addFriendUseCase = AddFriendUseCase(friendRepository: friendRepository)
+        removeFriendUseCase = RemoveFriendUseCase(friendRepository: friendRepository)
+        searchUsersUseCase = SearchUsersUseCase(friendRepository: friendRepository)
+        let searchRepository = SearchRepositoryImpl(client: client)
+        searchUseCase = SearchUseCase(searchRepository: searchRepository)
     }
 }

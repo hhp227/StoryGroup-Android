@@ -11,6 +11,8 @@ import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
+import kr.hhp227.storygroup.shared.domain.model.PostReport
+import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 
 interface GroupRepository {
     /**
@@ -82,4 +84,16 @@ interface GroupRepository {
 
     /** 그룹 나가기(멤버/부방장 — OWNER·라운지는 서버가 거부) — POST /api/groups/{id}/leave */
     suspend fun leaveGroup(groupId: Long): Result<Unit>
+
+    /**
+     * 그룹 신고함 목록(모더레이터 전용) — GET /api/groups/{id}/reports, status null=전체.
+     * 멤버가 신고한 게시글 요약이 내려온다(웹 /groups/[id]/reports 미러).
+     */
+    suspend fun getGroupReports(groupId: Long, status: ReportStatus? = null): Result<List<PostReport>>
+
+    /**
+     * 신고 처리(모더레이터 전용) — PATCH /api/groups/{id}/reports/{reportId}, 처리된 행을 돌려준다.
+     * 확인(RESOLVED)/기각(DISMISSED)은 기록일 뿐 — 게시글 삭제 등 조치는 기존 기능으로 한다.
+     */
+    suspend fun processGroupReport(groupId: Long, reportId: Long, status: ReportStatus): Result<PostReport>
 }

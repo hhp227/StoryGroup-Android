@@ -42,6 +42,9 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
@@ -61,15 +64,14 @@ private fun groupEditViewModel(groupId: Long): GroupEditViewModel {
 
 /**
  * 그룹 정보 수정 — 설정 탭 "그룹 정보 수정" 행에서 진입하는 풀스크린(계정 설정 패턴,
- * 상단바는 화면 소유). 저장 성공 시 onSaved — App.kt가 GROUP_UPDATED_KEY를 남기고 pop한다.
+ * 상단바는 화면 소유). 저장 성공 시 화면이 스스로 GroupUpdated·GroupsChanged를 publish하고 pop한다.
  * iosApp GroupEditView.swift와 1:1 미러
  */
 @Composable
 fun GroupEditScreen(
     groupId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: GroupEditViewModel = groupEditViewModel(groupId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -79,11 +81,15 @@ fun GroupEditScreen(
         onAction(GroupEditViewModel.Action.ChangeImage(picked.bytes, picked.fileName, picked.contentType))
     }
 
-    // 일회성 이벤트 수집 — 저장 성공은 결과 신호+pop(라우트 몫)
+    // 일회성 이벤트 수집 — 저장 성공은 결과 신호+pop(상세는 커버·제목을, 목록은 카드를 다시 읽는다)
     LaunchedEffect(viewModel) {
         viewModel.event.collect { event ->
             when (event) {
-                GroupEditViewModel.Event.Saved -> onSaved()
+                GroupEditViewModel.Event.Saved -> {
+                    onNavigationAction(NavigationAction.PublishResult(NavResult.GroupUpdated(groupId)))
+                    onNavigationAction(NavigationAction.PublishResult(NavResult.GroupsChanged))
+                    onNavigationAction(NavigationAction.NavigateBack)
+                }
             }
         }
     }
@@ -93,7 +99,7 @@ fun GroupEditScreen(
             SgTopBar(
                 title = "그룹 정보 수정",
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                     }
                 }

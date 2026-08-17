@@ -3,6 +3,7 @@ package kr.hhp227.storygroup.shared.domain.repository
 import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
+import kr.hhp227.storygroup.shared.domain.model.PublicProfile
 
 interface UserRepository {
     suspend fun getMyProfile(): Result<Profile>
@@ -46,9 +47,21 @@ interface UserRepository {
     val userBlocks: Flow<Long>
 
     /**
+     * 차단 해제 — DELETE /api/users/{userId}/block. 설정의 차단 목록에서만 쓴다.
+     * 해제해도 이미 걸러낸 화면(피드 스냅샷)은 되돌리지 않는다 — 다음 새로고침부터 다시 보인다.
+     */
+    suspend fun unblockUser(userId: Long): Result<Unit>
+
+    /**
      * 내가 차단한 사용자 목록 — GET /api/users/me/blocks.
      * 서버는 게시글·댓글·채팅만 걸러줄 뿐 그룹 멤버 목록에는 차단 사용자가 그대로 있어서,
      * 멤버를 그리는 화면이 이 목록으로 직접 걸러낸다.
      */
     suspend fun getBlockedUsers(): Result<List<BlockedUser>>
+
+    /**
+     * 공개 프로필 — GET /api/users/{userId}. 게시글 작성자·검색·친구 행에서 진입하는 화면용.
+     * 404(없는 사용자)는 예외로 떨어져 화면 로드 에러 문구가 된다
+     */
+    suspend fun getPublicProfile(userId: Long): Result<PublicProfile>
 }

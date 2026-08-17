@@ -46,3 +46,15 @@ data class ReportUserRequest(
     val reason: String? = null
 )
 
+// 공개 프로필 — GET /api/users/{userId}(PublicProfileController) 계약과 1:1.
+// 친구 여부는 응답에 없다 — 화면이 친구 목록과 대조한다(웹 미러)
+@Serializable
+data class PublicProfileResponse(
+    val id: Long,
+    val name: String,
+    val profileImg: String? = null,
+    val bio: String? = null,
+    val statusMessage: String? = null,
+    val createdAt: String = ""
+)
+

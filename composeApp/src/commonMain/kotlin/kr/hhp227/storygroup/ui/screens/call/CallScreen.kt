@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.rtc.RtcCallToggleButton
 import kr.hhp227.storygroup.ui.rtc.RtcVideoGrid
 import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
@@ -76,8 +78,8 @@ fun CallScreen(
     ring: Boolean,
     // false면 보이스톡 — 카메라 OFF·수화구로 시작(통화 중 카메라를 켜면 페이스톡 전환)
     video: Boolean,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     // 라우트(백스택 엔트리) 스코프 — pop되면 구독(=통화)도 함께 정리된다
     viewModel: CallViewModel = callViewModel(chatRoomId, ring, video)
 ) {
@@ -99,7 +101,7 @@ fun CallScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                CallViewModel.Event.Ended -> onBack()
+                CallViewModel.Event.Ended -> onNavigationAction(NavigationAction.NavigateBack)
             }
         }
     }

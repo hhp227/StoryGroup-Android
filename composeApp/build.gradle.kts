@@ -54,6 +54,9 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            // NavigationViewModel의 event(SharedFlow, replay 0)는 구독 중에만 전달되므로
+            // runTest + backgroundScope로 수집기를 띄워야 검증할 수 있다
+            implementation(libs.kotlinx.coroutines.test)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)

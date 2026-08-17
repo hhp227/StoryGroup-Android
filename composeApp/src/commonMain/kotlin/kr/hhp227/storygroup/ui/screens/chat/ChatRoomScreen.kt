@@ -1,6 +1,8 @@
 package kr.hhp227.storygroup.ui.screens.chat
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -71,11 +74,16 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
+import org.jetbrains.compose.resources.decodeToImageBitmap
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.chatDateKey
+import kr.hhp227.storygroup.ui.util.formatChatDate
 import kr.hhp227.storygroup.ui.util.rememberFilePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 import kotlin.math.roundToInt
@@ -91,15 +99,17 @@ fun ChatRoomScreen(
     chatRoomId: Long,
     groupId: Long?,
     title: String,
-    onBack: () -> Unit,
-    // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
-    onStartCall: (video: Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
+    // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
+    val onStartCall = { video: Boolean -> onNavigationAction(NavigationAction.StartCall(chatRoomId, title, video)) }
+    // 타인 메시지 아바타 탭 → 공개 프로필 다이얼로그(내 메시지엔 아바타가 없다)
+    val onOpenUserProfile = { userId: Long -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) }
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
     // + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
@@ -215,7 +225,7 @@ fun ChatRoomScreen(
         SgTopBar(
             title = title,
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = sg.ink)
                 }
             },
@@ -301,13 +311,22 @@ fun ChatRoomScreen(
                         val previous = uiState.messages.getOrNull(messageIndex + 1)
                         val isMine = message.userId == uiState.myUserId
 
-                        MessageRow(
-                            message = message,
-                            isMine = isMine,
-                            showAuthor = previous?.userId != message.userId,
-                            // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
-                            readCount = if (isMine) otherReadPositions.count { it >= message.id } else 0
-                        )
+                        Column {
+                            // 날짜가 바뀌는 첫 메시지 위에 날짜 버블 — 별도 행이 아니라 아이템 안에
+                            // 합성한다(행을 끼우면 이전 페이지 로드 시 키 앵커가 흔들린다 — 위 주석 참고).
+                            // 이전 페이지가 위로 끼면 판정이 다시 돌아 버블이 더 오래된 첫 메시지로 옮겨 붙는다
+                            if (previous == null || chatDateKey(previous.createdAt) != chatDateKey(message.createdAt)) {
+                                ChatDateBubble(message.createdAt)
+                            }
+                            MessageRow(
+                                message = message,
+                                isMine = isMine,
+                                showAuthor = previous?.userId != message.userId,
+                                // "읽음 N" = 내 메시지에 대해, 위치가 그 메시지 이상인 타인 수(웹 미러)
+                                readCount = if (isMine) otherReadPositions.count { it >= message.id } else 0,
+                                onAuthorClick = { onOpenUserProfile(message.userId) }
+                            )
+                        }
                     }
                 }
             }
@@ -421,6 +440,24 @@ private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewMod
     }
 }
 
+/** 날짜 구분 버블 — 그날 첫 메시지 위 가로 중앙 pill(카카오톡 관례, 기기 로컬 기준) */
+@Composable
+private fun ChatDateBubble(isoDateTime: String) {
+    val sg = SgTheme.colors
+
+    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+        Text(
+            formatChatDate(isoDateTime),
+            style = SgTheme.typography.labelSmall,
+            color = sg.inkSoft,
+            modifier = Modifier
+                .background(sg.linen, RoundedCornerShape(50))
+                .border(1.dp, sg.stoneBorder, RoundedCornerShape(50))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
 /** 웹 MessageBubble 미러 — 내 메시지는 우측 accent, 타인은 좌측 linen+작성자 변경 시 아바타/이름 */
 @Composable
 private fun MessageRow(
@@ -428,6 +465,7 @@ private fun MessageRow(
     isMine: Boolean,
     showAuthor: Boolean,
     readCount: Int,
+    onAuthorClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
@@ -438,7 +476,13 @@ private fun MessageRow(
     ) {
         if (!isMine) {
             if (showAuthor) {
-                SgAvatar(message.authorName, size = 32.dp, imageUrl = message.authorProfileImg)
+                // 아바타 탭 → 공개 프로필(그룹 상세 멤버 스트립·게시글 작성자 탭과 같은 진입 규칙)
+                SgAvatar(
+                    message.authorName,
+                    size = 32.dp,
+                    imageUrl = message.authorProfileImg,
+                    modifier = Modifier.clip(CircleShape).clickable(onClick = onAuthorClick)
+                )
             } else {
                 // 같은 작성자 연속 메시지는 아바타 없이 자리만 맞춘다(웹 spacer 미러)
                 Spacer(Modifier.width(32.dp))
@@ -459,7 +503,8 @@ private fun MessageRow(
                     style = SgTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = sg.inkSoft,
-                    modifier = Modifier.padding(bottom = 2.dp)
+                    // 이름 탭도 아바타와 같은 프로필 진입(clickable을 padding 밖에 둬 탭 영역 확보)
+                    modifier = Modifier.clickable(onClick = onAuthorClick).padding(bottom = 2.dp)
                 )
             }
             message.attachment?.let { attachment ->
@@ -525,7 +570,7 @@ private fun ReadCountLabel(readCount: Int, modifier: Modifier = Modifier) {
     )
 }
 
-/** 전송 대기 첨부 칩(웹 pending chip 미러) — 취소하면 업로드 없이 그냥 버려진다 */
+/** 전송 대기 첨부(웹 pending chip 미러) — 이미지는 썸네일, 파일은 이름 칩. 취소하면 업로드 없이 그냥 버려진다 */
 @Composable
 private fun PendingAttachmentChip(
     pending: ChatRoomViewModel.PendingAttachment,
@@ -533,25 +578,49 @@ private fun PendingAttachmentChip(
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
+    // 이미지면 썸네일로 — 첨부당 1회만 디코드하고, 깨진 데이터는 null로 떨어져 이름 칩 폴백
+    val thumbnail = if (pending.isImage) {
+        remember(pending) { runCatching { pending.bytes.decodeToImageBitmap() }.getOrNull() }
+    } else {
+        null
+    }
 
     Row(
         modifier = modifier.fillMaxWidth().background(sg.linen).padding(start = 16.dp, end = 4.dp, top = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            if (pending.isImage) Icons.Default.Image else Icons.Default.Description,
-            contentDescription = null,
-            tint = sg.inkSoft,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            "${pending.fileName} (${formatFileSize(pending.bytes.size)})",
-            style = SgTheme.typography.bodySmall,
-            color = sg.ink,
-            maxLines = 1,
-            modifier = Modifier.weight(1f)
-        )
+        if (thumbnail != null) {
+            Image(
+                bitmap = thumbnail,
+                contentDescription = pending.fileName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .height(64.dp)
+                    // 높이 기준 원본 비율 폭 — 파노라마는 200dp에서 잘라낸다(Crop)
+                    .widthIn(max = 200.dp)
+                    .aspectRatio(
+                        thumbnail.width.toFloat() / thumbnail.height.coerceAtLeast(1),
+                        matchHeightConstraintsFirst = true
+                    )
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            Spacer(Modifier.weight(1f))
+        } else {
+            Icon(
+                if (pending.isImage) Icons.Default.Image else Icons.Default.Description,
+                contentDescription = null,
+                tint = sg.inkSoft,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "${pending.fileName} (${formatFileSize(pending.bytes.size)})",
+                style = SgTheme.typography.bodySmall,
+                color = sg.ink,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+        }
         IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
             Icon(Icons.Default.Close, contentDescription = "첨부 취소", tint = sg.inkSoft, modifier = Modifier.size(16.dp))
         }

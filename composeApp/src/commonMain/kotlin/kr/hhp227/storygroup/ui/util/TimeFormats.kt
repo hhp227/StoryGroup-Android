@@ -25,4 +25,33 @@ fun formatRelativeTime(isoDateTime: String): String {
     }
 }
 
+/**
+ * 가입일 표기 — 웹 공개 프로필의 toLocaleDateString("ko-KR") 미러("2026. 7. 1." — 선행 0 없음).
+ * " 가입" 접미는 화면 몫. iosApp TimeFormats.swift joinDate와 1:1 미러
+ */
+fun formatJoinDate(isoDateTime: String): String {
+    val parts = isoDateTime.substringBefore('T').split('-').mapNotNull { it.toIntOrNull() }
+
+    if (parts.size != 3) return isoDateTime.dateOnly()
+    return "${parts[0]}. ${parts[1]}. ${parts[2]}."
+}
+
+// 채팅 날짜 버블 요일 표기 — dayOfWeek(일=0…토=6) 인덱스와 1:1
+private val DAY_NAMES = listOf("일", "월", "화", "수", "목", "금", "토")
+
+/** 채팅 날짜 구분 그룹 키 — 기기 로컬 기준 yyyy-MM-dd(파싱 실패 시 서버 오프셋 날짜부 폴백) */
+fun chatDateKey(isoDateTime: String): String =
+    isoToLocal(isoDateTime)?.dateKey ?: isoDateTime.substringBefore('T')
+
+/**
+ * 채팅 날짜 구분 버블 라벨 — "2026년 8월 16일 토요일"(카카오톡 관례, 기기 로컬 기준).
+ * iosApp TimeFormats.swift chatDate와 1:1 미러
+ */
+fun formatChatDate(isoDateTime: String): String {
+    val local = isoToLocal(isoDateTime) ?: return isoDateTime.dateOnly()
+
+    return "${local.year}년 ${local.month}월 ${local.day}일 " +
+        "${DAY_NAMES[dayOfWeek(local.year, local.month, local.day)]}요일"
+}
+
 private fun String.dateOnly(): String = substringBefore('T').replace('-', '.')

@@ -96,6 +96,13 @@ class GroupSettingsViewModel(
     ) {
         val isOwner: Boolean get() = group?.myRole == GroupRole.OWNER
         val isLounge: Boolean get() = group?.isLounge == true
+
+        /**
+         * 신고함 노출 조건 — 웹 커버 "신고함" 버튼의 canModerate(myRole) 미러.
+         * 라운지도 게시글 신고가 이 신고함으로 접수되므로 GroupDetailViewModel의
+         * canModerate(초대코드·일정용, 라운지 제외)와 달리 라운지를 빼지 않는다.
+         */
+        val canModerate: Boolean get() = group != null && group.myRole != GroupRole.MEMBER
     }
 
     sealed interface Action {

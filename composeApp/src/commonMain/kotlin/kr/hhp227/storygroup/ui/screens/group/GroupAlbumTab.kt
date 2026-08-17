@@ -59,6 +59,17 @@ internal fun GroupAlbumTab(
     val refreshState = lazyPagingItems.loadState.refresh
     val appendState = lazyPagingItems.loadState.append
 
+    // 첫 로드·복귀 재표출 중엔 그리드를 컴포즈하지 않는다 — 빈 그리드로 한 프레임이라도
+    // 측정되면 복원된 스크롤 인덱스가 0으로 클램프된다(GroupFeedTab과 동일 사유)
+    if (lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading) {
+        Box(
+            modifier.fillMaxSize().padding(top = 48.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            CircularProgressIndicator(color = sg.accent)
+        }
+        return
+    }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = modifier.fillMaxSize(),
@@ -67,17 +78,6 @@ internal fun GroupAlbumTab(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         when {
-            lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(
-                key = "album-loading",
-                span = { GridItemSpan(maxLineSpan) }
-            ) {
-                Box(
-                    Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = sg.accent)
-                }
-            }
             lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(
                 key = "album-error",
                 span = { GridItemSpan(maxLineSpan) }

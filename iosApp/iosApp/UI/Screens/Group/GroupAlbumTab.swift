@@ -15,6 +15,11 @@ struct GroupAlbumTab: View {
     /// 게시글 상세 push의 VM 생성에 쓰인다
     let container: AppContainer
 
+    /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 화면은 전달만
+    let chatViewModel: ChatViewModel
+
+    let profileViewModel: ProfileViewModel
+
     @Environment(\.sgColors) private var colors
 
     private static let columns = [
@@ -85,7 +90,13 @@ struct GroupAlbumTab: View {
         let photo = photoItems.get(index)
         return NavigationLink {
             if let photo {
-                PostDetailView(container: container, groupId: groupId, postId: photo.postId)
+                PostDetailView(
+                    container: container,
+                    groupId: groupId,
+                    postId: photo.postId,
+                    chatViewModel: chatViewModel,
+                    profileViewModel: profileViewModel
+                )
             }
         } label: {
             // scaledToFill은 명시 프레임 필수 — GeometryReader로 셀 크기를 고정한다(그룹 그리드 커버 픽스 미러)
