@@ -48,6 +48,8 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
@@ -71,8 +73,8 @@ private fun createGroupViewModel(): CreateGroupViewModel {
  */
 @Composable
 fun CreateGroupScreen(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: CreateGroupViewModel = createGroupViewModel(),
     groupsViewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
@@ -95,7 +97,7 @@ fun CreateGroupScreen(
             when (event) {
                 is CreateGroupViewModel.Event.Created -> {
                     groupsViewModel.onAction(GroupsViewModel.Action.Refresh)
-                    onBack()
+                    onNavigationAction(NavigationAction.NavigateBack)
                 }
             }
         }
@@ -104,7 +106,7 @@ fun CreateGroupScreen(
         SgTopBar(
             title = "그룹 만들기",
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }

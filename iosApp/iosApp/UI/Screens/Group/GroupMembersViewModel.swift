@@ -5,10 +5,11 @@ import Shared
 /// 멤버 탭 — composeApp GroupMembersViewModel.kt와 1:1 미러(탭별 VM 분리).
 /// 인박스는 모더레이터 전용 API지만 role 게이트 없이 항상 시도하고 403은 빈 목록으로
 /// 흡수한다(초대코드 버튼 노출만 화면이 상세 VM의 canModerate로 게이트).
+/// 멤버 탭=공개 프로필 진입(DM은 프로필의 버튼 몫)이라 화면 전환이 없어 Event=Never.
 final class GroupMembersViewModel: MviViewModel {
-    @Published private(set) var uiState = UiState()
+    typealias Event = Never
 
-    let event = PassthroughSubject<Event, Never>()
+    @Published private(set) var uiState = UiState()
 
     let groupId: Int64
 
@@ -22,8 +23,6 @@ final class GroupMembersViewModel: MviViewModel {
 
     private let createGroupInviteUseCase: CreateGroupInviteUseCase
 
-    private let openDirectRoomUseCase: OpenDirectRoomUseCase
-
     private let getBlockedUsersUseCase: GetBlockedUsersUseCase
 
     func onAction(_ action: Action) {
@@ -36,8 +35,6 @@ final class GroupMembersViewModel: MviViewModel {
         case .dismissInvite:
             uiState.createdInvite = nil
             uiState.inviteError = nil
-        case .openDm(let userId, let userName): openDm(userId: userId, userName: userName)
-        case .dismissDm: uiState.dmError = nil
         }
     }
 
@@ -127,26 +124,6 @@ final class GroupMembersViewModel: MviViewModel {
         }
     }
 
-    /// 멤버와 1:1 DM 열기 — get-or-create(멱등)라 이미 방이 있으면 그 방으로 간다(웹 handleDm 미러)
-    private func openDm(userId: Int64, userName: String) {
-        if uiState.isOpeningDm { return }
-
-        uiState.isOpeningDm = true
-        uiState.dmError = nil
-        Task { @MainActor in
-            do {
-                let chatRoomId = try await openDirectRoomUseCase.invoke(otherUserId: userId)
-                uiState.isOpeningDm = false
-                // 방 이름은 서버가 "DM" 고정이라 상대 이름을 제목으로 넘긴다(허브와 동일)
-                event.send(.dmOpened(chatRoomId: chatRoomId.int64Value, title: userName))
-            } catch {
-                // 차단 관계(403 BLOCKED) 등 — 다이얼로그 안에 표시된다
-                uiState.isOpeningDm = false
-                uiState.dmError = error.kotlinMessage(fallback: "DM을 열지 못했습니다.")
-            }
-        }
-    }
-
     init(
         groupId: Int64,
         getGroupMembersUseCase: GetGroupMembersUseCase,
@@ -154,7 +131,6 @@ final class GroupMembersViewModel: MviViewModel {
         approveJoinRequestUseCase: ApproveJoinRequestUseCase,
         rejectJoinRequestUseCase: RejectJoinRequestUseCase,
         createGroupInviteUseCase: CreateGroupInviteUseCase,
-        openDirectRoomUseCase: OpenDirectRoomUseCase,
         getBlockedUsersUseCase: GetBlockedUsersUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase
     ) {
@@ -164,7 +140,6 @@ final class GroupMembersViewModel: MviViewModel {
         self.approveJoinRequestUseCase = approveJoinRequestUseCase
         self.rejectJoinRequestUseCase = rejectJoinRequestUseCase
         self.createGroupInviteUseCase = createGroupInviteUseCase
-        self.openDirectRoomUseCase = openDirectRoomUseCase
         self.getBlockedUsersUseCase = getBlockedUsersUseCase
         uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
     }
@@ -185,8 +160,6 @@ final class GroupMembersViewModel: MviViewModel {
         var createdInvite: GroupInvite? = nil
         var isCreatingInvite = false
         var inviteError: String? = nil
-        var isOpeningDm = false
-        var dmError: String? = nil
 
         /// 멤버 그리드에 그릴 멤버 — 차단한 사용자는 뺀다(차단=내 화면에서 숨김)
         var visibleMembers: [GroupMember] { members.filter { !blockedUserIds.contains($0.userId) } }
@@ -198,12 +171,5 @@ final class GroupMembersViewModel: MviViewModel {
         case rejectJoinRequest(userId: Int64)
         case createInvite(maxUses: Int?, expiresInDays: Int?)
         case dismissInvite
-        case openDm(userId: Int64, userName: String)
-        case dismissDm
-    }
-
-    enum Event {
-        /// DM 방 확보 성공 — 화면이 채팅방(groupId=nil)으로 push한다
-        case dmOpened(chatRoomId: Int64, title: String)
     }
 }

@@ -45,6 +45,9 @@ import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoThumbnail
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.PickerMode
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
@@ -70,17 +73,16 @@ private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewMo
 /**
  * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진·동영상 첨부 행.
  * groupId null이면 라운지(홈 피드)에 게시. NavHost 풀스크린 목적지라 상단바는 화면이 소유하고,
- * 성공 이벤트는 화면이 수집해 onCreated로 알린다(ConCafe CafeScreen 패턴).
+ * 성공 이벤트는 화면이 수집해 결과를 publish하고 스스로 복귀한다(ConCafe CafeScreen 패턴).
  * iosApp CreatePostView.swift와 1:1 미러
  */
 @Composable
 fun CreatePostScreen(
     groupId: Long?,
-    onBack: () -> Unit,
-    onCreated: () -> Unit,
     modifier: Modifier = Modifier,
     // 있으면 수정 모드 — 기존 본문·첨부를 불러와 채운다
     postId: Long? = null,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: CreatePostViewModel = createPostViewModel(groupId, postId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -100,11 +102,20 @@ fun CreatePostScreen(
         onAction(CreatePostViewModel.Action.AddVideo(picked.bytes, picked.fileName, picked.contentType))
     }
 
-    // 일회성 이벤트 수집 — 성공 시 호출부(App.kt)가 피드 갱신+복귀를 처리한다
+    // 일회성 이벤트 수집 — 성공 시 결과를 publish하고 스스로 복귀한다(수정이면 상세가, 신규면 피드가 읽어간다)
     LaunchedEffect(viewModel) {
         viewModel.event.collect { event ->
             when (event) {
-                CreatePostViewModel.Event.Created -> onCreated()
+                CreatePostViewModel.Event.Created -> {
+                    val result = if (postId != null && groupId != null) {
+                        NavResult.PostUpdated(groupId, postId)
+                    } else {
+                        NavResult.PostCreated(groupId)
+                    }
+
+                    onNavigationAction(NavigationAction.PublishResult(result))
+                    onNavigationAction(NavigationAction.NavigateBack)
+                }
             }
         }
     }
@@ -113,7 +124,7 @@ fun CreatePostScreen(
         SgTopBar(
             title = if (uiState.isEditMode) "글 수정" else "글쓰기",
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             },

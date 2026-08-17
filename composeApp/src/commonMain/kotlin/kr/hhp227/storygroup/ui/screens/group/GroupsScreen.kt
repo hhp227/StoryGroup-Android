@@ -54,6 +54,10 @@ import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.MainDestination
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgColors
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -64,27 +68,23 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
  */
 @Composable
 fun GroupsScreen(
-    onOpenGroup: (Group) -> Unit,
-    onOpenNotifications: () -> Unit,
-    onOpenCreateGroup: () -> Unit,
-    onOpenDiscoverGroups: () -> Unit,
-    // 상세에서 나가기/삭제 후 복귀 — 셸이 소비해 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
-    refreshRequested: Boolean,
-    onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     viewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
     }
 ) {
     GroupsContent(
         viewModel = viewModel,
-        onOpenGroup = onOpenGroup,
-        onOpenNotifications = onOpenNotifications,
-        onOpenCreateGroup = onOpenCreateGroup,
-        onOpenDiscoverGroups = onOpenDiscoverGroups,
-        refreshRequested = refreshRequested,
-        onRefreshHandled = onRefreshHandled,
+        onOpenGroup = { group -> onNavigationAction(NavigationAction.NavigateToGroupDetail(group.id)) },
+        onOpenNotifications = { onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS)) },
+        onOpenCreateGroup = { onNavigationAction(NavigationAction.NavigateToCreateGroup) },
+        onOpenDiscoverGroups = { onNavigationAction(NavigationAction.NavigateToDiscoverGroups) },
+        // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+        refreshRequested = NavResult.GroupsChanged in pendingResults,
+        onRefreshHandled = { onNavigationAction(NavigationAction.ConsumeResult(NavResult.GroupsChanged)) },
         navigationIcon = navigationIcon,
         modifier = modifier
     )

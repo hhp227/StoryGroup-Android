@@ -150,7 +150,7 @@ class GroupEditViewModel(
     }
 
     sealed interface Event {
-        /** 저장 성공 — App.kt가 GROUP_UPDATED_KEY를 남기고 pop한다 */
+        /** 저장 성공 — GroupEditScreen이 NavResult.GroupUpdated·GroupsChanged를 publish하고 NavigateBack한다 */
         data object Saved : Event
     }
 }

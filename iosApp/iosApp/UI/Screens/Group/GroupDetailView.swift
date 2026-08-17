@@ -5,6 +5,12 @@ import Shared
 // SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
 import class Shared.Group
 
+/// 공개 프로필 시트에서 고른 후속 push 대상 — 시트가 완전히 닫힌 뒤(onDismiss) 실행해야 유실되지 않는다
+private enum ProfileFollowUp {
+    case chatRoom(ChatRoomRef)
+    case accountSettings
+}
+
 /// 그룹 상세 — 웹 /groups/[id]·Compose GroupDetailScreen 미러: 콜랩싱 커버(그라데이션 폴백+
 /// 이름/설명/역할 칩)+5탭(소식/앨범/일정/멤버/설정). 상단바는 루트 NavigationStack의 기본 내비바.
 /// groupId만 받아 VM이 스스로 로드한다(목록 페이징 전환으로 스냅샷 lookup 불가 — Compose 미러).
@@ -90,7 +96,6 @@ struct GroupDetailView: View {
             approveJoinRequestUseCase: container.approveJoinRequestUseCase,
             rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
             createGroupInviteUseCase: container.createGroupInviteUseCase,
-            openDirectRoomUseCase: container.openDirectRoomUseCase,
             getBlockedUsersUseCase: container.getBlockedUsersUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
         ))
@@ -184,8 +189,11 @@ private struct GroupDetailContent: View {
     /// 모더레이터 초대코드 다이얼로그 — Compose GroupDetailScreen showInviteDialog 미러
     @State private var showInviteDialog = false
 
-    /// DM 확인 다이얼로그 대상 — 멤버 탭에서 타인을 탭하면 채워진다(Compose dmTargetMember 미러)
-    @State private var dmTargetMember: GroupMember?
+    /// 멤버 탭 셀 탭 → 공개 프로필 시트 — Compose UserProfileRoute 다이얼로그 미러(DM은 프로필의 버튼 몫)
+    @State private var selectedProfileUserId: Int64? = nil
+
+    /// 프로필 시트의 후속 이동(DM 채팅방/본인 계정 설정) — 시트 dismiss 완료 후 push한다
+    @State private var profileFollowUp: ProfileFollowUp? = nil
 
     /// push할 채팅방 — Compose ChatRoomRoute 미러(상단바 채팅 버튼=그룹 기본 방, 멤버 탭 DM 공용)
     @State private var pushedChatRoom: ChatRoomRef?
@@ -193,12 +201,14 @@ private struct GroupDetailContent: View {
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
     @State private var shareItem: ShareItem?
 
-    /// 설정 탭 풀스크린 push 3종 — Compose GroupEditRoute/AccountSettingsRoute/AppSettingsRoute 미러
+    /// 설정 탭 풀스크린 push 4종 — Compose GroupEditRoute/AccountSettingsRoute/AppSettingsRoute/GroupReportsRoute 미러
     @State private var showGroupEdit = false
 
     @State private var showAccountSettings = false
 
     @State private var showAppSettings = false
+
+    @State private var showGroupReports = false
 
     /// 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, Compose APP_SHARE_TEXT 미러)
     private static let appShareText = "StoryGroup — 그룹과 함께하는 이야기\n\(StoryGroupApi.shared.DEFAULT_BASE_URL)"
@@ -212,6 +222,8 @@ private struct GroupDetailContent: View {
                 .navigationDestination(isPresented: $showGroupEdit) { groupEditDestination }
                 .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
                 .navigationDestination(isPresented: $showAppSettings) { appSettingsDestination }
+                .navigationDestination(isPresented: $showGroupReports) { groupReportsDestination }
+                .sheet(isPresented: showProfile, onDismiss: runProfileFollowUp) { profileDestination }
         } else {
             core
                 .background(
@@ -254,6 +266,15 @@ private struct GroupDetailContent: View {
                     }
                     .hidden()
                 )
+                .background(
+                    NavigationLink(isActive: $showGroupReports) {
+                        groupReportsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .sheet(isPresented: showProfile, onDismiss: runProfileFollowUp) { profileDestination }
         }
     }
 
@@ -310,20 +331,6 @@ private struct GroupDetailContent: View {
                 )
             }
         }
-        .overlay {
-            if let member = dmTargetMember {
-                DmConfirmDialog(
-                    memberName: member.name,
-                    isLoading: groupMembersViewModel.uiState.isOpeningDm,
-                    error: groupMembersViewModel.uiState.dmError,
-                    onDismiss: {
-                        dmTargetMember = nil
-                        groupMembersViewModel.onAction(.dismissDm)
-                    },
-                    onConfirm: { groupMembersViewModel.onAction(.openDm(userId: member.userId, userName: member.name)) }
-                )
-            }
-        }
         // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
         .navigationTitle(viewModel.uiState.group?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
@@ -343,15 +350,6 @@ private struct GroupDetailContent: View {
                         Image(systemName: "bubble.left.fill")
                     }
                 }
-            }
-        }
-        // 멤버 탭의 일회성 이벤트 — DM 방 확보 성공 시 채팅방으로 이동(Compose LaunchedEffect(membersViewModel) 미러)
-        .onReceive(groupMembersViewModel.event) { event in
-            switch event {
-            case .dmOpened(let chatRoomId, let title):
-                dmTargetMember = nil
-                // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
-                pushedChatRoom = ChatRoomRef(chatRoomId: chatRoomId, groupId: nil, title: title)
             }
         }
         // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 groupEditDestination 클로저 경로)
@@ -454,7 +452,13 @@ private struct GroupDetailContent: View {
     @ViewBuilder private var tabContent: some View {
         switch selectedTab {
         case 0: feedTab
-        case 1: GroupAlbumTab(photoItems: photoLazyPagingItems, groupId: viewModel.groupId, container: container)
+        case 1: GroupAlbumTab(
+            photoItems: photoLazyPagingItems,
+            groupId: viewModel.groupId,
+            container: container,
+            chatViewModel: chatViewModel,
+            profileViewModel: profileViewModel
+        )
         case 2: GroupEventsTab(viewModel: groupEventsViewModel, canModerate: viewModel.uiState.canModerate)
         case 3: membersTab
         default: GroupSettingsTab(
@@ -463,6 +467,7 @@ private struct GroupDetailContent: View {
             onOpenGroupEdit: { showGroupEdit = true },
             onOpenAccountSettings: { showAccountSettings = true },
             onOpenAppSettings: { showAppSettings = true },
+            onOpenGroupReports: { showGroupReports = true },
             onShareApp: { shareItem = ShareItem(text: Self.appShareText) }
         )
         }
@@ -537,7 +542,9 @@ private struct GroupDetailContent: View {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id
+                                postId: post.id,
+                                chatViewModel: chatViewModel,
+                                profileViewModel: profileViewModel
                             )
                         } label: {
                             SGPostCard(
@@ -685,7 +692,8 @@ private struct GroupDetailContent: View {
                 GridItem(.flexible(), spacing: 12, alignment: .top)
             ], spacing: 16) {
                 ForEach(groupMembersViewModel.uiState.visibleMembers, id: \.userId) { member in
-                    Button(action: { dmTargetMember = member }) {
+                    // 본인 포함 전원 탭 가능 — 프로필 시트 진입(본인=프로필 수정, DM 버튼은 타인에게만 보인다)
+                    Button(action: { selectedProfileUserId = member.userId }) {
                         VStack(spacing: 4) {
                             SGAvatar(name: member.name, imageUrl: member.profileImg)
                             Text(member.name)
@@ -695,8 +703,6 @@ private struct GroupDetailContent: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
-                    .disabled(member.userId == groupMembersViewModel.uiState.myUserId)
                 }
             }
         }
@@ -733,7 +739,8 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose GROUP_UPDATED_KEY 미러)
+    /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose NavResult.GroupUpdated
+    /// pendingResults 미러)
     private var groupEditDestination: some View {
         GroupEditView(groupId: viewModel.groupId, container: container) {
             showGroupEdit = false
@@ -750,6 +757,52 @@ private struct GroupDetailContent: View {
 
     private var appSettingsDestination: some View {
         SGSettingsView(theme: theme)
+    }
+
+    /// 신고함(모더레이터) — 신고된 게시글 탭 시 상세 push 체인에 세션 VM 2종이 필요해 전달한다
+    private var groupReportsDestination: some View {
+        GroupReportsView(
+            groupId: viewModel.groupId,
+            container: container,
+            chatViewModel: chatViewModel,
+            profileViewModel: profileViewModel
+        )
+    }
+
+    /// 멤버 탭 셀 탭 → 공개 프로필 시트(검색·친구 탭과 같은 진입 규칙)
+    @ViewBuilder private var profileDestination: some View {
+        if let userId = selectedProfileUserId {
+            UserProfileView(
+                userId: userId,
+                container: container,
+                onOpenChatRoom: { room in
+                    profileFollowUp = .chatRoom(room)
+                    selectedProfileUserId = nil
+                },
+                onOpenAccountSettings: {
+                    profileFollowUp = .accountSettings
+                    selectedProfileUserId = nil
+                }
+            )
+        }
+    }
+
+    /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        switch profileFollowUp {
+        case .chatRoom(let room): pushedChatRoom = room
+        case .accountSettings: showAccountSettings = true
+        case nil: break
+        }
+        profileFollowUp = nil
+    }
+
+    /// 시트를 닫으면(X·드래그) selectedProfileUserId를 nil로 되돌리는 브리지(MainShellView 선례)
+    private var showProfile: Binding<Bool> {
+        Binding(
+            get: { selectedProfileUserId != nil },
+            set: { if !$0 { selectedProfileUserId = nil } }
+        )
     }
 
     init(
@@ -888,60 +941,5 @@ private struct InviteDialog: View {
         // 서버 ISO-8601 원문에서 날짜만 잘라 보여준다
         if let expiresAt = invite.expiresAt { parts.append("\(expiresAt.prefix(10))까지 유효") }
         return parts.isEmpty ? "사용 제한 없음" : parts.joined(separator: " · ")
-    }
-}
-
-/// 멤버 탭 → 1:1 DM 확인 다이얼로그 — Compose DmConfirmDialog 미러(InviteDialog와 같은
-/// 반투명 배경+중앙 카드, iOS 15 공통). 성공 시 dmOpened 이벤트로 채팅방으로 push된다
-private struct DmConfirmDialog: View {
-    let memberName: String
-
-    let isLoading: Bool
-
-    let error: String?
-
-    let onDismiss: () -> Void
-
-    let onConfirm: () -> Void
-
-    @Environment(\.sgColors) private var colors
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture(perform: onDismiss)
-            SGCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("1:1 DM")
-                        .font(.headline)
-                        .foregroundColor(colors.ink)
-                    Text("\(memberName)님과 1:1 DM을 시작할까요?")
-                        .font(.subheadline)
-                        .foregroundColor(colors.ink)
-                    if let error = error {
-                        Text(error).font(.caption).foregroundColor(colors.rust)
-                    }
-                    HStack(spacing: 8) {
-                        Button(action: onDismiss) {
-                            Text("취소")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity)
-                                // SGPrimaryButton과 같은 높이로 나란히 맞춘다
-                                .frame(height: 48)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
-                                        .stroke(colors.stoneBorder, lineWidth: 1)
-                                )
-                                .foregroundColor(colors.ink)
-                        }
-                        .buttonStyle(.plain)
-                        SGPrimaryButton(title: "DM 시작", isLoading: isLoading, action: onConfirm)
-                    }
-                }
-                .padding(16)
-            }
-            .padding(24)
-        }
     }
 }

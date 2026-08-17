@@ -28,6 +28,8 @@ import kr.hhp227.storygroup.shared.data.network.dto.InviteResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinRequestResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MemberResponse
+import kr.hhp227.storygroup.shared.data.network.dto.PostReportResponse
+import kr.hhp227.storygroup.shared.data.network.dto.ProcessReportRequest
 import kr.hhp227.storygroup.shared.data.paging.PagePagingConfig
 import kr.hhp227.storygroup.shared.data.paging.PagePagingSource
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
@@ -43,6 +45,8 @@ import kr.hhp227.storygroup.shared.domain.model.GroupPhotoMediaType
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
 import kr.hhp227.storygroup.shared.domain.model.JoinResult
+import kr.hhp227.storygroup.shared.domain.model.PostReport
+import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 
 class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
@@ -193,6 +197,22 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
             client.post("/api/groups/$groupId/leave")
             Unit
         }
+
+    override suspend fun getGroupReports(groupId: Long, status: ReportStatus?): Result<List<PostReport>> =
+        runCatching {
+            client.get("/api/groups/$groupId/reports") {
+                // null=전체 — 쿼리 자체를 뺀다(웹과 동일)
+                if (status != null) parameter("status", status.name)
+            }.body<List<PostReportResponse>>().map { it.toDomain() }
+        }
+
+    override suspend fun processGroupReport(groupId: Long, reportId: Long, status: ReportStatus): Result<PostReport> =
+        runCatching {
+            client.patch("/api/groups/$groupId/reports/$reportId") {
+                contentType(ContentType.Application.Json)
+                setBody(ProcessReportRequest(status.name))
+            }.body<PostReportResponse>().toDomain()
+        }
 }
 
 // 백엔드 sort 파라미터는 소문자 wire 이름(recent|popular) — DiscoverSort.name과 표기가 달라 별도 매핑
@@ -256,4 +276,19 @@ private fun GroupPhotoResponse.toDomain() = GroupPhoto(
     userId = userId,
     authorName = authorName,
     createdAt = createdAt
+)
+
+private fun PostReportResponse.toDomain() = PostReport(
+    id = id,
+    postId = postId,
+    postTextPreview = postTextPreview,
+    postAuthorId = postAuthorId,
+    postAuthorName = postAuthorName,
+    reporterId = reporterId,
+    reporterName = reporterName,
+    reason = reason,
+    // 미지의 값은 PENDING 폴백 — 서버가 상태를 늘려도 목록이 죽지 않는다
+    status = ReportStatus.entries.firstOrNull { it.name == status } ?: ReportStatus.PENDING,
+    createdAt = createdAt,
+    processedAt = processedAt
 )

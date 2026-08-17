@@ -22,9 +22,10 @@ import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,8 +87,9 @@ fun SgCollapsingTabScaffold(
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // 접힘 구간 = 헤더 전체 - 핀 상단바(탭바는 그 아래 남는다) — SgCollapsingHeaderScaffold와 동일 규칙
     val collapseRangePx = with(density) { (headerHeight - TabScaffoldTopBarHeight).toPx() }
-    // 0(펼침) → collapseRangePx(접힘)
-    var headerOffsetPx by remember { mutableFloatStateOf(0f) }
+    // 0(펼침) → collapseRangePx(접힘). saveable — 라우트 재진입(채팅방 등을 다녀온 복귀) 시
+    // 접힘 상태가 유지돼야 복원되는 리스트 스크롤 위치와 화면이 일관된다
+    var headerOffsetPx by rememberSaveable { mutableStateOf(0f) }
     val scope = rememberCoroutineScope()
     val connection = remember(collapseRangePx) {
         object : NestedScrollConnection {

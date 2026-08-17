@@ -10,6 +10,7 @@ import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.SearchRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
@@ -23,6 +24,7 @@ import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
+import kr.hhp227.storygroup.shared.domain.repository.SearchRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 import kr.hhp227.storygroup.shared.domain.usecase.AddFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ApproveJoinRequestUseCase
@@ -60,6 +62,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetIceServersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPostsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupReportsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetLoungePostsPagingDataUseCase
@@ -68,6 +71,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyJoinRequestedGroupsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPublicProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
@@ -86,18 +90,21 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ProcessGroupReportUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RsvpEventUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.SearchUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SearchUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UnblockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
@@ -124,6 +131,7 @@ class AppContainer(
     private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
     private val friendRepository: FriendRepository = FriendRepositoryImpl(apiClient)
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
+    private val searchRepository: SearchRepository = SearchRepositoryImpl(apiClient)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -132,6 +140,8 @@ class AppContainer(
     val getMyProfileUseCase = GetMyProfileUseCase(userRepository)
     val updateMyProfileUseCase = UpdateMyProfileUseCase(userRepository)
     val changePasswordUseCase = ChangePasswordUseCase(userRepository)
+    // 공개 프로필 — 게시글 작성자·검색·친구 행에서 진입(웹 /users/[id] 미러)
+    val getPublicProfileUseCase = GetPublicProfileUseCase(userRepository)
     val getMyGroupsUseCase = GetMyGroupsUseCase(groupRepository)
     val getMyGroupsPagingDataUseCase = GetMyGroupsPagingDataUseCase(groupRepository)
     val getGroupUseCase = GetGroupUseCase(groupRepository)
@@ -159,6 +169,11 @@ class AppContainer(
     val blockUserUseCase = BlockUserUseCase(userRepository)
     // 멤버 스트립에서 차단 사용자를 걸러내는 데 쓴다(서버는 멤버 목록을 걸러주지 않는다)
     val getBlockedUsersUseCase = GetBlockedUsersUseCase(userRepository)
+    // 차단 해제 — 설정의 차단 사용자 관리 화면 전용(웹 /settings/blocked 미러)
+    val unblockUserUseCase = UnblockUserUseCase(userRepository)
+    // 그룹 신고함(모더레이터) — 목록·확인/기각 처리(웹 /groups/[id]/reports 미러)
+    val getGroupReportsUseCase = GetGroupReportsUseCase(groupRepository)
+    val processGroupReportUseCase = ProcessGroupReportUseCase(groupRepository)
     // 차단 알림 — 목록이 재조회 없이 그 작성자의 글만 걷어낸다
     val observeUserBlocksUseCase = ObserveUserBlocksUseCase(userRepository)
     // 삭제 알림 — 목록이 재조회 없이 그 글만 걷어낸다
@@ -212,4 +227,6 @@ class AppContainer(
     val addFriendUseCase = AddFriendUseCase(friendRepository)
     val removeFriendUseCase = RemoveFriendUseCase(friendRepository)
     val searchUsersUseCase = SearchUsersUseCase(friendRepository)
+    // 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
+    val searchUseCase = SearchUseCase(searchRepository)
 }

@@ -91,6 +91,11 @@ final class GroupSettingsViewModel: MviViewModel {
 
         var isOwner: Bool { group?.myRole == .owner }
         var isLounge: Bool { group?.isLounge == true }
+
+        /// 신고함 노출 조건 — 웹 커버 "신고함" 버튼의 canModerate(myRole) 미러.
+        /// 라운지도 게시글 신고가 이 신고함으로 접수되므로 GroupDetailViewModel의
+        /// canModerate(초대코드·일정용, 라운지 제외)와 달리 라운지를 빼지 않는다.
+        var canModerate: Bool { group != nil && group?.myRole != .member }
     }
 
     enum Action {

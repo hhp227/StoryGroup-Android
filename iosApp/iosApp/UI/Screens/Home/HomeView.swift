@@ -12,11 +12,16 @@ struct HomeView: View {
     /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
+    /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
+    private let chatViewModel: ChatViewModel
+
+    private let profileViewModel: ProfileViewModel
+
     var body: some View {
-        HomeContent(viewModel: homeViewModel, container: container)
+        HomeContent(viewModel: homeViewModel, container: container, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
     }
 
-    init(container: AppContainer) {
+    init(container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         _homeViewModel = StateObject(wrappedValue: HomeViewModel(
             getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase,
@@ -25,6 +30,8 @@ struct HomeView: View {
             togglePostLikeUseCase: container.togglePostLikeUseCase
         ))
         self.container = container
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
     }
 }
 
@@ -34,6 +41,11 @@ private struct HomeContent: View {
     @ObservedObject var viewModel: HomeViewModel
 
     let container: AppContainer
+
+    /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
+    let chatViewModel: ChatViewModel
+
+    let profileViewModel: ProfileViewModel
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -184,7 +196,9 @@ private struct HomeContent: View {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id
+                                postId: post.id,
+                                chatViewModel: chatViewModel,
+                                profileViewModel: profileViewModel
                             )
                         } label: {
                             SGPostCard(
@@ -206,13 +220,15 @@ private struct HomeContent: View {
         }
     }
 
-    init(viewModel: HomeViewModel, container: AppContainer) {
+    init(viewModel: HomeViewModel, container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }
