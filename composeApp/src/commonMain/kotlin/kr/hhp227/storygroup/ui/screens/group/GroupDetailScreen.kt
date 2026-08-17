@@ -80,6 +80,9 @@ import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
@@ -186,26 +189,9 @@ private fun groupSettingsViewModel(groupId: Long): GroupSettingsViewModel {
 @Composable
 fun GroupDetailScreen(
     groupId: Long,
-    onBack: () -> Unit,
-    onCreatePost: () -> Unit,
-    // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘긴다
-    onOpenPostDetail: (postId: Long) -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    refreshRequested: Boolean,
-    onRefreshHandled: () -> Unit,
-    // 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다
-    onGroupClosed: () -> Unit,
-    // 그룹 정보 수정 화면에서 돌아온 결과 — 상세·설정 탭을 다시 읽는다(GROUP_UPDATED_KEY)
-    groupUpdateRequested: Boolean,
-    onGroupUpdateHandled: () -> Unit,
-    // 설정 탭 메뉴의 풀스크린 진입 4종 — 라우트는 App.kt가 배선한다
-    onOpenGroupEdit: () -> Unit,
-    onOpenAccountSettings: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onOpenGroupReports: () -> Unit,
-    // 멤버 탭 셀 탭 → 공개 프로필 다이얼로그(DM은 프로필의 버튼 몫)
-    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴).
     // 탭 상태는 레거시(탭 Fragment마다 VM)처럼 탭별 VM이 각자 소유한다
     viewModel: GroupDetailViewModel = groupDetailViewModel(groupId),
@@ -225,20 +211,33 @@ fun GroupDetailScreen(
         eventsViewModel = eventsViewModel,
         settingsViewModel = settingsViewModel,
         profileViewModel = profileViewModel,
-        onBack = onBack,
-        onCreatePost = onCreatePost,
-        onOpenPostDetail = onOpenPostDetail,
-        onOpenChatRoom = onOpenChatRoom,
-        refreshRequested = refreshRequested,
-        onRefreshHandled = onRefreshHandled,
-        onGroupClosed = onGroupClosed,
-        groupUpdateRequested = groupUpdateRequested,
-        onGroupUpdateHandled = onGroupUpdateHandled,
-        onOpenGroupEdit = onOpenGroupEdit,
-        onOpenAccountSettings = onOpenAccountSettings,
-        onOpenAppSettings = onOpenAppSettings,
-        onOpenGroupReports = onOpenGroupReports,
-        onOpenUserProfile = onOpenUserProfile,
+        onBack = { onNavigationAction(NavigationAction.NavigateBack) },
+        onCreatePost = { onNavigationAction(NavigationAction.NavigateToCreatePost(groupId)) },
+        // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘어온다
+        onOpenPostDetail = { postId -> onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, postId)) },
+        onOpenChatRoom = { chatRoomId, gid, title ->
+            onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, gid, title))
+        },
+        // 작성 화면이 남긴 결과 — 그룹 피드는 화면이 lazyPagingItems.refresh()로 갱신
+        refreshRequested = NavResult.PostCreated(groupId) in pendingResults,
+        onRefreshHandled = { onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostCreated(groupId))) },
+        // 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다
+        onGroupClosed = {
+            onNavigationAction(NavigationAction.PublishResult(NavResult.GroupsChanged))
+            onNavigationAction(NavigationAction.NavigateBack)
+        },
+        // 그룹 정보 수정 화면에서 돌아온 결과 — 상세·설정 탭을 다시 읽는다
+        groupUpdateRequested = NavResult.GroupUpdated(groupId) in pendingResults,
+        onGroupUpdateHandled = {
+            onNavigationAction(NavigationAction.ConsumeResult(NavResult.GroupUpdated(groupId)))
+        },
+        // 설정 탭 메뉴의 풀스크린 진입 4종 — 이제 화면이 직접 라우팅 액션을 낸다
+        onOpenGroupEdit = { onNavigationAction(NavigationAction.NavigateToGroupEdit(groupId)) },
+        onOpenAccountSettings = { onNavigationAction(NavigationAction.NavigateToAccountSettings) },
+        onOpenAppSettings = { onNavigationAction(NavigationAction.NavigateToAppSettings) },
+        onOpenGroupReports = { onNavigationAction(NavigationAction.NavigateToGroupReports(groupId)) },
+        // 멤버 탭 셀 탭 → 공개 프로필 다이얼로그(DM은 프로필의 버튼 몫)
+        onOpenUserProfile = { userId -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) },
         modifier = modifier
     )
 }
@@ -315,7 +314,8 @@ private fun GroupDetailContent(
             onGroupUpdateHandled()
         }
     }
-    // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 GROUP_UPDATED_KEY 경로)
+    // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 위 groupUpdateRequested/
+    // pendingResults의 NavResult.GroupUpdated 소비 경로)
     LaunchedEffect(settingsViewModel) {
         settingsViewModel.event.collect { event ->
             when (event) {

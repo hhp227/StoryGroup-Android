@@ -30,6 +30,8 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgSectionTitle
 import kr.hhp227.storygroup.ui.components.SgUnreadBadge
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /**
@@ -39,13 +41,16 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
  */
 @Composable
 fun ChatScreen(
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: ChatViewModel = sessionChatViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
+    val onOpenChatRoom = { chatRoomId: Long, groupId: Long?, title: String ->
+        onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, groupId, title))
+    }
 
     when {
         uiState.groupRooms.isEmpty() && uiState.directRooms.isEmpty() && uiState.isLoading ->

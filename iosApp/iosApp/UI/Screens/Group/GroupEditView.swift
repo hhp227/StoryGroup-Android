@@ -3,7 +3,7 @@ import Shared
 
 /// 그룹 정보 수정 — composeApp GroupEditScreen.kt와 1:1 미러(설정 탭 메뉴에서 진입하는
 /// 풀스크린, 계정 설정 패턴). 내비바는 루트 스택 몫. 저장 성공 시 onSaved — 부모가
-/// pop+상세 갱신을 처리한다(Compose GROUP_UPDATED_KEY 미러).
+/// pop+상세 갱신을 처리한다(Compose NavResult.GroupUpdated pendingResults 미러).
 struct GroupEditView: View {
     @StateObject private var viewModel: GroupEditViewModel
 

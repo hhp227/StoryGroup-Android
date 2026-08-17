@@ -60,6 +60,9 @@ import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoAttachment
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -94,20 +97,23 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
 fun PostDetailScreen(
     groupId: Long,
     postId: Long,
-    onBack: () -> Unit,
-    onEdit: () -> Unit,
-    // 본문·댓글 작성자 탭 → 공개 프로필(웹 작성자 메뉴의 "프로필 보기"만 직행으로 미러 —
-    // 신고·차단은 기존 더보기 메뉴, DM은 프로필 화면 버튼이 담당해 중복이 없다)
-    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
-    // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
-    refreshRequested: Boolean = false,
-    onRefreshHandled: () -> Unit = {},
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     viewModel: PostDetailViewModel = postDetailViewModel(groupId, postId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
+    val onBack = { onNavigationAction(NavigationAction.NavigateBack) }
+    // 본문·댓글 작성자 탭 → 공개 프로필(웹 작성자 메뉴의 "프로필 보기"만 직행으로 미러 —
+    // 신고·차단은 기존 더보기 메뉴, DM은 프로필 화면 버튼이 담당해 중복이 없다)
+    val onOpenUserProfile = { userId: Long -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) }
+    // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
+    val refreshRequested = NavResult.PostUpdated(groupId, postId) in pendingResults
+    val onRefreshHandled = {
+        onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostUpdated(groupId, postId)))
+    }
     var commentText by rememberSaveable { mutableStateOf("") }
     // 상단바 더보기 메뉴 — 열린 채로 화면을 벗어나면 닫히는 게 맞아 remember면 충분하다
     var menuExpanded by remember { mutableStateOf(false) }
@@ -163,7 +169,7 @@ fun PostDetailScreen(
                             DropdownMenuItem(
                                 onClick = {
                                     menuExpanded = false
-                                    onEdit()
+                                    onNavigationAction(NavigationAction.NavigateToCreatePost(groupId, postId))
                                 }
                             ) {
                                 Text("수정", style = SgTheme.typography.bodyMedium, color = sg.ink)

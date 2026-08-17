@@ -739,7 +739,8 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose GROUP_UPDATED_KEY 미러)
+    /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose NavResult.GroupUpdated
+    /// pendingResults 미러)
     private var groupEditDestination: some View {
         GroupEditView(groupId: viewModel.groupId, container: container) {
             showGroupEdit = false

@@ -34,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatJoinDate
 
@@ -63,10 +65,10 @@ private fun userProfileViewModel(userId: Long): UserProfileViewModel {
 @Composable
 fun UserProfileScreen(
     userId: Long,
-    onClose: () -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    onOpenAccountSettings: () -> Unit,
+    /** 바로 아래가 채팅방이면 그 방 id — 같은 방으로 가려 할 때 또 쌓지 않기 위한 판정 재료 */
+    underlyingChatRoomId: Long?,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: UserProfileViewModel = userProfileViewModel(userId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -76,7 +78,14 @@ fun UserProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is UserProfileViewModel.Event.DmOpened -> onOpenChatRoom(event.chatRoomId, null, event.title)
+                is UserProfileViewModel.Event.DmOpened -> onNavigationAction(
+                    NavigationAction.OpenChatRoomFromProfile(
+                        chatRoomId = event.chatRoomId,
+                        groupId = null,
+                        title = event.title,
+                        underlyingChatRoomId = underlyingChatRoomId
+                    )
+                )
             }
         }
     }
@@ -92,7 +101,7 @@ fun UserProfileScreen(
                 color = sg.ink,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onClose) {
+            IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                 Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
             }
         }
@@ -143,7 +152,7 @@ fun UserProfileScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (uiState.isSelf) {
                         OutlinedButton(
-                            onClick = onOpenAccountSettings,
+                            onClick = { onNavigationAction(NavigationAction.NavigateToAccountSettings) },
                             shape = SgTheme.shapes.button,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                         ) {

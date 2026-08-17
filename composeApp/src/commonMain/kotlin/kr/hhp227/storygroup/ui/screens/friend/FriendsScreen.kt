@@ -52,6 +52,8 @@ import kr.hhp227.storygroup.shared.domain.model.UserSearchResult
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 /** 세션 스코프 친구 VM — 로그아웃 시 함께 사라진다(다음 로그인은 init이 자가 로드) */
@@ -75,15 +77,16 @@ internal fun sessionFriendsViewModel(): FriendsViewModel = sessionViewModel {
  */
 @Composable
 fun FriendsScreen(
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: FriendsViewModel = sessionFriendsViewModel()
 ) {
     FriendsContent(
         viewModel = viewModel,
-        onOpenChatRoom = onOpenChatRoom,
-        onOpenUserProfile = onOpenUserProfile,
+        onOpenChatRoom = { chatRoomId, groupId, title ->
+            onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, groupId, title))
+        },
+        onOpenUserProfile = { userId -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) },
         modifier = modifier
     )
 }

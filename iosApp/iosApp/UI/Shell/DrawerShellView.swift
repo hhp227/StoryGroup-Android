@@ -7,9 +7,16 @@ import class Shared.Group
 struct DrawerShellView: View {
     @Environment(\.sgColors) private var colors
 
-    @Binding var current: SGDestination
+    /// 탭 선택은 값으로 받는다 — 소유자는 MainShellView의 navigationViewModel.uiState.currentTab.
+    /// 선택 자체는 onNavigationAction(.selectTab)으로 올려보낸다(Compose DrawerShell currentTab 미러)
+    let current: SGDestination
 
-    @Binding var showSettings: Bool
+    /// 화면 전환 의도의 단일 진입점 — MainShellView의 navigationViewModel.onAction(ConCafe 패턴)
+    let onNavigationAction: (NavigationAction) -> Void
+
+    /// 화면 간 결과 신호 — 그룹 탭 refresh 판정에 쓴다(Compose는 각 화면이 세션
+    /// NavigationViewModel에서 직접 읽지만, iOS엔 세션 VM 저장소가 없어 셸이 드릴링한다)
+    let pendingResults: Set<NavResult>
 
     /// 화면이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
     let container: AppContainer
@@ -20,28 +27,6 @@ struct DrawerShellView: View {
     @ObservedObject var notificationsViewModel: NotificationsViewModel
 
     @ObservedObject var chatViewModel: ChatViewModel
-
-    /// 그룹 상세 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
-    let onOpenGroup: (Group) -> Void
-
-    /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
-    let onOpenChatRoom: (ChatRoomRef) -> Void
-
-    /// 상세에서 나가기/삭제 후 복귀 — MainShellView groupsRefreshPending 드릴링(Compose DrawerShell.kt 미러)
-    let groupsRefreshRequested: Bool
-
-    let onGroupsRefreshHandled: () -> Void
-
-    /// 계정 설정 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
-    let onOpenAccountSettings: () -> Void
-
-    let onOpenBlockedUsers: () -> Void
-
-    /// 홈 통합검색 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
-    let onOpenSearch: () -> Void
-
-    /// 공개 프로필 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
-    let onOpenUserProfile: (Int64) -> Void
 
     /// 홈→게시글 상세→작성자 프로필 체인이 계정 설정 push에 쓴다 — 셸 소유 세션 VM 전달
     let profileViewModel: ProfileViewModel
@@ -67,14 +52,17 @@ struct DrawerShellView: View {
                             profileViewModel: profileViewModel,
                             notificationsViewModel: notificationsViewModel,
                             chatViewModel: chatViewModel,
-                            onOpenGroup: onOpenGroup,
-                            onOpenChatRoom: onOpenChatRoom,
-                            onOpenUserProfile: onOpenUserProfile,
-                            groupsRefreshRequested: groupsRefreshRequested,
-                            onGroupsRefreshHandled: onGroupsRefreshHandled,
-                            onOpenSettings: { showSettings = true },
-                            onOpenAccountSettings: onOpenAccountSettings,
-                            onOpenBlockedUsers: onOpenBlockedUsers,
+                            onOpenGroup: { onNavigationAction(.navigateToGroupDetail(groupId: $0.id)) },
+                            onOpenChatRoom: { room in
+                                onNavigationAction(.navigateToChatRoom(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title))
+                            },
+                            onOpenUserProfile: { onNavigationAction(.navigateToUserProfile(userId: $0)) },
+                            // 상세에서 나가기/삭제 후 복귀 — 그룹 탭이 pendingResults를 소비해 목록을 다시 읽는다
+                            groupsRefreshRequested: pendingResults.contains(.groupsChanged),
+                            onGroupsRefreshHandled: { onNavigationAction(.consumeResult(.groupsChanged)) },
+                            onOpenSettings: { onNavigationAction(.navigateToAppSettings) },
+                            onOpenAccountSettings: { onNavigationAction(.navigateToAccountSettings) },
+                            onOpenBlockedUsers: { onNavigationAction(.navigateToBlockedUsers) },
                             onLogout: onLogout
                         )
                         .opacity(destination == current ? 1 : 0)
@@ -101,11 +89,11 @@ struct DrawerShellView: View {
             }
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 if current == .home {
-                    Button(action: onOpenSearch) { Image(systemName: "magnifyingglass") }
+                    Button(action: { onNavigationAction(.navigateToSearch) }) { Image(systemName: "magnifyingglass") }
                 }
                 // 탭 쉘과 동일하게 내비바 우측에서도 알림 진입(알림 화면에서는 숨김)
                 if current != .notifications {
-                    Button(action: { current = .notifications }) {
+                    Button(action: { onNavigationAction(.selectTab(destination: .notifications)) }) {
                         Image(systemName: "bell.fill")
                             .overlay(alignment: .topTrailing) {
                                 SGUnreadBadge(count: notificationsViewModel.uiState.unreadCount)
@@ -114,7 +102,7 @@ struct DrawerShellView: View {
                     }
                 }
                 if current == .profile {
-                    Button(action: { showSettings = true }) { Image(systemName: "gearshape.fill") }
+                    Button(action: { onNavigationAction(.navigateToAppSettings) }) { Image(systemName: "gearshape.fill") }
                 }
             }
         }
@@ -147,14 +135,14 @@ struct DrawerShellView: View {
                             selected: destination == current,
                             badgeCount: drawerBadgeCount(for: destination)
                         ) {
-                            current = destination
+                            onNavigationAction(.selectTab(destination: destination))
                             withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false }
                         }
                     }
                     Divider().background(colors.stoneBorder).padding(.vertical, 8)
                     drawerRow("설정", "gearshape.fill", selected: false) {
                         withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false }
-                        showSettings = true
+                        onNavigationAction(.navigateToAppSettings)
                     }
                     drawerRow("로그아웃", "rectangle.portrait.and.arrow.right", selected: false) {
                         withAnimation(.easeIn(duration: 0.2)) { drawerOpen = false }

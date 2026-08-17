@@ -30,10 +30,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgUnreadBadge
+import kr.hhp227.storygroup.ui.navigation.MainDestination
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -47,31 +48,17 @@ private val RailBreakpoint = 600.dp
  */
 @Composable
 internal fun TabShell(
-    currentDestination: MainDestination,
-    onDestinationSelected: (MainDestination) -> Unit,
-    onOpenGroupDetail: (Group) -> Unit,
-    onCreatePost: () -> Unit,
-    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    homeRefreshRequested: Boolean,
-    onHomeRefreshHandled: () -> Unit,
-    groupsRefreshRequested: Boolean,
-    onGroupsRefreshHandled: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccountSettings: () -> Unit,
-    onOpenBlockedUsers: () -> Unit,
-    onOpenCreateGroup: () -> Unit,
-    onOpenDiscoverGroups: () -> Unit,
-    onOpenSearch: () -> Unit,
-    onOpenUserProfile: (Long) -> Unit,
-    onLogout: () -> Unit
+    currentTab: MainDestination,
+    onNavigationAction: (NavigationAction) -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
     // 셸 뱃지 — 알림 화면/채팅 허브와 같은 세션 VM을 조회한다(드로어 셸 ProfileViewModel 선례)
     val notificationsUiState by sessionNotificationsViewModel().uiState.collectAsState()
     val chatUiState by sessionChatViewModel().uiState.collectAsState()
 
-    BoxWithConstraints {
+    BoxWithConstraints(modifier) {
         val useRail = maxWidth >= RailBreakpoint
 
         Row(Modifier.fillMaxSize()) {
@@ -83,8 +70,8 @@ internal fun TabShell(
                 ) {
                     MainDestination.entries.filter { it.inTabs }.forEach { destination ->
                         NavigationRailItem(
-                            selected = destination == currentDestination,
-                            onClick = { onDestinationSelected(destination) },
+                            selected = destination == currentTab,
+                            onClick = { onNavigationAction(NavigationAction.SelectTab(destination)) },
                             icon = {
                                 DestinationIcon(
                                     destination = destination,
@@ -103,19 +90,21 @@ internal fun TabShell(
                 backgroundColor = sg.paper,
                 topBar = {
                     // 홈·그룹은 화면이 상단바를 직접 그린다(홈=콜랩싱 헤더, 그룹=목록↔상세 전환)
-                    if (currentDestination != MainDestination.HOME && currentDestination != MainDestination.GROUPS) {
+                    if (currentTab != MainDestination.HOME && currentTab != MainDestination.GROUPS) {
                         SgTopBar(
-                            title = currentDestination.label,
+                            title = currentTab.label,
                             actions = {
                                 // 알림은 탭에서 빠지고 상단바 종 아이콘으로 진입(알림 화면에서는 숨김)
-                                if (currentDestination != MainDestination.NOTIFICATIONS) {
+                                if (currentTab != MainDestination.NOTIFICATIONS) {
                                     SgBellAction(
                                         unreadCount = notificationsUiState.unreadCount,
-                                        onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }
+                                        onClick = {
+                                            onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS))
+                                        }
                                     )
                                 }
-                                if (currentDestination == MainDestination.PROFILE) {
-                                    IconButton(onClick = onOpenSettings) {
+                                if (currentTab == MainDestination.PROFILE) {
+                                    IconButton(onClick = { onNavigationAction(NavigationAction.NavigateToAppSettings) }) {
                                         Icon(Icons.Default.Settings, contentDescription = "앱 설정")
                                     }
                                 }
@@ -131,8 +120,8 @@ internal fun TabShell(
                             BottomNavigation(backgroundColor = sg.linen, elevation = 0.dp) {
                                 MainDestination.entries.filter { it.inTabs }.forEach { destination ->
                                     BottomNavigationItem(
-                                        selected = destination == currentDestination,
-                                        onClick = { onDestinationSelected(destination) },
+                                        selected = destination == currentTab,
+                                        onClick = { onNavigationAction(NavigationAction.SelectTab(destination)) },
                                         icon = {
                                             DestinationIcon(
                                                 destination = destination,
@@ -150,23 +139,7 @@ internal fun TabShell(
                 }
             ) { padding ->
                 DestinationContent(
-                    destination = currentDestination,
-                    onOpenGroupDetail = onOpenGroupDetail,
-                    onCreatePost = onCreatePost,
-                    onOpenPostDetail = onOpenPostDetail,
-                    onOpenChatRoom = onOpenChatRoom,
-                    homeRefreshRequested = homeRefreshRequested,
-                    onHomeRefreshHandled = onHomeRefreshHandled,
-                    groupsRefreshRequested = groupsRefreshRequested,
-                    onGroupsRefreshHandled = onGroupsRefreshHandled,
-                    onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
-                    onOpenSearch = onOpenSearch,
-                    onOpenUserProfile = onOpenUserProfile,
-                    onOpenSettings = onOpenSettings,
-                    onOpenAccountSettings = onOpenAccountSettings,
-                    onOpenBlockedUsers = onOpenBlockedUsers,
-                    onOpenCreateGroup = onOpenCreateGroup,
-                    onOpenDiscoverGroups = onOpenDiscoverGroups,
+                    destination = currentTab,
                     onLogout = onLogout,
                     // 레일 모드는 하단 바가 없어 내비바 인셋을 콘텐츠가 직접 소화(탭 모드는 하단 바가 소화)
                     modifier = Modifier

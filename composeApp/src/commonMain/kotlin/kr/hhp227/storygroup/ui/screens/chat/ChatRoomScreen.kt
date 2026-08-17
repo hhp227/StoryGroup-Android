@@ -79,6 +79,8 @@ import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.chatDateKey
 import kr.hhp227.storygroup.ui.util.formatChatDate
@@ -97,17 +99,17 @@ fun ChatRoomScreen(
     chatRoomId: Long,
     groupId: Long?,
     title: String,
-    onBack: () -> Unit,
-    // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
-    onStartCall: (video: Boolean) -> Unit,
-    // 타인 메시지 아바타 탭 → 공개 프로필 다이얼로그(내 메시지엔 아바타가 없다)
-    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
+    // video=false는 보이스톡(카메라 OFF·수화구 시작) — 첨부 패널에서만 갈리고 상단바는 페이스톡
+    val onStartCall = { video: Boolean -> onNavigationAction(NavigationAction.StartCall(chatRoomId, title, video)) }
+    // 타인 메시지 아바타 탭 → 공개 프로필 다이얼로그(내 메시지엔 아바타가 없다)
+    val onOpenUserProfile = { userId: Long -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) }
     val listState = rememberLazyListState()
     var input by rememberSaveable { mutableStateOf("") }
     // + 버튼 첨부 패널(카톡 미러) — 열 때 키보드를 내리고 그 자리에 나타난다
@@ -223,7 +225,7 @@ fun ChatRoomScreen(
         SgTopBar(
             title = title,
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = sg.ink)
                 }
             },

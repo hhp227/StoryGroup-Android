@@ -41,6 +41,8 @@ import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -66,9 +68,8 @@ private fun groupReportsViewModel(groupId: Long): GroupReportsViewModel {
 @Composable
 fun GroupReportsScreen(
     groupId: Long,
-    onBack: () -> Unit,
-    onOpenPostDetail: (postId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: GroupReportsViewModel = groupReportsViewModel(groupId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -79,7 +80,7 @@ fun GroupReportsScreen(
         SgTopBar(
             title = "신고함",
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }
@@ -141,7 +142,9 @@ fun GroupReportsScreen(
                     ReportCard(
                         report = report,
                         isBusy = uiState.busyReportId != null,
-                        onOpenPost = { onOpenPostDetail(report.postId) },
+                        onOpenPost = {
+                            onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, report.postId))
+                        },
                         onProcess = { status ->
                             onAction(GroupReportsViewModel.Action.Process(report.id, status))
                         }

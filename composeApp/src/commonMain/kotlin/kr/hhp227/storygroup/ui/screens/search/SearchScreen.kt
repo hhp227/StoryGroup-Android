@@ -60,6 +60,8 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgSectionTitle
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -86,12 +88,8 @@ private fun searchViewModel(): SearchViewModel {
  */
 @Composable
 fun SearchScreen(
-    onBack: () -> Unit,
-    onOpenGroupDetail: (groupId: Long) -> Unit,
-    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    onOpenUserProfile: (userId: Long) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: SearchViewModel = searchViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -100,11 +98,19 @@ fun SearchScreen(
     var queryText by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val uriHandler = LocalUriHandler.current
+    val onOpenGroupDetail = { groupId: Long -> onNavigationAction(NavigationAction.NavigateToGroupDetail(groupId)) }
+    val onOpenPostDetail = { groupId: Long, postId: Long ->
+        onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, postId))
+    }
+    val onOpenChatRoom = { chatRoomId: Long, groupId: Long?, title: String ->
+        onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, groupId, title))
+    }
+    val onOpenUserProfile = { userId: Long -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) }
 
     Column(modifier.fillMaxSize().background(sg.paper)) {
         SgTopBar(
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }

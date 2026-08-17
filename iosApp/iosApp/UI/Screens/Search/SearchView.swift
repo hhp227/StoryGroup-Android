@@ -28,7 +28,8 @@ struct SearchView: View {
 
     let profileViewModel: ProfileViewModel
 
-    /// 그룹 상세에서 나가기/삭제 시 셸의 그룹 탭 refresh 신호(MainShellView groupsRefreshPending)
+    /// 그룹 상세에서 나가기/삭제 시 그룹 탭 refresh 신호 — NavigationViewModel.pendingResults에
+    /// NavResult.groupsChanged를 publish한다(TabShellView/DrawerShellView가 소비)
     let onGroupsRefreshNeeded: () -> Void
 
     @StateObject private var searchViewModel: SearchViewModel

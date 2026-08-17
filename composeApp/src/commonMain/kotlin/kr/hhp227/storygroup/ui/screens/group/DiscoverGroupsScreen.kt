@@ -68,6 +68,8 @@ import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 @Composable
@@ -93,8 +95,8 @@ private fun discoverGroupsViewModel(): DiscoverGroupsViewModel {
  */
 @Composable
 fun DiscoverGroupsScreen(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: DiscoverGroupsViewModel = discoverGroupsViewModel(),
     groupsViewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
@@ -102,7 +104,7 @@ fun DiscoverGroupsScreen(
 ) {
     DiscoverGroupsContent(
         viewModel = viewModel,
-        onBack = onBack,
+        onBack = { onNavigationAction(NavigationAction.NavigateBack) },
         onJoined = { groupsViewModel.onAction(GroupsViewModel.Action.Refresh) },
         onMembershipChanged = { groupsViewModel.onAction(GroupsViewModel.Action.RefreshPending) },
         modifier = modifier

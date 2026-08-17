@@ -35,6 +35,8 @@ import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatJoinDate
 
@@ -57,8 +59,8 @@ private fun blockedUsersViewModel(): BlockedUsersViewModel {
  */
 @Composable
 fun BlockedUsersScreen(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: BlockedUsersViewModel = blockedUsersViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -69,7 +71,7 @@ fun BlockedUsersScreen(
         SgTopBar(
             title = "차단 사용자 관리",
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }
