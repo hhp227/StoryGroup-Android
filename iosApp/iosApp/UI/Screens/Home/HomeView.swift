@@ -58,11 +58,6 @@ private struct HomeContent: View {
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
     @State private var shareItem: ShareItem?
 
-    /// 첫 레이아웃 시점 헤더의 global minY — 스크롤 오프셋은 이 기준의 상대값으로 계산한다.
-    /// NavigationView 안에선 rest 오프셋이 0이 아닐 수 있어(내비바 인셋), 절대값을 쓰면
-    /// 헤더가 아이템과 따로 미끄러지는 어색한 움직임이 생긴다(이전 구현의 버그).
-    @State private var headerRestMinY: CGFloat?
-
     /// 내비바 아래로 노출되는 이미지 높이 — Compose와 시각적 패리티(2026-07-19 사용자 조정).
     /// Compose는 헤더 170dp 위에 툴바 56dp가 겹쳐 바 아래 노출이 114dp인데, iOS는 전체 슬롯을
     /// topInset(상태바+내비바)+이 값으로 만들므로 노출 높이끼리 맞추려면 170이 아니라 114여야 한다.
@@ -142,7 +137,11 @@ private struct HomeContent: View {
         let total = headerHeight + topInset
         return GeometryReader { geo in
             let raw = geo.frame(in: .global).minY
-            let minY = raw - (headerRestMinY ?? raw)
+            // 헤더는 .ignoresSafeArea(edges: .top)를 건 스크롤뷰의 첫 요소라 rest 상태의 global minY가
+            // 0이다 — raw 자체가 곧 스크롤 변위다(아래 스크림 임계값도 같은 전제). 기준값을 한 번 잡아
+            // 빼던 보정은 그 값이 잘못 잡히면 rest에서도 변위가 남아 헤더 콘텐츠가 밀린 채 잘렸다
+            // (그룹 상세에서 커버 설명이 사라지던 버그 — 같은 방식으로 정렬)
+            let minY = raw
             let stretch = max(0, minY)
             Image("header")
                 .resizable()
@@ -154,9 +153,6 @@ private struct HomeContent: View {
                 // 클리핑 뒤에 당긴 만큼 끌어올려 이미지 상단을 화면 상단에 고정 —
                 // clipped보다 먼저 옮기면 늘어난 윗부분이 잘려나간다(이전 구현의 버그)
                 .offset(y: -stretch)
-                .onAppear {
-                    if headerRestMinY == nil { headerRestMinY = raw }
-                }
                 // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다.
                 // rest 보정값(minY)이 아니라 화면 기하(raw: 헤더 하단 raw+total ≤ 바 하단 topInset,
                 // 정리하면 raw ≤ -headerHeight)로 판정 — 셸(탭/드로어)별 첫 레이아웃 오프셋 차이로

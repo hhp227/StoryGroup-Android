@@ -394,16 +394,19 @@ private struct GroupDetailContent: View {
             let minY = raw
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
+                // 바탕 그라데이션은 항상 깔아두고 사진을 그 위에 덧그린다.
+                // 분기로 바꿔 끼우면 상세 로드 전후·재진입마다 바탕이 통째로 갈아엎어져 깜빡인다
+                // (AsyncImage는 자체 캐시가 없어 뷰가 다시 만들어질 때마다 다시 받는다)
+                groupCoverGradient(groupId: viewModel.groupId, colors: colors)
                 if let imageUrlString = viewModel.uiState.group?.image, let url = URL(string: imageUrlString) {
                     AsyncImage(url: url) { phase in
                         if case .success(let image) = phase {
                             image.resizable().scaledToFill()
                         } else {
-                            groupCoverGradient(groupId: viewModel.groupId, colors: colors)
+                            // 로드 전·실패는 비워 둔다 — 아래 그라데이션이 그대로 보인다
+                            Color.clear
                         }
                     }
-                } else {
-                    groupCoverGradient(groupId: viewModel.groupId, colors: colors)
                 }
                 // 웹 커버 하단 스크림(0.05→0.62) — 흰 텍스트 대비 확보
                 LinearGradient(
