@@ -480,20 +480,24 @@ private struct GroupDetailContent: View {
         HStack(spacing: 0) {
             ForEach(Array(Self.tabs.enumerated()), id: \.offset) { index, title in
                 Button { selectedTab = index } label: {
-                    VStack(spacing: 6) {
-                        Text(title)
-                            .font(.subheadline.weight(selectedTab == index ? .bold : .regular))
-                            .foregroundColor(
-                                selectedTab == index
-                                    ? (onImage ? .white : colors.ink)
-                                    : (onImage ? Self.tabTextOnImage : colors.inkFaint)
-                            )
-                        Rectangle()
-                            .fill(selectedTab == index ? colors.accent : Color.clear)
-                            .frame(height: 2)
-                    }
-                    // 탭바 높이를 채워 바닥 정렬 — 48pt 전체가 탭 히트 영역
-                    .frame(height: Self.tabBarHeight, alignment: .bottom)
+                    Text(title)
+                        .font(.subheadline.weight(selectedTab == index ? .bold : .regular))
+                        .foregroundColor(
+                            selectedTab == index
+                                ? (onImage ? .white : colors.ink)
+                                : (onImage ? Self.tabTextOnImage : colors.inkFaint)
+                        )
+                        // 글자는 48pt 안에서 세로 중앙 — 칸 전체가 탭 히트 영역(M2 Tab 미러)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: Self.tabBarHeight)
+                        // 인디케이터는 Compose TabRow처럼 바닥에 겹쳐 그린다 — VStack으로 쌓으면
+                        // 인디케이터+간격(8pt)만큼 글자가 위로 밀려 세로 중앙에서 벗어난다
+                        .overlay(alignment: .bottom) {
+                            Rectangle()
+                                .fill(selectedTab == index ? colors.accent : Color.clear)
+                                .frame(height: 2)
+                        }
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
