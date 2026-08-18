@@ -282,6 +282,8 @@ struct ChatRoomView: View {
                     }
                 }
             }
+            // 목록과 입력 영역을 가르는 헤어라인 — 레거시 1px darker_gray 미러
+            Divider().background(colors.stoneBorder)
             if let actionError = uiState.actionError {
                 Text(actionError)
                     .font(.caption)
@@ -454,7 +456,11 @@ struct ChatRoomView: View {
                     .foregroundColor(colors.inkSoft)
             }
             .disabled(isSending)
-            SGTextField(label: hasPendingAttachment ? "메시지 (선택)" : nil, text: $input)
+            // 라벨이 아닌 placeholder로 알린다 — 라벨은 필드 위에 줄을 더해 첨부할 때만 바가 튄다
+            SGComposerField(
+                placeholder: hasPendingAttachment ? "메시지 (선택)" : "메시지를 입력하세요.",
+                text: $input
+            )
             Button(action: { viewModel.onAction(.send(text: input)) }) {
                 if isSending {
                     ProgressView()

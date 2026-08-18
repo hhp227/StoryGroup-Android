@@ -123,6 +123,30 @@ struct SGTextField: View {
     }
 }
 
+/// 입력 바 필드의 최소 높이 — 바 총 높이 = 이 값 + 세로 패딩 2배. Compose ComposerFieldMinHeight 미러
+let sgComposerFieldMinHeight: CGFloat = 40
+
+/// 하단 입력 바 전용 슬림 필드 — 레거시 EditText(background="@null") 미러.
+///
+/// SGTextField는 46pt 고정 높이에 테두리까지 그려 한 줄짜리 댓글/메시지 입력에는 두껍다.
+/// 여기서는 테두리도 배경도 없이 바 배경 위에 글자만 얹고, 터치 영역만 40pt로 확보한다.
+struct SGComposerField: View {
+    let placeholder: String
+
+    @Binding var text: String
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.subheadline)
+            .foregroundColor(colors.ink)
+            // 세로 여백은 바깥 입력 바가 준다 — 여기는 레거시 paddingStart 5pt 자리만
+            .padding(.horizontal, 6)
+            .frame(minHeight: sgComposerFieldMinHeight)
+    }
+}
+
 /// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러
 struct SGPrimaryButton: View {
     let title: String

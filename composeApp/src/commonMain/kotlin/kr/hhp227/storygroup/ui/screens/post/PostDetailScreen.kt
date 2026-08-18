@@ -57,7 +57,7 @@ import kr.hhp227.storygroup.shared.domain.model.Comment
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
-import kr.hhp227.storygroup.ui.components.SgTextField
+import kr.hhp227.storygroup.ui.components.SgComposerField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoAttachment
 import kr.hhp227.storygroup.ui.navigation.NavResult
@@ -580,7 +580,9 @@ private fun CommentComposer(
         replyTo?.let { target ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().background(sg.accentSoft).padding(start = 16.dp, end = 4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().background(sg.accentSoft)
+                    .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
             ) {
                 Text(
                     "${target.authorName}님에게 답글",
@@ -588,24 +590,30 @@ private fun CommentComposer(
                     color = sg.ink,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onCancelReply) {
+                IconButton(onClick = onCancelReply, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Default.Close, contentDescription = "답글 취소", tint = sg.inkFaint)
                 }
             }
         }
+        // 레거시 fragment_post_detail.xml 미러 — 헤어라인 아래 여백 얇은 한 줄:
+        // 테두리 없는 입력란 + 작은 전송 버튼. 채팅방 MessageInputBar와 같은 치수다.
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // 좌측 10dp + 필드 자체 6dp = 댓글 목록과 같은 16dp 글자 시작선
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
         ) {
-            // 라벨 없이 입력창만 — SgTextField의 label은 필드 위에 별도 줄로 그려져서
-            // 한 줄짜리 댓글 입력에는 군더더기다(답글 대상은 위 칩이 이미 알려준다).
-            SgTextField(
+            SgComposerField(
                 value = text,
                 onValueChange = onTextChange,
+                placeholder = "댓글을 입력하세요.",
                 modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onSubmit, enabled = !isSubmitting && text.isNotBlank()) {
+            IconButton(
+                onClick = onSubmit,
+                enabled = !isSubmitting && text.isNotBlank(),
+                modifier = Modifier.size(28.dp)
+            ) {
                 Icon(
                     Icons.Default.Send,
                     contentDescription = "등록",
@@ -613,6 +621,5 @@ private fun CommentComposer(
                 )
             }
         }
-        Spacer(Modifier.height(4.dp))
     }
 }

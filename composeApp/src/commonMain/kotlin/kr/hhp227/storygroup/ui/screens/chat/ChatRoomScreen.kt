@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
@@ -77,7 +78,7 @@ import kr.hhp227.storygroup.shared.domain.model.ChatMessage
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgEmptyState
-import kr.hhp227.storygroup.ui.components.SgTextField
+import kr.hhp227.storygroup.ui.components.SgComposerField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
@@ -339,6 +340,8 @@ fun ChatRoomScreen(
                 )
             }
         }
+        // 목록과 입력 영역을 가르는 헤어라인 — 레거시 1px darker_gray 미러
+        Divider(color = sg.stoneBorder)
         uiState.actionError?.let {
             Text(
                 it,
@@ -663,10 +666,11 @@ private fun MessageInputBar(
                 tint = sg.inkSoft
             )
         }
-        SgTextField(
+        // 라벨이 아닌 placeholder로 알린다 — 라벨은 필드 위에 줄을 더해 첨부할 때만 바가 튄다
+        SgComposerField(
             value = value,
             onValueChange = onValueChange,
-            label = if (hasPendingAttachment) "메시지 (선택)" else null,
+            placeholder = if (hasPendingAttachment) "메시지 (선택)" else "메시지를 입력하세요.",
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onSend, enabled = canSend, modifier = Modifier.size(28.dp)) {

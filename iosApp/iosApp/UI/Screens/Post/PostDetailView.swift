@@ -471,10 +471,10 @@ struct PostDetailView: View {
                 .padding(.vertical, 6)
                 .background(colors.accentSoft)
             }
+            // 레거시 fragment_post_detail.xml 미러 — 헤어라인 아래 여백 얇은 한 줄:
+            // 테두리 없는 입력란 + 작은 전송 버튼. 채팅방 inputBar와 같은 치수다.
             HStack(spacing: 8) {
-                // 라벨 없이 입력창만 — SGTextField의 label은 필드 위에 별도 줄로 그려져서
-                // 한 줄짜리 댓글 입력에는 군더더기다(답글 대상은 위 칩이 이미 알려준다).
-                SGTextField(text: $commentText)
+                SGComposerField(placeholder: "댓글을 입력하세요.", text: $commentText)
                 Button {
                     postDetailViewModel.onAction(.submitComment(text: commentText))
                 } label: {
@@ -485,8 +485,10 @@ struct PostDetailView: View {
                 }
                 .disabled(uiState.isSubmittingComment || commentText.isEmpty)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            // 좌측 10pt + 필드 자체 6pt = 댓글 목록과 같은 16pt 글자 시작선
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .padding(.vertical, 6)
         }
         .background(colors.paper)
     }

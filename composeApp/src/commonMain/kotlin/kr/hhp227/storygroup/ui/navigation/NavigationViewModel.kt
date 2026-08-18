@@ -24,12 +24,6 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 class NavigationViewModel : ViewModel(),
     MviViewModel<NavigationViewModel.UiState, NavigationAction, NavigationEvent> {
 
-    data class UiState(
-        val currentTab: MainDestination = MainDestination.HOME,
-        /** 화면이 재진입해 읽어갈 때까지 남는다 — savedStateHandle 키의 일반화 */
-        val pendingResults: Set<NavResult> = emptySet()
-    )
-
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -54,49 +48,35 @@ class NavigationViewModel : ViewModel(),
             // 탭은 상태다 — 셸이 uiState.currentTab을 그린다
             is NavigationAction.SelectTab ->
                 _uiState.update { it.copy(currentTab = action.destination) }
-
             is NavigationAction.PublishResult ->
                 _uiState.update { it.copy(pendingResults = it.pendingResults + action.result) }
-
             is NavigationAction.ConsumeResult ->
                 _uiState.update { it.copy(pendingResults = it.pendingResults - action.result) }
-
             NavigationAction.NavigateBack -> emit(NavigationEvent.NavigateBack)
-
             is NavigationAction.OpenChatRoomFromProfile ->
                 if (action.underlyingChatRoomId == action.chatRoomId) {
                     emit(NavigationEvent.NavigateBack)
                 } else {
                     emit(navigateTo(Route.ChatRoom(action.chatRoomId, action.groupId, action.title)))
                 }
-
             is NavigationAction.NavigateToGroupDetail ->
                 emit(navigateTo(Route.GroupDetail(action.groupId)))
-
             is NavigationAction.NavigateToPostDetail ->
                 emit(navigateTo(Route.PostDetail(action.groupId, action.postId)))
-
             is NavigationAction.NavigateToChatRoom ->
                 emit(navigateTo(Route.ChatRoom(action.chatRoomId, action.groupId, action.title)))
-
             is NavigationAction.NavigateToUserProfile ->
                 emit(navigateTo(Route.UserProfile(action.userId)))
-
             is NavigationAction.NavigateToCreatePost ->
                 emit(navigateTo(Route.CreatePost(action.groupId, action.postId)))
-
             is NavigationAction.NavigateToGroupEdit ->
                 emit(navigateTo(Route.GroupEdit(action.groupId)))
-
             is NavigationAction.NavigateToGroupReports ->
                 emit(navigateTo(Route.GroupReports(action.groupId)))
-
             is NavigationAction.StartCall ->
                 emit(navigateTo(Route.Call(action.chatRoomId, action.title, ring = true, video = action.video)))
-
             is NavigationAction.AcceptIncomingCall ->
                 emit(navigateTo(Route.Call(action.chatRoomId, action.title, ring = false, video = action.video)))
-
             NavigationAction.NavigateToAccountSettings -> emit(navigateTo(Route.AccountSettings))
             NavigationAction.NavigateToAppSettings -> emit(navigateTo(Route.AppSettings))
             NavigationAction.NavigateToBlockedUsers -> emit(navigateTo(Route.BlockedUsers))
@@ -112,4 +92,10 @@ class NavigationViewModel : ViewModel(),
     private fun emit(event: NavigationEvent) {
         _event.tryEmit(event)
     }
+
+    data class UiState(
+        val currentTab: MainDestination = MainDestination.HOME,
+        /** 화면이 재진입해 읽어갈 때까지 남는다 — savedStateHandle 키의 일반화 */
+        val pendingResults: Set<NavResult> = emptySet()
+    )
 }

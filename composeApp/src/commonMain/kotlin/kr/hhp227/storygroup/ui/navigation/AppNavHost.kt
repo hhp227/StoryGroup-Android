@@ -48,7 +48,6 @@ fun AppNavHost(
 ) {
     NavHost(navController = navController, startDestination = Route.Shell, modifier = modifier) {
         composable<Route.Shell> {}
-
         composable<Route.GroupDetail> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.GroupDetail>()
 
@@ -59,7 +58,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.ChatRoom> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.ChatRoom>()
 
@@ -72,7 +70,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.PostDetail> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.PostDetail>()
 
@@ -84,7 +81,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.CreatePost> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.CreatePost>()
 
@@ -96,7 +92,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.Call> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.Call>()
 
@@ -110,7 +105,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.GroupEdit> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.GroupEdit>()
 
@@ -121,7 +115,6 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.GroupReports> { backStackEntry ->
             val route = backStackEntry.toRoute<Route.GroupReports>()
 
@@ -132,19 +125,16 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.AccountSettings> {
             DestinationSurface {
                 AccountSettingsScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
             }
         }
-
         composable<Route.BlockedUsers> {
             DestinationSurface {
                 BlockedUsersScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
             }
         }
-
         composable<Route.AppSettings> {
             // AppSettingsScreen은 이번 전환 범위 밖(onBack을 그대로 받는다) — 여기서 세션 VM을
             // 직접 조회해 다른 화면들과 같은 NavigateBack 경로로 이어준다
@@ -157,19 +147,16 @@ fun AppNavHost(
                 )
             }
         }
-
         composable<Route.CreateGroup> {
             DestinationSurface {
                 CreateGroupScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
             }
         }
-
         composable<Route.DiscoverGroups> {
             DestinationSurface {
                 DiscoverGroupsScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
             }
         }
-
         composable<Route.Search> {
             DestinationSurface {
                 SearchScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
