@@ -35,6 +35,8 @@ final class ChatRoomViewModel: MviViewModel {
 
     private let getChatReadPositionsUseCase: GetChatReadPositionsUseCase
 
+    private let getGroupMembersUseCase: GetGroupMembersUseCase
+
     /// 최신순 페이징 커서 — 재조회(loadLatest)마다 0으로 되돌아간다(웹 전체 교체 미러)
     private var oldestLoadedPage: Int32 = 0
 
@@ -60,6 +62,20 @@ final class ChatRoomViewModel: MviViewModel {
             uiState.actionError = nil
         case .clearAttachment: uiState.pendingAttachment = nil
         case .typing: sendTypingThrottled()
+        case .loadMembers: loadMembers()
+        }
+    }
+
+    /// 대화상대 = 그룹 멤버(그룹 방 전용) — 채팅방 참여자 API가 없어 그룹 멤버로 대신한다.
+    /// DM 방은 참여자가 나와 상대뿐이라 서버를 부르지 않고 화면이 메시지에서 파생한다.
+    /// 드로어를 처음 열 때 1회만 — 실패해도 조용히 둔다(드로어가 "불러오지 못했습니다"를 그린다)
+    private func loadMembers() {
+        guard let groupId = groupId, !uiState.isLoadingMembers, uiState.members == nil else { return }
+
+        uiState.isLoadingMembers = true
+        Task { @MainActor in
+            uiState.members = try? await getGroupMembersUseCase.invoke(groupId: groupId)
+            uiState.isLoadingMembers = false
         }
     }
 
@@ -268,6 +284,7 @@ final class ChatRoomViewModel: MviViewModel {
         uploadChatFileUseCase: UploadChatFileUseCase,
         sendChatTypingUseCase: SendChatTypingUseCase,
         getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
+        getGroupMembersUseCase: GetGroupMembersUseCase,
         getCallRosterUseCase: GetCallRosterUseCase,
         observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
         getCurrentUserIdUseCase: GetCurrentUserIdUseCase
@@ -280,6 +297,7 @@ final class ChatRoomViewModel: MviViewModel {
         self.uploadChatFileUseCase = uploadChatFileUseCase
         self.sendChatTypingUseCase = sendChatTypingUseCase
         self.getChatReadPositionsUseCase = getChatReadPositionsUseCase
+        self.getGroupMembersUseCase = getGroupMembersUseCase
         uiState = UiState(myUserId: getCurrentUserIdUseCase.invoke()?.int64Value)
 
         loadLatest()
@@ -323,6 +341,10 @@ final class ChatRoomViewModel: MviViewModel {
         var error: String? = nil
         /// 전송/이전 로드 실패 문구 — 목록을 대체하지 않는다(가입 신청 인박스 actionError 패턴)
         var actionError: String? = nil
+        /// 우측 드로어의 대화상대 — 그룹 방만 채워진다(DM은 참여자가 둘뿐이라 화면이 파생).
+        /// nil = 아직 안 읽음(드로어를 열어야 읽는다), [] = 읽었는데 비어 있음
+        var members: [GroupMember]? = nil
+        var isLoadingMembers = false
     }
 
     /// 전송 대기 첨부 — Compose PendingAttachment 미러
@@ -343,6 +365,8 @@ final class ChatRoomViewModel: MviViewModel {
         case clearAttachment
         /// 입력 변화 신호 — VM이 스로틀해 STOMP 타이핑 신호로 발신한다
         case typing
+        /// 우측 드로어 첫 오픈 — 그룹 방의 대화상대(그룹 멤버)를 1회 읽는다
+        case loadMembers
     }
 
     enum Event {

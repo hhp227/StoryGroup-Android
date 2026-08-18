@@ -20,11 +20,13 @@ import kotlin.time.TimeSource
 import kr.hhp227.storygroup.shared.domain.model.ChatEvent
 import kr.hhp227.storygroup.shared.domain.model.ChatEventType
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
+import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.RtcCallPeer
 import kr.hhp227.storygroup.shared.domain.usecase.GetCallRosterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatMessagesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetChatReadPositionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetCurrentUserIdUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
@@ -52,6 +54,7 @@ class ChatRoomViewModel(
     private val sendChatTypingUseCase: SendChatTypingUseCase,
     private val getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
     private val getCallRosterUseCase: GetCallRosterUseCase,
+    private val getGroupMembersUseCase: GetGroupMembersUseCase,
     observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
     getCurrentUserIdUseCase: GetCurrentUserIdUseCase
 ) : ViewModel(), MviViewModel<ChatRoomViewModel.UiState, ChatRoomViewModel.Action, ChatRoomViewModel.Event> {
@@ -86,6 +89,24 @@ class ChatRoomViewModel(
             }
             Action.ClearAttachment -> _uiState.update { it.copy(pendingAttachment = null) }
             Action.Typing -> sendTypingThrottled()
+            Action.LoadMembers -> loadMembers()
+        }
+    }
+
+    /**
+     * 대화상대 = 그룹 멤버(그룹 방 전용) — 채팅방 참여자 API가 없어 그룹 멤버로 대신한다.
+     * DM 방은 참여자가 나와 상대뿐이라 서버를 부르지 않고 화면이 메시지에서 파생한다.
+     * 드로어를 처음 열 때 1회만 — 실패해도 조용히 둔다(드로어가 "불러오지 못했습니다"를 그린다)
+     */
+    private fun loadMembers() {
+        val state = _uiState.value
+        if (groupId == null || state.isLoadingMembers || state.members != null) return
+
+        _uiState.update { it.copy(isLoadingMembers = true) }
+        viewModelScope.launch {
+            runCatching { getGroupMembersUseCase(groupId) }
+                .onSuccess { fetched -> _uiState.update { it.copy(isLoadingMembers = false, members = fetched) } }
+                .onFailure { _uiState.update { it.copy(isLoadingMembers = false) } }
         }
     }
 
@@ -305,6 +326,10 @@ class ChatRoomViewModel(
         val readPositions: Map<Long, Long> = emptyMap(),
         // 이 방에서 통화 중인 사람(6초 폴링 스냅숏) — 비어 있지 않으면 상단 라이브 바가 뜬다
         val callRoster: List<RtcCallPeer> = emptyList(),
+        // 우측 드로어의 대화상대 — 그룹 방만 채워진다(DM은 참여자가 둘뿐이라 화면이 파생).
+        // null = 아직 안 읽음(드로어를 열어야 읽는다), emptyList = 읽었는데 비어 있음
+        val members: List<GroupMember>? = null,
+        val isLoadingMembers: Boolean = false,
         // 이력 로드 에러 — 목록이 비었을 때만 화면을 대체한다
         val error: String? = null,
         // 전송/이전 로드 실패 문구 — 목록을 대체하지 않는다(가입 신청 인박스 actionError 패턴)
@@ -329,6 +354,8 @@ class ChatRoomViewModel(
         data object ClearAttachment : Action
         /** 입력 변화 신호 — VM이 스로틀해 STOMP 타이핑 신호로 발신한다 */
         data object Typing : Action
+        /** 우측 드로어 첫 오픈 — 그룹 방의 대화상대(그룹 멤버)를 1회 읽는다 */
+        data object LoadMembers : Action
     }
 
     sealed interface Event {

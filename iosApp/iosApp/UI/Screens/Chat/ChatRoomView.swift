@@ -50,6 +50,12 @@ struct ChatRoomView: View {
     /// 첨부 패널 안의 이모지 페이지(카톡 미러) — 패널을 새로 열면 첨부 목록으로 되돌아온다
     @State private var showEmojiPicker = false
 
+    /// 우측 사이드 드로어(카톡 미러) — 대화상대·사진·통화. 순수 UI 상태라 VM에 두지 않는다
+    @State private var showDrawer = false
+
+    /// 드로어 사진 탭 → 그 메시지로 이동. proxy는 ScrollViewReader 안에만 있어 id를 실어 보낸다
+    @State private var jumpToMessageId: Int64? = nil
+
     /// 관측한 키보드 높이(하단 안전영역 제외) — 첨부·이모지 패널을 키보드 자리에 같은 높이로 띄운다(카톡 미러)
     @State private var keyboardHeight: CGFloat = 0
 
@@ -59,12 +65,12 @@ struct ChatRoomView: View {
     /// 공개 프로필은 push가 아니라 시트 — DM 후속 push는 시트가 완전히 닫힌 뒤(onDismiss)에 한다
     var body: some View {
         if #available(iOS 16.0, *) {
-            core
+            coreWithDrawer
                 .navigationDestination(isPresented: $showCall) { callDestination }
                 .navigationDestination(isPresented: showPushedChatRoom) { pushedChatRoomDestination }
                 .sheet(isPresented: showProfile, onDismiss: runProfileFollowUp) { profileDestination }
         } else {
-            core
+            coreWithDrawer
                 .background(
                     NavigationLink(isActive: $showCall) {
                         callDestination
@@ -143,6 +149,11 @@ struct ChatRoomView: View {
             get: { pushedChatRoom != nil },
             set: { if !$0 { pushedChatRoom = nil } }
         )
+    }
+
+    /// core + 우측 드로어 오버레이 — 드로어가 입력 바·패널 위까지 덮어야 해서 가장 바깥에 얹는다
+    @ViewBuilder private var coreWithDrawer: some View {
+        core.overlay { chatRoomDrawer }
     }
 
     @ViewBuilder private var core: some View {
@@ -279,6 +290,13 @@ struct ChatRoomView: View {
                         ) { _ in
                             scrollToLatest(proxy)
                         }
+                        // 드로어 사진 탭 → 그 메시지로 이동(플립이라 anchor는 .top)
+                        .onChange(of: jumpToMessageId) { target in
+                            guard let target else { return }
+
+                            withAnimation { proxy.scrollTo(target, anchor: .top) }
+                            jumpToMessageId = nil
+                        }
                     }
                 }
             }
@@ -318,15 +336,14 @@ struct ChatRoomView: View {
         .navigationBarTitleDisplayMode(.inline)
         // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
         .navigationBarScrim(visible: true)
-        // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러, Compose ChatRoomScreen과 동일).
-        // DM=상대 벨울림(웹 D6), 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
+        // 우측 사이드 드로어(카톡 미러) — 통화는 드로어 하단과 + 첨부 패널 두 곳에 남는다
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    callVideo = true
-                    showCall = true
+                    showDrawer = true
+                    viewModel.onAction(.loadMembers)
                 }) {
-                    Image(systemName: groupId == nil ? "phone.fill" : "video.fill")
+                    Image(systemName: "line.3.horizontal")
                 }
             }
         }
@@ -397,6 +414,229 @@ struct ChatRoomView: View {
             )
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
+    }
+
+    /// 로드된 이력 안의 이미지 첨부 — 서버 사진함 API가 없어 화면이 파생한다(위로 더 불러오면 늘어난다).
+    /// VM 목록이 최신순이라 그대로 최신순, 메시지 id는 탭했을 때의 이동 대상이다
+    private var drawerPhotos: [DrawerPhoto] {
+        viewModel.uiState.messages.compactMap { message in
+            guard let attachment = message.attachment, attachment.isImage else { return nil }
+
+            return DrawerPhoto(id: message.id, url: attachment.url)
+        }
+    }
+
+    /// 그룹 방은 그룹 멤버, DM 방은 메시지에서 집은 상대 1명 — 채팅방 참여자 API가 없다
+    private var drawerPeer: ChatMessage? {
+        viewModel.uiState.messages.first { $0.userId != viewModel.uiState.myUserId }
+    }
+
+    /**
+     * 우측 사이드 드로어(카카오톡 채팅방 서랍 미러) — 대화상대 / 사진 / 통화.
+     * 셸 드로어(DrawerShellView)와 같은 관용구: 스크림 탭으로 닫히고 0.2초 슬라이드.
+     */
+    @ViewBuilder private var chatRoomDrawer: some View {
+        if showDrawer {
+            ZStack(alignment: .trailing) {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .onTapGesture { withAnimation(.easeIn(duration: 0.2)) { showDrawer = false } }
+                drawerPanel
+                    .frame(width: 288)
+                    .background(colors.paper.ignoresSafeArea(edges: .vertical))
+                    .transition(.move(edge: .trailing))
+            }
+        }
+    }
+
+    private var drawerPanel: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.ink)
+                        .lineLimit(1)
+                    Text(groupId == nil ? "1:1 대화" : "그룹 대화")
+                        .font(.caption2)
+                        .foregroundColor(colors.inkFaint)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+                } label: {
+                    Image(systemName: "xmark").foregroundColor(colors.inkSoft)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(colors.linen)
+            Divider().background(colors.stoneBorder)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    drawerSectionTitle("대화상대", count: drawerMemberCountLabel)
+                    drawerMembers
+                    Divider().background(colors.stoneBorder).padding(.vertical, 8)
+                    drawerSectionTitle("사진", count: drawerPhotos.isEmpty ? nil : "\(drawerPhotos.count)장")
+                    drawerPhotoGrid
+                    Spacer().frame(height: 16)
+                }
+            }
+            Divider().background(colors.stoneBorder)
+            // 통화 — 상단바에서 뺀 진입점을 여기로 옮겼다(+ 첨부 패널에도 그대로 있다)
+            HStack(spacing: 8) {
+                drawerCallButton("phone.fill", "보이스톡") { startCallFromDrawer(video: false) }
+                drawerCallButton("video.fill", "페이스톡") { startCallFromDrawer(video: true) }
+            }
+            .padding(8)
+        }
+    }
+
+    private var drawerMemberCountLabel: String? {
+        if groupId == nil { return "2명" }
+        guard let members = viewModel.uiState.members else { return nil }
+
+        return "\(members.count)명"
+    }
+
+    @ViewBuilder private var drawerMembers: some View {
+        let uiState = viewModel.uiState
+
+        if groupId == nil {
+            // DM 방엔 참여자 API도 groupId도 없다 — 상대는 내 것이 아닌 첫 메시지에서 집는다
+            if let peer = drawerPeer {
+                drawerMemberRow(
+                    name: peer.authorName,
+                    profileImg: peer.authorProfileImg,
+                    role: nil,
+                    isMe: false
+                ) { openProfileFromDrawer(userId: peer.userId) }
+            }
+        } else if uiState.isLoadingMembers && uiState.members == nil {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+        } else if let members = uiState.members {
+            ForEach(members, id: \.userId) { member in
+                drawerMemberRow(
+                    name: member.name,
+                    profileImg: member.profileImg,
+                    role: member.role == .member ? nil : member.role,
+                    isMe: member.userId == uiState.myUserId
+                ) { openProfileFromDrawer(userId: member.userId) }
+            }
+        } else {
+            Text("대화상대를 불러오지 못했습니다.")
+                .font(.caption)
+                .foregroundColor(colors.rust)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder private var drawerPhotoGrid: some View {
+        if drawerPhotos.isEmpty {
+            Text("주고받은 사진이 없습니다.")
+                .font(.caption)
+                .foregroundColor(colors.inkFaint)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+        } else {
+            // 미리보기는 최신 9장 — 더 보려면 이력을 위로 더 불러오면 된다
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
+                ForEach(Array(drawerPhotos.prefix(9))) { photo in
+                    Button {
+                        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+                        jumpToMessageId = photo.id
+                    } label: {
+                        // 앨범 탭과 같은 정사각 셀 관용구 — scaledToFill은 명시 프레임이 있어야 크롭된다
+                        GeometryReader { geometry in
+                            AsyncImage(url: URL(string: photo.url)) { phase in
+                                if case .success(let image) = phase {
+                                    image.resizable().scaledToFill()
+                                } else {
+                                    colors.linen
+                                }
+                            }
+                            .frame(width: geometry.size.width, height: geometry.size.width)
+                            .clipped()
+                        }
+                        .aspectRatio(1, contentMode: .fit)
+                    }
+                    .buttonStyle(.plain)
+                    .cornerRadius(6)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func drawerSectionTitle(_ title: String, count: String?) -> some View {
+        HStack {
+            Text(title).font(.caption.bold()).foregroundColor(colors.inkSoft)
+            Spacer()
+            if let count {
+                Text(count).font(.caption2).foregroundColor(colors.inkFaint)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    private func drawerMemberRow(
+        name: String,
+        profileImg: String?,
+        role: GroupRole?,
+        isMe: Bool,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                SGAvatar(name: name, size: 32, imageUrl: profileImg)
+                Text(name)
+                    .font(.subheadline)
+                    .foregroundColor(colors.ink)
+                    .lineLimit(1)
+                if isMe {
+                    Text("나").font(.caption2).foregroundColor(colors.inkFaint)
+                }
+                Spacer()
+                // 역할 칩은 그룹 목록·상세와 같은 것(방장/부방장) — 일반 멤버는 칩을 달지 않는다
+                if let role {
+                    RoleChip(role: role)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func drawerCallButton(_ systemImage: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage).foregroundColor(colors.accent)
+                Text(label).font(.caption2).foregroundColor(colors.inkSoft)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 드로어를 닫고 프로필 시트를 연다 — 드로어 위에 시트를 겹치면 닫힘 처리가 꼬인다
+    private func openProfileFromDrawer(userId: Int64) {
+        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+        selectedProfileUserId = userId
+    }
+
+    private func startCallFromDrawer(video: Bool) {
+        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+        callVideo = video
+        showCall = true
     }
 
     private func scrollToLatest(_ proxy: ScrollViewProxy, duration: Double? = nil) {
@@ -607,6 +847,7 @@ struct ChatRoomView: View {
             uploadChatFileUseCase: container.uploadChatFileUseCase,
             sendChatTypingUseCase: container.sendChatTypingUseCase,
             getChatReadPositionsUseCase: container.getChatReadPositionsUseCase,
+            getGroupMembersUseCase: container.getGroupMembersUseCase,
             getCallRosterUseCase: container.getCallRosterUseCase,
             observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
@@ -617,6 +858,14 @@ struct ChatRoomView: View {
         self.container = container
         self.title = title
     }
+}
+
+/// 드로어 사진 한 칸 — ForEach 식별자용(Swift 튜플엔 키패스를 못 쓴다).
+/// id는 메시지 id라 탭했을 때 이동 대상이 그대로 된다(메시지당 첨부 1개라 중복 없음)
+private struct DrawerPhoto: Identifiable {
+    let id: Int64
+
+    let url: String
 }
 
 /// 웹 MessageBubble 미러 — 내 메시지는 우측 accent, 타인은 좌측 linen+작성자 변경 시 아바타/이름

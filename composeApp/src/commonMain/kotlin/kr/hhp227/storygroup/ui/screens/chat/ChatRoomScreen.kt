@@ -1,6 +1,11 @@
 package kr.hhp227.storygroup.ui.screens.chat
 
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,12 +19,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
+import androidx.compose.material.Surface
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -46,6 +54,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -54,6 +63,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -73,13 +85,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
+import kr.hhp227.storygroup.shared.domain.model.GroupMember
+import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgComposerField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.screens.group.RoleChip
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
@@ -117,6 +133,9 @@ fun ChatRoomScreen(
     var showAttachments by rememberSaveable { mutableStateOf(false) }
     // 첨부 패널 안의 이모지 페이지(카톡 미러) — 패널을 새로 열면 첨부 목록으로 되돌아온다
     var showEmojiPicker by rememberSaveable { mutableStateOf(false) }
+    // 우측 사이드 드로어(카톡 미러) — 대화상대·사진·통화. 순수 UI 상태라 VM에 두지 않는다
+    var showDrawer by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     // 허브(세션 VM)에 진입/이탈을 알린다 — 이 방의 미읽음 뱃지를 0으로 만들고 실시간 증가에서 제외
@@ -222,7 +241,9 @@ fun ChatRoomScreen(
             }
         }
     }
-    Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
+    // 드로어가 화면 전체를 덮어야 해서 Box로 한 겹 감싼다
+    Box(modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
             title = title,
             navigationIcon = {
@@ -231,14 +252,12 @@ fun ChatRoomScreen(
                 }
             },
             actions = {
-                // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러). DM=상대 벨울림(웹 D6),
-                // 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
-                IconButton(onClick = { onStartCall(true) }) {
-                    if (groupId == null) {
-                        Icon(Icons.Default.Call, contentDescription = "통화", tint = sg.accent)
-                    } else {
-                        Icon(Icons.Default.Videocam, contentDescription = "화상회의", tint = sg.accent)
-                    }
+                // 우측 사이드 드로어(카톡 미러) — 통화는 여기 하단과 + 첨부 패널 두 곳에 남는다
+                IconButton(onClick = {
+                    showDrawer = true
+                    onAction(ChatRoomViewModel.Action.LoadMembers)
+                }) {
+                    Icon(Icons.Default.Menu, contentDescription = "메뉴", tint = sg.ink)
                 }
             }
         )
@@ -419,6 +438,280 @@ fun ChatRoomScreen(
             }
         }
     }
+        ChatRoomDrawer(
+            open = showDrawer,
+            title = title,
+            groupId = groupId,
+            uiState = uiState,
+            onClose = { showDrawer = false },
+            onOpenUserProfile = { userId -> showDrawer = false; onOpenUserProfile(userId) },
+            onStartCall = { video -> showDrawer = false; onStartCall(video) },
+            onJumpToMessage = { messageIndex ->
+                showDrawer = false
+                // VM 목록은 최신순, 화면은 뒤집어 그리므로 표시 인덱스는 뒤집은 값
+                scope.launch { listState.animateScrollToItem(uiState.messages.size - 1 - messageIndex) }
+            }
+        )
+    }
+}
+
+/**
+ * 우측 사이드 드로어(카카오톡 채팅방 서랍 미러) — 대화상대 / 사진 / 통화.
+ *
+ * 셸의 M2 ModalDrawer는 좌측 전용이라 여기선 같은 모양을 오버레이로 직접 짠다
+ * (iOS DrawerShellView와 같은 관용구 — 스크림 탭으로 닫힘, 0.2초 슬라이드).
+ * 채팅방 참여자 API가 없어 대화상대는 그룹 방=그룹 멤버, DM=메시지에서 파생한 상대 1명이다.
+ */
+@Composable
+private fun ChatRoomDrawer(
+    open: Boolean,
+    title: String,
+    groupId: Long?,
+    uiState: ChatRoomViewModel.UiState,
+    onClose: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
+    onStartCall: (video: Boolean) -> Unit,
+    onJumpToMessage: (messageIndex: Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+    // 로드된 이력 안의 이미지 첨부 — 서버 사진함 API가 없어 화면이 파생한다(스크롤할수록 늘어난다).
+    // VM 목록이 최신순이라 그대로 최신순이고, 인덱스는 점프에 그대로 쓴다
+    val photos = remember(uiState.messages) {
+        uiState.messages.mapIndexedNotNull { index, message ->
+            message.attachment?.takeIf { it.isImage }?.let { index to it.url }
+        }
+    }
+
+    Box(modifier.fillMaxSize()) {
+        AnimatedVisibility(open, enter = fadeIn(), exit = fadeOut()) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(SgTheme.colors.ink.copy(alpha = 0.35f))
+                    .clickable(onClick = onClose)
+            )
+        }
+        AnimatedVisibility(
+            open,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            enter = slideInHorizontally { it },
+            exit = slideOutHorizontally { it }
+        ) {
+            Surface(color = sg.paper, elevation = 8.dp) {
+                Column(
+                    Modifier
+                        .width(288.dp)
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                ) {
+                    // 헤더 — 방 이름과 방 종류
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().background(sg.linen).padding(start = 16.dp, end = 8.dp)
+                    ) {
+                        Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+                            Text(
+                                title,
+                                style = SgTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = sg.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                if (groupId == null) "1:1 대화" else "그룹 대화",
+                                style = SgTheme.typography.labelSmall,
+                                color = sg.inkFaint
+                            )
+                        }
+                        IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                        }
+                    }
+                    Divider(color = sg.stoneBorder)
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        DrawerSectionTitle("대화상대", countLabel = drawerMemberCount(groupId, uiState))
+                        DrawerMembers(
+                            groupId = groupId,
+                            uiState = uiState,
+                            onOpenUserProfile = onOpenUserProfile
+                        )
+                        Divider(color = sg.stoneBorder, modifier = Modifier.padding(vertical = 8.dp))
+                        DrawerSectionTitle("사진", countLabel = if (photos.isEmpty()) null else "${photos.size}장")
+                        if (photos.isEmpty()) {
+                            Text(
+                                "주고받은 사진이 없습니다.",
+                                style = SgTheme.typography.bodySmall,
+                                color = sg.inkFaint,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        } else {
+                            // 미리보기는 최신 9장 — 더 보려면 이력을 위로 더 불러오면 된다
+                            Column(
+                                Modifier.padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                photos.take(9).chunked(3).forEach { row ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        row.forEach { (messageIndex, url) ->
+                                            AsyncImage(
+                                                model = url,
+                                                contentDescription = "사진",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(sg.linen)
+                                                    .clickable { onJumpToMessage(messageIndex) }
+                                            )
+                                        }
+                                        // 마지막 줄이 3칸을 못 채우면 남는 칸만큼 자리를 비워 정렬을 지킨다
+                                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                    Divider(color = sg.stoneBorder)
+                    // 통화 — 상단바에서 뺀 진입점을 여기로 옮겼다(+ 첨부 패널에도 그대로 있다)
+                    Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DrawerCallButton(Icons.Default.Call, "보이스톡", Modifier.weight(1f)) { onStartCall(false) }
+                        DrawerCallButton(Icons.Default.Videocam, "페이스톡", Modifier.weight(1f)) { onStartCall(true) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 드로어 대화상대 수 표기 — 그룹 방은 로드된 멤버 수, DM은 항상 2명 */
+private fun drawerMemberCount(groupId: Long?, uiState: ChatRoomViewModel.UiState): String? = when {
+    groupId == null -> "2명"
+    uiState.members != null -> "${uiState.members.size}명"
+    else -> null
+}
+
+@Composable
+private fun DrawerSectionTitle(title: String, countLabel: String?) {
+    val sg = SgTheme.colors
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+    ) {
+        Text(title, style = SgTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = sg.inkSoft)
+        Spacer(Modifier.weight(1f))
+        if (countLabel != null) {
+            Text(countLabel, style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+        }
+    }
+}
+
+/** 그룹 방=그룹 멤버 목록, DM 방=메시지에서 파생한 상대 1명 + 나 */
+@Composable
+private fun DrawerMembers(
+    groupId: Long?,
+    uiState: ChatRoomViewModel.UiState,
+    onOpenUserProfile: (Long) -> Unit
+) {
+    val sg = SgTheme.colors
+
+    if (groupId == null) {
+        // DM 방엔 참여자 API도 groupId도 없다 — 상대는 내 것이 아닌 첫 메시지에서 집는다
+        val peer = remember(uiState.messages, uiState.myUserId) {
+            uiState.messages.firstOrNull { it.userId != uiState.myUserId }
+        }
+
+        if (peer != null) {
+            DrawerMemberRow(
+                name = peer.authorName,
+                profileImg = peer.authorProfileImg,
+                role = null,
+                isMe = false,
+                onClick = { onOpenUserProfile(peer.userId) }
+            )
+        }
+        return
+    }
+    when {
+        uiState.isLoadingMembers && uiState.members == null -> Box(
+            Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = sg.accent)
+        }
+        uiState.members == null -> Text(
+            "대화상대를 불러오지 못했습니다.",
+            style = SgTheme.typography.bodySmall,
+            color = sg.rust,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        else -> uiState.members.forEach { member ->
+            DrawerMemberRow(
+                name = member.name,
+                profileImg = member.profileImg,
+                role = member.role.takeIf { it != GroupRole.MEMBER },
+                isMe = member.userId == uiState.myUserId,
+                onClick = { onOpenUserProfile(member.userId) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrawerMemberRow(
+    name: String,
+    profileImg: String?,
+    role: GroupRole?,
+    isMe: Boolean,
+    onClick: () -> Unit
+) {
+    val sg = SgTheme.colors
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        SgAvatar(name, size = 32.dp, imageUrl = profileImg)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            name,
+            style = SgTheme.typography.bodyMedium,
+            color = sg.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        if (isMe) {
+            Spacer(Modifier.width(6.dp))
+            Text("나", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+        }
+        // 역할 칩은 그룹 목록·상세와 같은 것(방장/부방장) — 일반 멤버는 칩을 달지 않는다
+        if (role != null) {
+            Spacer(Modifier.width(6.dp))
+            RoleChip(role)
+        }
+    }
+}
+
+@Composable
+private fun DrawerCallButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val sg = SgTheme.colors
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(icon, contentDescription = label, tint = sg.accent)
+        Spacer(Modifier.height(4.dp))
+        Text(label, style = SgTheme.typography.labelSmall, color = sg.inkSoft)
+    }
 }
 
 /** 채팅방 VM — 백스택 엔트리 스코프(그룹 상세 패턴), 화면을 떠나면 소켓 구독도 함께 정리된다 */
@@ -437,6 +730,7 @@ private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewMod
             sendChatTypingUseCase = container.sendChatTypingUseCase,
             getChatReadPositionsUseCase = container.getChatReadPositionsUseCase,
             getCallRosterUseCase = container.getCallRosterUseCase,
+            getGroupMembersUseCase = container.getGroupMembersUseCase,
             observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
             getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
         )
