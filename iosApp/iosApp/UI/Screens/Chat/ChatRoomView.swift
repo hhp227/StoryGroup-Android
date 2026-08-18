@@ -438,14 +438,19 @@ struct ChatRoomView: View {
     @ViewBuilder private var chatRoomDrawer: some View {
         if showDrawer {
             ZStack(alignment: .trailing) {
+                drawerPanel
+                    .frame(width: 288)
+                    .background(colors.paper)
+                    .transition(.move(edge: .trailing))
+            }
+            // ⚠️스크림을 ZStack의 "자식"으로 두고 .ignoresSafeArea()를 걸면 그만큼 ZStack이
+            // 안전영역 밖까지 넓어지고, 높이를 채우는 패널이 딸려 올라가 헤더(방 이름)가 상태바에
+            // 가린다. background로 두면 칠은 화면 끝까지 나가면서 레이아웃은 안전영역 안에 남는다
+            .background(
                 Color.black.opacity(0.35)
                     .ignoresSafeArea()
                     .onTapGesture { withAnimation(.easeIn(duration: 0.2)) { showDrawer = false } }
-                drawerPanel
-                    .frame(width: 288)
-                    .background(colors.paper.ignoresSafeArea(edges: .vertical))
-                    .transition(.move(edge: .trailing))
-            }
+            )
         }
     }
 

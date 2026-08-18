@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -503,7 +504,10 @@ private fun ChatRoomDrawer(
                     Modifier
                         .width(288.dp)
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        // 앱이 edge-to-edge라 인셋은 화면이 직접 소화한다(SgTopBar와 같은 규칙).
+                        // Surface 안쪽에 줘서 paper는 상태바 뒤까지 깔리고 헤더만 아래로 내려온다 —
+                        // navigationBars만 주면 방 이름이 상태바에 가린다
+                        .windowInsetsPadding(WindowInsets.systemBars)
                 ) {
                     // 헤더 — 방 이름과 방 종류
                     Row(
