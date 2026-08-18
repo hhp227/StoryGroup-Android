@@ -168,9 +168,6 @@ private struct GroupDetailContent: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 첫 레이아웃 시점 커버의 global minY — 스크롤 오프셋은 이 기준의 상대값(HomeView와 동일한 인셋 보정)
-    @State private var headerRestMinY: CGFloat?
-
     /// 커버가 발행한 스크림 임계값 — 내비바 배경 수동 제어(자동 전환은 keep-alive ZStack에서 불가)
     @State private var barScrimVisible = false
 
@@ -386,7 +383,15 @@ private struct GroupDetailContent: View {
         let total = headerHeight + Self.tabBarHeight + topInset
         return GeometryReader { geo in
             let raw = geo.frame(in: .global).minY
-            let minY = raw - (headerRestMinY ?? raw)
+            // 커버는 .ignoresSafeArea(edges: .top)를 건 스크롤뷰의 첫 요소라 rest 상태의 global minY가
+            // 0이다 — raw 자체가 곧 스크롤 변위다. 아래 스크림 임계값(raw <= -headerHeight)도 이미
+            // 같은 "rest = 0" 전제를 쓴다.
+            //
+            // ⚠️예전엔 onAppear에서 기준값(headerRestMinY)을 한 번 잡아 빼는 보정을 썼는데,
+            // push 전환 중 아직 안전영역이 반영되지 않은 raw(≈ 내비바+상태바 높이)를 잡으면
+            // rest에서도 변위가 0이 되지 않았다. 그러면 커버 콘텐츠가 통째로 아래로 밀리고
+            // 그만큼 clipped에 잘려, 맨 아래 있던 그룹 설명이 진입하자마자 사라졌다.
+            let minY = raw
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
                 if let imageUrlString = viewModel.uiState.group?.image, let url = URL(string: imageUrlString) {
@@ -417,9 +422,6 @@ private struct GroupDetailContent: View {
                 tabBar(onImage: true)
             }
             .offset(y: -stretch)
-            .onAppear {
-                if headerRestMinY == nil { headerRestMinY = raw }
-            }
             // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다 — rest 보정값이 아니라
             // 화면 기하(raw ≤ -headerHeight)로 판정(홈과 동일, 셸별 오프셋 차이 방지)
             .preference(key: NavigationBarScrimVisibleKey.self, value: raw <= -headerHeight)
