@@ -447,12 +447,12 @@ extension View {
     /// 내비바 배경을 명시 제어 — false면 투명(헤더 사진이 비침), true면 기본 머티리얼.
     /// iOS 15/16+ 공통으로 UIKit appearance를 직접 스왑한다.
     ///
-    /// ⚠️내비바는 **스택 전체가 공유하는 하나의 UINavigationBar**다. 마지막으로 설정한 값이 그대로
-    /// 남으므로, 투명(false)을 쓰는 화면(셸 홈·그룹 상세의 펼친 커버, 열린 드로어) 위로 push되는
-    /// 화면은 **자기 자신이 `visible: true`를 선언**해야 한다. 안 하면 push된 화면까지 투명해진다.
+    /// 값은 화면(스택에 실린 VC)의 `navigationItem`에 걸린다 — 내비바 자체는 스택 공용이라
+    /// 직접 스왑하면 다른 화면 설정을 덮어쓰고, 전환 뒤에 반영돼 진입 순간 깜빡임도 생긴다.
     ///
-    /// 반대 방향(아래 깔린 화면이 위 화면 설정을 덮어쓰는 것)은 Helper가 막는다 —
-    /// 스택 최상단일 때만 바에 쓰고, 복귀 시 viewWillAppear/viewDidAppear가 자기 값을 재적용한다.
+    /// ⚠️그래서 **내비 스택에 실리는 화면은 전부 이 modifier를 선언**해야 한다. 선언이 없으면
+    /// 그 화면만 iOS 기본값(15에서는 스크롤 최상단 투명)으로 떨어진다.
+    /// 시트는 자체 UINavigationController를 가지므로 대상이 아니다(공개 프로필 등).
     func navigationBarScrim(visible: Bool) -> some View {
         background(NavigationBarScrimSetter(visible: visible))
     }
@@ -469,17 +469,23 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
     }
 
     /// SwiftUI 계층 안에서 부모 UINavigationController에 접근하기 위한 숨은 VC.
-    /// push/pop 복귀 시(viewWillAppear/viewDidAppear) 최신 상태를 다시 적용한다
-    /// (내가 가려진 동안 위 화면이 바를 자기 값으로 바꿔놨을 수 있다).
+    /// 화면에 붙는 순간(didMove)부터 나타나는 시점까지 여러 번 적용을 시도한다 —
+    /// push 전환이 바를 그리기 전에 값을 걸어야 진입 첫 프레임부터 이 화면 배경이 나온다.
     final class Helper: UIViewController {
         var visible = false
+
+        /// SwiftUI가 이 자식 VC를 붙이는 순간 — viewWillAppear보다 이를 수 있어 가장 먼저 시도한다
+        override func didMove(toParent parent: UIViewController?) {
+            super.didMove(toParent: parent)
+            applyIfPossible()
+        }
 
         override func viewWillAppear(_ animated: Bool) {
             super.viewWillAppear(animated)
             applyIfPossible()
         }
 
-        /// 전환이 끝난 시점의 보정 — viewWillAppear 때 아직 스택 최상단이 아니었던 경우를 구제한다
+        /// 전환이 끝난 시점의 보정 — 앞의 두 시점에 아직 스택에 실리지 않았던 경우를 구제한다
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
             applyIfPossible()
@@ -488,13 +494,6 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
         func applyIfPossible() {
             guard let nav = navigationController else { return }
 
-            // 내비바는 스택 전체가 공유하는 하나뿐이라, 내가 아래 깔린 동안 값을 쓰면 위에 올라간
-            // 화면의 설정을 덮어쓴다. 가려진 뒤에도 상태가 바뀌는 화면이 실제로 있다 —
-            // 드로어는 "설정"을 push하면서 동시에 drawerOpen=false로 바꾸고(투명↔불투명 재계산),
-            // 홈·그룹 상세는 push된 뒤에도 스크롤 오프셋 preference가 흐른다.
-            // 소유 VC를 못 찾으면 판정을 포기하고 그냥 적용한다(최소한 종전 동작은 보장)
-            if let owner = owningStackViewController(in: nav), owner !== nav.topViewController { return }
-
             let appearance = UINavigationBarAppearance()
 
             if visible {
@@ -502,6 +501,23 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
             } else {
                 appearance.configureWithTransparentBackground()
             }
+
+            // 공용 바가 아니라 "내 화면 VC의 navigationItem"에 건다.
+            //
+            // ⚠️바(bar.standardAppearance)를 직접 스왑하면 두 가지가 따라온다:
+            //   1) 스택 공용이라 다른 화면 설정을 덮어쓴다
+            //   2) UIKit이 push 전환용으로 바를 구성한 "뒤"에 값이 바뀌어서, 진입 순간
+            //      이전 화면의 배경이 한 번 보였다가 투명으로 뒤집힌다(그룹 상세 커버 깜빡임)
+            // navigationItem 오버라이드는 UIKit이 화면별로 읽어 전환에 맞춰 적용하므로 둘 다 없다.
+            if let owner = owningStackViewController(in: nav) {
+                owner.navigationItem.standardAppearance = appearance
+                owner.navigationItem.scrollEdgeAppearance = appearance
+                owner.navigationItem.compactAppearance = appearance
+                return
+            }
+
+            // 소유 VC를 못 찾은 경우의 폴백 — 종전대로 공용 바를 직접 스왑한다(최소 동작 보장).
+            // 이 경로에선 화면 구분이 안 되므로 덮어쓰기 위험이 남는다
             let bar = nav.navigationBar
             bar.standardAppearance = appearance
             bar.scrollEdgeAppearance = appearance
