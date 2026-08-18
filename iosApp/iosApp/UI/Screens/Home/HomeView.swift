@@ -61,6 +61,9 @@ private struct HomeContent: View {
     /// 내비바 아래로 노출되는 이미지 높이 — Compose와 시각적 패리티(2026-07-19 사용자 조정).
     /// Compose는 헤더 170dp 위에 툴바 56dp가 겹쳐 바 아래 노출이 114dp인데, iOS는 전체 슬롯을
     /// topInset(상태바+내비바)+이 값으로 만들므로 노출 높이끼리 맞추려면 170이 아니라 114여야 한다.
+    /// 스크롤 변위 측정용 좌표계 이름 — ScrollView에 건다
+    private static let scrollSpace = "homeScroll"
+
     private let headerHeight: CGFloat = 114
 
     /// 글쓰기를 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
@@ -91,6 +94,8 @@ private struct HomeContent: View {
             .background(colors.paper)
             // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 스크롤 변위 측정 기준 — 전역 좌표는 로딩 중 값이 튀어 헤더가 떨린다(그룹 상세 미러)
+            .coordinateSpace(name: Self.scrollSpace)
             // 당겨서 새로고침 — 글쓰기 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
             // Compose HomeScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
@@ -136,10 +141,9 @@ private struct HomeContent: View {
     private func parallaxHeader(topInset: CGFloat) -> some View {
         let total = headerHeight + topInset
         return GeometryReader { geo in
-            let raw = geo.frame(in: .global).minY
-            // 헤더는 .ignoresSafeArea(edges: .top)를 건 스크롤뷰의 첫 요소라 rest의 global minY가
-            // 0이다 — raw가 곧 스크롤 변위다. 기준을 바꿔선 안 되는 이유는 GroupDetailView의
-            // 같은 자리 주석 참고(보정값 방식·명명 좌표계 방식 둘 다 시도했다가 되돌렸다)
+            // 스크롤 변위 — rest에서 정확히 0. `+ topInset`의 이유와, 전역 좌표·기준값 보정으로
+            // 되돌리면 안 되는 이유는 GroupDetailView의 같은 자리 주석 참고(셋 다 겪었다)
+            let raw = geo.frame(in: .named(Self.scrollSpace)).minY + topInset
             let minY = raw
             let stretch = max(0, minY)
             Image("header")

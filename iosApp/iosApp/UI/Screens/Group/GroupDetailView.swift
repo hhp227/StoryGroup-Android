@@ -172,6 +172,9 @@ private struct GroupDetailContent: View {
     @State private var barScrimVisible = false
 
     /// 내비바 아래 노출 커버 높이(탭바 제외) — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
+    /// 스크롤 변위 측정용 좌표계 이름 — ScrollView에 건다
+    private static let scrollSpace = "groupDetailScroll"
+
     private let headerHeight: CGFloat = 114
 
     /// 커버 하단에 겹치는 탭바 높이 — Compose CollapsingTabRowHeight(48dp) 미러
@@ -287,6 +290,9 @@ private struct GroupDetailContent: View {
             .background(colors.paper)
             // 커버가 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 스크롤 변위 측정 기준 — 전역 좌표는 로딩 중 레이아웃이 정착하는 동안 값이 튀어
+            // 커버가 떨린다(진입 깜빡임). 이 좌표계는 스크롤뷰 프레임이 원점이라 그 잡음에 면역이다
+            .coordinateSpace(name: Self.scrollSpace)
             // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드+앨범을 함께 갱신한다.
             // Compose GroupDetailScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
@@ -382,16 +388,18 @@ private struct GroupDetailContent: View {
     private func cover(topInset: CGFloat) -> some View {
         let total = headerHeight + Self.tabBarHeight + topInset
         return GeometryReader { geo in
-            let raw = geo.frame(in: .global).minY
-            // 커버는 .ignoresSafeArea(edges: .top)를 건 스크롤뷰의 첫 요소라 rest의 global minY가
-            // 0이다 — raw가 곧 스크롤 변위다. 아래 스크림 임계값(raw <= -headerHeight)도 같은 전제.
+            // 스크롤 변위 — rest에서 정확히 0, 아래로 스크롤하면 음수, 당기면 양수.
             //
-            // ⚠️여기서 재는 기준을 바꾸지 말 것. 시도해 보고 되돌린 것들:
-            //   - onAppear에서 기준값을 한 번 잡아 빼는 보정: 그 값이 잘못 잡히면 rest에서도 변위가
-            //     남아, 커버 콘텐츠가 밀린 채 clipped에 잘려 그룹 설명이 사라진다.
-            //   - ScrollView에 .coordinateSpace(name:)를 걸고 그 기준으로 측정: 이름 붙은 좌표계의
-            //     원점이 화면 최상단이 아니라 "안전영역 상단"이라 rest에서 raw = -topInset이 된다.
-            //     그러면 패럴럭스가 커버를 topInset/2만큼 아래로 밀어 상단에 여백이 생긴다.
+            // ⚠️`+ topInset`을 빼지 말 것. 이 좌표계의 원점은 화면 최상단이 아니라 "안전영역 상단"인데
+            // 커버는 .ignoresSafeArea(edges: .top)로 화면 최상단부터 깔린다. 그래서 rest에서 minY가
+            // -topInset으로 나오고, 안 더하면 패럴럭스가 커버를 topInset/2만큼 아래로 밀어 상단에
+            // 여백이 생긴다(실제로 겪은 회귀).
+            //
+            // ⚠️전역 좌표(.global)로 되돌리지도 말 것. rest는 0으로 맞지만 로딩 중 레이아웃이
+            // 정착하는 동안 값이 튀어 커버가 떨린다. onAppear에서 기준값을 한 번 잡아 빼던 보정도
+            // 안 된다 — 그 값이 잘못 잡히면 rest 변위가 남아 커버 콘텐츠가 clipped에 잘리고
+            // 그룹 설명이 사라진다. 셋 다 실제로 겪었다.
+            let raw = geo.frame(in: .named(Self.scrollSpace)).minY + topInset
             let minY = raw
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
