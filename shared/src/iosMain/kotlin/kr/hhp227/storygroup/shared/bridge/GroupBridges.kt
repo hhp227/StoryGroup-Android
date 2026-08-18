@@ -10,7 +10,9 @@ import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
 import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetGroupPhotosPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyGroupsPagingDataUseCase
 
 // 그룹 목록의 Flow<PagingData<Group>> 브리지 — PostBridges.kt의 Group 타입 대응
@@ -63,3 +65,28 @@ fun GetDiscoverGroupsPagingDataUseCase.pagingFlow(query: String, sort: DiscoverS
 
 /** Swift State 기본값용 — Kotlin의 PagingData.empty() 대응 */
 fun emptyDiscoverGroupPagingData(): PagingData<DiscoverGroup> = PagingData.empty()
+
+// 그룹 앨범의 Flow<PagingData<GroupPhoto>> 브리지 — GroupPagingFlowAdapter와 동일 규약
+
+/** 그룹 앨범의 Flow<PagingData> 대응 핸들 — GroupPagingFlowAdapter와 동일 규약 */
+class GroupPhotoPagingFlowAdapter internal constructor(
+    private val source: Flow<PagingData<GroupPhoto>>,
+    private val cached: Boolean = false
+) {
+    fun cachedIn(): GroupPhotoPagingFlowAdapter = GroupPhotoPagingFlowAdapter(source, cached = true)
+
+    fun subscribe(onEach: (PagingData<GroupPhoto>) -> Unit): FlowSubscription {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        val flow = if (cached) source.cachedIn(scope) else source
+
+        scope.launch { flow.collect { onEach(it) } }
+        return FlowSubscription(scope)
+    }
+}
+
+/** Kotlin의 getGroupPhotosPagingDataUseCase(groupId) 호출 대응 — Swift callAsFunction이 감싼다 */
+fun GetGroupPhotosPagingDataUseCase.pagingFlow(groupId: Long): GroupPhotoPagingFlowAdapter =
+    GroupPhotoPagingFlowAdapter(invoke(groupId))
+
+/** Swift State 기본값용 — Kotlin의 PagingData.empty() 대응 */
+fun emptyGroupPhotoPagingData(): PagingData<GroupPhoto> = PagingData.empty()

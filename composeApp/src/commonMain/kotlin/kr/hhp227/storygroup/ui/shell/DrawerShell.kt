@@ -41,12 +41,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.di.sessionViewModel
-import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgBellAction
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgUnreadBadge
+import kr.hhp227.storygroup.ui.navigation.MainDestination
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
@@ -55,19 +56,10 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 /** 레거시 쉘: 구 앱 드로어(프로필 헤더 + 라운지·그룹·친구·채팅 + 알림·설정·로그아웃 보강) */
 @Composable
 internal fun DrawerShell(
-    currentDestination: MainDestination,
-    onDestinationSelected: (MainDestination) -> Unit,
-    onOpenGroupDetail: (Group) -> Unit,
-    onCreatePost: () -> Unit,
-    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    homeRefreshRequested: Boolean,
-    onHomeRefreshHandled: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenAccountSettings: () -> Unit,
-    onOpenCreateGroup: () -> Unit,
-    onOpenDiscoverGroups: () -> Unit,
-    onLogout: () -> Unit
+    currentTab: MainDestination,
+    onNavigationAction: (NavigationAction) -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -81,6 +73,7 @@ internal fun DrawerShell(
 
     ModalDrawer(
         drawerState = drawerState,
+        modifier = modifier,
         drawerBackgroundColor = sg.linen,
         drawerContent = {
             DrawerHeader(profileUiState.profile)
@@ -88,14 +81,14 @@ internal fun DrawerShell(
                 DrawerItem(
                     label = destination.label,
                     icon = destination.icon,
-                    selected = destination == currentDestination,
+                    selected = destination == currentTab,
                     badgeCount = when (destination) {
                         MainDestination.CHAT -> chatUiState.totalUnread
                         MainDestination.NOTIFICATIONS -> notificationsUiState.unreadCount
                         else -> 0
                     },
                     onClick = {
-                        onDestinationSelected(destination)
+                        onNavigationAction(NavigationAction.SelectTab(destination))
                         scope.launch { drawerState.close() }
                     }
                 )
@@ -110,7 +103,7 @@ internal fun DrawerShell(
                 selected = false,
                 onClick = {
                     scope.launch { drawerState.close() }
-                    onOpenSettings()
+                    onNavigationAction(NavigationAction.NavigateToAppSettings)
                 }
             )
             DrawerItem(
@@ -128,9 +121,9 @@ internal fun DrawerShell(
             backgroundColor = sg.paper,
             topBar = {
                 // 홈·그룹은 화면이 상단바를 직접 그린다(메뉴 아이콘은 menuNavigationIcon으로 전달)
-                if (currentDestination != MainDestination.HOME && currentDestination != MainDestination.GROUPS) {
+                if (currentTab != MainDestination.HOME && currentTab != MainDestination.GROUPS) {
                     SgTopBar(
-                        title = currentDestination.label,
+                        title = currentTab.label,
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "메뉴")
@@ -138,10 +131,12 @@ internal fun DrawerShell(
                         },
                         actions = {
                             // 탭 쉘과 동일하게 상단바 우측에서도 알림 진입(알림 화면에서는 숨김)
-                            if (currentDestination != MainDestination.NOTIFICATIONS) {
+                            if (currentTab != MainDestination.NOTIFICATIONS) {
                                 SgBellAction(
                                     unreadCount = notificationsUiState.unreadCount,
-                                    onClick = { onDestinationSelected(MainDestination.NOTIFICATIONS) }
+                                    onClick = {
+                                        onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS))
+                                    }
                                 )
                             }
                         }
@@ -150,18 +145,7 @@ internal fun DrawerShell(
             }
         ) { padding ->
             DestinationContent(
-                destination = currentDestination,
-                onOpenGroupDetail = onOpenGroupDetail,
-                onCreatePost = onCreatePost,
-                onOpenPostDetail = onOpenPostDetail,
-                onOpenChatRoom = onOpenChatRoom,
-                homeRefreshRequested = homeRefreshRequested,
-                onHomeRefreshHandled = onHomeRefreshHandled,
-                onOpenNotifications = { onDestinationSelected(MainDestination.NOTIFICATIONS) },
-                onOpenSettings = onOpenSettings,
-                onOpenAccountSettings = onOpenAccountSettings,
-                onOpenCreateGroup = onOpenCreateGroup,
-                onOpenDiscoverGroups = onOpenDiscoverGroups,
+                destination = currentTab,
                 onLogout = onLogout,
                 menuNavigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {

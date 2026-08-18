@@ -43,6 +43,10 @@ import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.collapsingParallax
+import kr.hhp227.storygroup.ui.navigation.MainDestination
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.postShareText
@@ -59,15 +63,10 @@ import storygroup.composeapp.generated.resources.header
  */
 @Composable
 fun HomeScreen(
-    onCreatePost: () -> Unit,
-    // 라운지 글도 그룹 글이라 상세는 그 글의 groupId로 들어간다
-    onOpenPostDetail: (groupId: Long, postId: Long) -> Unit,
-    // 글쓰기 성공 신호(라운지) — 소비 후 onRefreshHandled로 소거한다
-    refreshRequested: Boolean,
-    onRefreshHandled: () -> Unit,
-    onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     viewModel: HomeViewModel = sessionViewModel {
         HomeViewModel(
             it.getLoungePostsPagingDataUseCase,
@@ -80,11 +79,18 @@ fun HomeScreen(
 ) {
     HomeContent(
         viewModel = viewModel,
-        onCreatePost = onCreatePost,
-        onOpenPostDetail = onOpenPostDetail,
-        refreshRequested = refreshRequested,
-        onRefreshHandled = onRefreshHandled,
-        onOpenNotifications = onOpenNotifications,
+        // 라운지 글쓰기 — groupId null이면 홈 피드에 게시된다
+        onCreatePost = { onNavigationAction(NavigationAction.NavigateToCreatePost(groupId = null)) },
+        onOpenPostDetail = { groupId, postId ->
+            onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, postId))
+        },
+        // 글쓰기 성공 신호(라운지) — 소비 후 ConsumeResult로 소거한다
+        refreshRequested = NavResult.PostCreated(null) in pendingResults,
+        onRefreshHandled = {
+            onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostCreated(null)))
+        },
+        onOpenNotifications = { onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS)) },
+        onOpenSearch = { onNavigationAction(NavigationAction.NavigateToSearch) },
         navigationIcon = navigationIcon,
         modifier = modifier
     )
@@ -99,6 +105,7 @@ private fun HomeContent(
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     navigationIcon: (@Composable () -> Unit)? = null
 ) {
@@ -136,7 +143,7 @@ private fun HomeContent(
         title = "우리들의 이야기",
         navigationIcon = navigationIcon,
         actions = {
-            IconButton(onClick = { /* TODO: 검색 */ }) {
+            IconButton(onClick = onOpenSearch) {
                 Icon(Icons.Default.Search, contentDescription = "검색")
             }
             SgBellAction(

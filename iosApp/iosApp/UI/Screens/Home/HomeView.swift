@@ -12,11 +12,16 @@ struct HomeView: View {
     /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
     private let container: AppContainer
 
+    /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
+    private let chatViewModel: ChatViewModel
+
+    private let profileViewModel: ProfileViewModel
+
     var body: some View {
-        HomeContent(viewModel: homeViewModel, container: container)
+        HomeContent(viewModel: homeViewModel, container: container, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
     }
 
-    init(container: AppContainer) {
+    init(container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         _homeViewModel = StateObject(wrappedValue: HomeViewModel(
             getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
             observePostUpdatesUseCase: container.observePostUpdatesUseCase,
@@ -25,6 +30,8 @@ struct HomeView: View {
             togglePostLikeUseCase: container.togglePostLikeUseCase
         ))
         self.container = container
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
     }
 }
 
@@ -34,6 +41,11 @@ private struct HomeContent: View {
     @ObservedObject var viewModel: HomeViewModel
 
     let container: AppContainer
+
+    /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
+    let chatViewModel: ChatViewModel
+
+    let profileViewModel: ProfileViewModel
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -46,14 +58,12 @@ private struct HomeContent: View {
     /// 공유 시트 대상 — 카드 공유 버튼이 채우면 ActivityShareSheet가 뜬다(Compose postShareText 미러)
     @State private var shareItem: ShareItem?
 
-    /// 첫 레이아웃 시점 헤더의 global minY — 스크롤 오프셋은 이 기준의 상대값으로 계산한다.
-    /// NavigationView 안에선 rest 오프셋이 0이 아닐 수 있어(내비바 인셋), 절대값을 쓰면
-    /// 헤더가 아이템과 따로 미끄러지는 어색한 움직임이 생긴다(이전 구현의 버그).
-    @State private var headerRestMinY: CGFloat?
-
     /// 내비바 아래로 노출되는 이미지 높이 — Compose와 시각적 패리티(2026-07-19 사용자 조정).
     /// Compose는 헤더 170dp 위에 툴바 56dp가 겹쳐 바 아래 노출이 114dp인데, iOS는 전체 슬롯을
     /// topInset(상태바+내비바)+이 값으로 만들므로 노출 높이끼리 맞추려면 170이 아니라 114여야 한다.
+    /// 스크롤 변위 측정용 좌표계 이름 — ScrollView에 건다
+    private static let scrollSpace = "homeScroll"
+
     private let headerHeight: CGFloat = 114
 
     /// 글쓰기를 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
@@ -84,6 +94,8 @@ private struct HomeContent: View {
             .background(colors.paper)
             // 헤더 사진이 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 스크롤 변위 측정 기준 — 전역 좌표는 로딩 중 값이 튀어 헤더가 떨린다(그룹 상세 미러)
+            .coordinateSpace(name: Self.scrollSpace)
             // 당겨서 새로고침 — 글쓰기 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
             // Compose HomeScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
@@ -129,8 +141,10 @@ private struct HomeContent: View {
     private func parallaxHeader(topInset: CGFloat) -> some View {
         let total = headerHeight + topInset
         return GeometryReader { geo in
-            let raw = geo.frame(in: .global).minY
-            let minY = raw - (headerRestMinY ?? raw)
+            // 스크롤 변위 — rest에서 정확히 0. `+ topInset`의 이유와, 전역 좌표·기준값 보정으로
+            // 되돌리면 안 되는 이유는 GroupDetailView의 같은 자리 주석 참고(셋 다 겪었다)
+            let raw = geo.frame(in: .named(Self.scrollSpace)).minY + topInset
+            let minY = raw
             let stretch = max(0, minY)
             Image("header")
                 .resizable()
@@ -142,9 +156,6 @@ private struct HomeContent: View {
                 // 클리핑 뒤에 당긴 만큼 끌어올려 이미지 상단을 화면 상단에 고정 —
                 // clipped보다 먼저 옮기면 늘어난 윗부분이 잘려나간다(이전 구현의 버그)
                 .offset(y: -stretch)
-                .onAppear {
-                    if headerRestMinY == nil { headerRestMinY = raw }
-                }
                 // 피드 아이템이 내비바 영역에 닿는 시점부터 바 배경을 켠다.
                 // rest 보정값(minY)이 아니라 화면 기하(raw: 헤더 하단 raw+total ≤ 바 하단 topInset,
                 // 정리하면 raw ≤ -headerHeight)로 판정 — 셸(탭/드로어)별 첫 레이아웃 오프셋 차이로
@@ -184,7 +195,9 @@ private struct HomeContent: View {
                             PostDetailView(
                                 container: container,
                                 groupId: post.groupId,
-                                postId: post.id
+                                postId: post.id,
+                                chatViewModel: chatViewModel,
+                                profileViewModel: profileViewModel
                             )
                         } label: {
                             SGPostCard(
@@ -206,13 +219,15 @@ private struct HomeContent: View {
         }
     }
 
-    init(viewModel: HomeViewModel, container: AppContainer) {
+    init(viewModel: HomeViewModel, container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
         self.container = container
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

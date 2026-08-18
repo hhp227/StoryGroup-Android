@@ -123,6 +123,30 @@ struct SGTextField: View {
     }
 }
 
+/// 입력 바 필드의 최소 높이 — 바 총 높이 = 이 값 + 세로 패딩 2배. Compose ComposerFieldMinHeight 미러
+let sgComposerFieldMinHeight: CGFloat = 40
+
+/// 하단 입력 바 전용 슬림 필드 — 레거시 EditText(background="@null") 미러.
+///
+/// SGTextField는 46pt 고정 높이에 테두리까지 그려 한 줄짜리 댓글/메시지 입력에는 두껍다.
+/// 여기서는 테두리도 배경도 없이 바 배경 위에 글자만 얹고, 터치 영역만 40pt로 확보한다.
+struct SGComposerField: View {
+    let placeholder: String
+
+    @Binding var text: String
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .font(.subheadline)
+            .foregroundColor(colors.ink)
+            // 세로 여백은 바깥 입력 바가 준다 — 여기는 레거시 paddingStart 5pt 자리만
+            .padding(.horizontal, 6)
+            .frame(minHeight: sgComposerFieldMinHeight)
+    }
+}
+
 /// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러
 struct SGPrimaryButton: View {
     let title: String
@@ -422,6 +446,13 @@ struct NavigationBarScrimVisibleKey: PreferenceKey {
 extension View {
     /// 내비바 배경을 명시 제어 — false면 투명(헤더 사진이 비침), true면 기본 머티리얼.
     /// iOS 15/16+ 공통으로 UIKit appearance를 직접 스왑한다.
+    ///
+    /// 값은 화면(스택에 실린 VC)의 `navigationItem`에 걸린다 — 내비바 자체는 스택 공용이라
+    /// 직접 스왑하면 다른 화면 설정을 덮어쓰고, 전환 뒤에 반영돼 진입 순간 깜빡임도 생긴다.
+    ///
+    /// ⚠️그래서 **내비 스택에 실리는 화면은 전부 이 modifier를 선언**해야 한다. 선언이 없으면
+    /// 그 화면만 iOS 기본값(15에서는 스크롤 최상단 투명)으로 떨어진다.
+    /// 시트는 자체 UINavigationController를 가지므로 대상이 아니다(공개 프로필 등).
     func navigationBarScrim(visible: Bool) -> some View {
         background(NavigationBarScrimSetter(visible: visible))
     }
@@ -438,17 +469,31 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
     }
 
     /// SwiftUI 계층 안에서 부모 UINavigationController에 접근하기 위한 숨은 VC.
-    /// push/pop 복귀 시(viewWillAppear) 최신 상태를 다시 적용한다(pushed 화면이 덮어썼을 수 있음).
+    /// 화면에 붙는 순간(didMove)부터 나타나는 시점까지 여러 번 적용을 시도한다 —
+    /// push 전환이 바를 그리기 전에 값을 걸어야 진입 첫 프레임부터 이 화면 배경이 나온다.
     final class Helper: UIViewController {
         var visible = false
+
+        /// SwiftUI가 이 자식 VC를 붙이는 순간 — viewWillAppear보다 이를 수 있어 가장 먼저 시도한다
+        override func didMove(toParent parent: UIViewController?) {
+            super.didMove(toParent: parent)
+            applyIfPossible()
+        }
 
         override func viewWillAppear(_ animated: Bool) {
             super.viewWillAppear(animated)
             applyIfPossible()
         }
 
+        /// 전환이 끝난 시점의 보정 — 앞의 두 시점에 아직 스택에 실리지 않았던 경우를 구제한다
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            applyIfPossible()
+        }
+
         func applyIfPossible() {
-            guard let bar = navigationController?.navigationBar else { return }
+            guard let nav = navigationController else { return }
+
             let appearance = UINavigationBarAppearance()
 
             if visible {
@@ -456,9 +501,38 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
             } else {
                 appearance.configureWithTransparentBackground()
             }
+
+            // 공용 바가 아니라 "내 화면 VC의 navigationItem"에 건다.
+            //
+            // ⚠️바(bar.standardAppearance)를 직접 스왑하면 두 가지가 따라온다:
+            //   1) 스택 공용이라 다른 화면 설정을 덮어쓴다
+            //   2) UIKit이 push 전환용으로 바를 구성한 "뒤"에 값이 바뀌어서, 진입 순간
+            //      이전 화면의 배경이 한 번 보였다가 투명으로 뒤집힌다(그룹 상세 커버 깜빡임)
+            // navigationItem 오버라이드는 UIKit이 화면별로 읽어 전환에 맞춰 적용하므로 둘 다 없다.
+            if let owner = owningStackViewController(in: nav) {
+                owner.navigationItem.standardAppearance = appearance
+                owner.navigationItem.scrollEdgeAppearance = appearance
+                owner.navigationItem.compactAppearance = appearance
+                return
+            }
+
+            // 소유 VC를 못 찾은 경우의 폴백 — 종전대로 공용 바를 직접 스왑한다(최소 동작 보장).
+            // 이 경로에선 화면 구분이 안 되므로 덮어쓰기 위험이 남는다
+            let bar = nav.navigationBar
             bar.standardAppearance = appearance
             bar.scrollEdgeAppearance = appearance
             bar.compactAppearance = appearance
+        }
+
+        /// 이 헬퍼를 품은 "스택에 직접 실린" 조상 VC(= 화면 하나). 못 찾으면 nil
+        private func owningStackViewController(in nav: UINavigationController) -> UIViewController? {
+            var node: UIViewController? = self
+
+            while let current = node {
+                if nav.viewControllers.contains(current) { return current }
+                node = current.parent
+            }
+            return nil
         }
     }
 }

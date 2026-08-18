@@ -9,6 +9,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -17,13 +18,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.shared.data.network.dto.CreateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.CreateInviteRequest
+import kr.hhp227.storygroup.shared.data.network.dto.UpdateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DiscoverGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
+import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotoResponse
+import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotosPageResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.InviteResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinRequestResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MemberResponse
+import kr.hhp227.storygroup.shared.data.network.dto.PostReportResponse
+import kr.hhp227.storygroup.shared.data.network.dto.ProcessReportRequest
 import kr.hhp227.storygroup.shared.data.paging.PagePagingConfig
 import kr.hhp227.storygroup.shared.data.paging.PagePagingSource
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
@@ -34,9 +40,13 @@ import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupMembershipStatus
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
+import kr.hhp227.storygroup.shared.domain.model.GroupPhotoMediaType
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
 import kr.hhp227.storygroup.shared.domain.model.JoinResult
+import kr.hhp227.storygroup.shared.domain.model.PostReport
+import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 
 class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
@@ -63,6 +73,16 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
         runCatching {
             client.get("/api/groups/$groupId/members").body<List<MemberResponse>>().map { it.toDomain() }
         }
+
+    override fun getGroupPhotosPagingData(groupId: Long): Flow<PagingData<GroupPhoto>> =
+        Pager(PagePagingConfig) {
+            PagePagingSource { page, size ->
+                client.get("/api/groups/$groupId/photos") {
+                    parameter("page", page)
+                    parameter("size", size)
+                }.body<GroupPhotosPageResponse>().photos.map { it.toDomain() }
+            }
+        }.flow
 
     override suspend fun createGroup(
         name: String,
@@ -145,6 +165,54 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
                 throw IllegalStateException(message ?: "유효하지 않거나 만료된 초대 코드입니다.", e)
             }
         }
+
+    override suspend fun updateGroup(
+        groupId: Long,
+        name: String,
+        description: String?,
+        image: String?,
+        joinType: GroupJoinType?
+    ): Result<Group> = runCatching {
+        client.patch("/api/groups/$groupId") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                UpdateGroupRequest(
+                    name = name,
+                    description = description,
+                    image = image,
+                    joinType = joinType?.name
+                )
+            )
+        }.body<GroupResponse>().toDomain()
+    }
+
+    override suspend fun deleteGroup(groupId: Long): Result<Unit> =
+        runCatching {
+            client.delete("/api/groups/$groupId")
+            Unit
+        }
+
+    override suspend fun leaveGroup(groupId: Long): Result<Unit> =
+        runCatching {
+            client.post("/api/groups/$groupId/leave")
+            Unit
+        }
+
+    override suspend fun getGroupReports(groupId: Long, status: ReportStatus?): Result<List<PostReport>> =
+        runCatching {
+            client.get("/api/groups/$groupId/reports") {
+                // null=전체 — 쿼리 자체를 뺀다(웹과 동일)
+                if (status != null) parameter("status", status.name)
+            }.body<List<PostReportResponse>>().map { it.toDomain() }
+        }
+
+    override suspend fun processGroupReport(groupId: Long, reportId: Long, status: ReportStatus): Result<PostReport> =
+        runCatching {
+            client.patch("/api/groups/$groupId/reports/$reportId") {
+                contentType(ContentType.Application.Json)
+                setBody(ProcessReportRequest(status.name))
+            }.body<PostReportResponse>().toDomain()
+        }
 }
 
 // 백엔드 sort 파라미터는 소문자 wire 이름(recent|popular) — DiscoverSort.name과 표기가 달라 별도 매핑
@@ -196,4 +264,31 @@ private fun DiscoverGroupResponse.toDomain() = DiscoverGroup(
     memberCount = memberCount,
     membership = GroupMembershipStatus.entries.firstOrNull { it.name == membership } ?: GroupMembershipStatus.NONE,
     createdAt = createdAt
+)
+
+private fun GroupPhotoResponse.toDomain() = GroupPhoto(
+    id = id,
+    postId = postId,
+    image = image,
+    // 미지의 값은 IMAGE 폴백 — 서버가 종류를 늘려도 그리드가 죽지 않는다
+    mediaType = if (mediaType.equals("video", ignoreCase = true)) GroupPhotoMediaType.VIDEO
+        else GroupPhotoMediaType.IMAGE,
+    userId = userId,
+    authorName = authorName,
+    createdAt = createdAt
+)
+
+private fun PostReportResponse.toDomain() = PostReport(
+    id = id,
+    postId = postId,
+    postTextPreview = postTextPreview,
+    postAuthorId = postAuthorId,
+    postAuthorName = postAuthorName,
+    reporterId = reporterId,
+    reporterName = reporterName,
+    reason = reason,
+    // 미지의 값은 PENDING 폴백 — 서버가 상태를 늘려도 목록이 죽지 않는다
+    status = ReportStatus.entries.firstOrNull { it.name == status } ?: ReportStatus.PENDING,
+    createdAt = createdAt,
+    processedAt = processedAt
 )

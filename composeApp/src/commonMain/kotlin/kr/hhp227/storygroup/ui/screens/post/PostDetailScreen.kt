@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.ui.screens.post
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,9 +57,12 @@ import kr.hhp227.storygroup.shared.domain.model.Comment
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
-import kr.hhp227.storygroup.ui.components.SgTextField
+import kr.hhp227.storygroup.ui.components.SgComposerField
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoAttachment
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
@@ -93,17 +97,23 @@ private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewMode
 fun PostDetailScreen(
     groupId: Long,
     postId: Long,
-    onBack: () -> Unit,
-    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
-    // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
-    refreshRequested: Boolean = false,
-    onRefreshHandled: () -> Unit = {},
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     viewModel: PostDetailViewModel = postDetailViewModel(groupId, postId)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
+    val onBack = { onNavigationAction(NavigationAction.NavigateBack) }
+    // 본문·댓글 작성자 탭 → 공개 프로필(웹 작성자 메뉴의 "프로필 보기"만 직행으로 미러 —
+    // 신고·차단은 기존 더보기 메뉴, DM은 프로필 화면 버튼이 담당해 중복이 없다)
+    val onOpenUserProfile = { userId: Long -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) }
+    // 수정 화면에서 돌아왔다는 신호 — 본문이 바뀌었으니 다시 읽는다(그룹 상세와 같은 규약)
+    val refreshRequested = NavResult.PostUpdated(groupId, postId) in pendingResults
+    val onRefreshHandled = {
+        onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostUpdated(groupId, postId)))
+    }
     var commentText by rememberSaveable { mutableStateOf("") }
     // 상단바 더보기 메뉴 — 열린 채로 화면을 벗어나면 닫히는 게 맞아 remember면 충분하다
     var menuExpanded by remember { mutableStateOf(false) }
@@ -159,7 +169,7 @@ fun PostDetailScreen(
                             DropdownMenuItem(
                                 onClick = {
                                     menuExpanded = false
-                                    onEdit()
+                                    onNavigationAction(NavigationAction.NavigateToCreatePost(groupId, postId))
                                 }
                             ) {
                                 Text("수정", style = SgTheme.typography.bodyMedium, color = sg.ink)
@@ -245,6 +255,7 @@ fun PostDetailScreen(
                         PostBody(
                             uiState = uiState,
                             onAction = onAction,
+                            onOpenUserProfile = onOpenUserProfile,
                             playingVideoUrl = playingVideoUrl,
                             onPlayVideo = { playingVideoUrl = it }
                         )
@@ -270,7 +281,8 @@ fun PostDetailScreen(
                                 },
                                 onBlock = {
                                     confirmAction = ConfirmAction.BlockComment(comment.userId, comment.authorName)
-                                }
+                                },
+                                onOpenAuthor = { onOpenUserProfile(comment.userId) }
                             )
                             // 답글은 한 단계만 들여쓴다(서버가 답글의 답글을 허용하지 않는다)
                             uiState.repliesOf(comment.id).forEach { reply ->
@@ -285,6 +297,7 @@ fun PostDetailScreen(
                                     onBlock = {
                                         confirmAction = ConfirmAction.BlockComment(reply.userId, reply.authorName)
                                     },
+                                    onOpenAuthor = { onOpenUserProfile(reply.userId) },
                                     modifier = Modifier.padding(start = 40.dp)
                                 )
                             }
@@ -400,6 +413,7 @@ private fun ActionConfirmDialog(
 private fun PostBody(
     uiState: PostDetailViewModel.UiState,
     onAction: (PostDetailViewModel.Action) -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     playingVideoUrl: String?,
     onPlayVideo: (String) -> Unit
 ) {
@@ -412,7 +426,11 @@ private fun PostBody(
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            // 작성자 영역만 탭 타깃(본문·첨부 제외) — 본인 글이면 본인 프로필(프로필 수정 버튼)로 간다
+            modifier = Modifier.clickable { onOpenUserProfile(post.userId) }
+        ) {
             SgAvatar(post.authorName, size = 40.dp, imageUrl = post.authorProfileImg)
             Spacer(Modifier.width(10.dp))
             Column {
@@ -468,17 +486,29 @@ private fun CommentRow(
     onDelete: () -> Unit,
     onReport: () -> Unit,
     onBlock: () -> Unit,
+    onOpenAuthor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
     var menuExpanded by remember { mutableStateOf(false) }
 
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        SgAvatar(comment.authorName, size = 28.dp, imageUrl = comment.authorProfileImg)
+        SgAvatar(
+            comment.authorName,
+            size = 28.dp,
+            imageUrl = comment.authorProfileImg,
+            modifier = Modifier.clickable(onClick = onOpenAuthor)
+        )
         Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.authorName, style = SgTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = sg.ink)
+                Text(
+                    comment.authorName,
+                    style = SgTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = sg.ink,
+                    modifier = Modifier.clickable(onClick = onOpenAuthor)
+                )
                 Spacer(Modifier.width(6.dp))
                 Text(formatRelativeTime(comment.createdAt), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
             }
@@ -550,7 +580,9 @@ private fun CommentComposer(
         replyTo?.let { target ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().background(sg.accentSoft).padding(start = 16.dp, end = 4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().background(sg.accentSoft)
+                    .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
             ) {
                 Text(
                     "${target.authorName}님에게 답글",
@@ -558,24 +590,30 @@ private fun CommentComposer(
                     color = sg.ink,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onCancelReply) {
+                IconButton(onClick = onCancelReply, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Default.Close, contentDescription = "답글 취소", tint = sg.inkFaint)
                 }
             }
         }
+        // 레거시 fragment_post_detail.xml 미러 — 헤어라인 아래 여백 얇은 한 줄:
+        // 테두리 없는 입력란 + 작은 전송 버튼. 채팅방 MessageInputBar와 같은 치수다.
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // 좌측 10dp + 필드 자체 6dp = 댓글 목록과 같은 16dp 글자 시작선
+            modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
         ) {
-            // 라벨 없이 입력창만 — SgTextField의 label은 필드 위에 별도 줄로 그려져서
-            // 한 줄짜리 댓글 입력에는 군더더기다(답글 대상은 위 칩이 이미 알려준다).
-            SgTextField(
+            SgComposerField(
                 value = text,
                 onValueChange = onTextChange,
+                placeholder = "댓글을 입력하세요.",
                 modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = onSubmit, enabled = !isSubmitting && text.isNotBlank()) {
+            IconButton(
+                onClick = onSubmit,
+                enabled = !isSubmitting && text.isNotBlank(),
+                modifier = Modifier.size(28.dp)
+            ) {
                 Icon(
                     Icons.Default.Send,
                     contentDescription = "등록",
@@ -583,6 +621,5 @@ private fun CommentComposer(
                 )
             }
         }
-        Spacer(Modifier.height(4.dp))
     }
 }

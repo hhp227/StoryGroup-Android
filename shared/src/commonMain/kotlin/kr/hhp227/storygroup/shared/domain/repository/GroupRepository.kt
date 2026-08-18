@@ -9,7 +9,10 @@ import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
+import kr.hhp227.storygroup.shared.domain.model.GroupPhoto
 import kr.hhp227.storygroup.shared.domain.model.JoinGroupResult
+import kr.hhp227.storygroup.shared.domain.model.PostReport
+import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 
 interface GroupRepository {
     /**
@@ -26,6 +29,9 @@ interface GroupRepository {
 
     /** 그룹 멤버 목록 — GET /api/groups/{id}/members */
     suspend fun getMembers(groupId: Long): Result<List<GroupMember>>
+
+    /** 그룹 앨범(게시글 첨부 파생 뷰) Paging 스트림 — 최신 게시글 순 */
+    fun getGroupPhotosPagingData(groupId: Long): Flow<PagingData<GroupPhoto>>
 
     /** 그룹 생성 — POST /api/groups */
     suspend fun createGroup(name: String, description: String?, image: String?, joinType: GroupJoinType): Result<Group>
@@ -59,4 +65,35 @@ interface GroupRepository {
 
     /** 초대코드로 가입 — POST /api/groups/join/{code}, 승인제 그룹이라도 즉시 MEMBER로 가입된다 */
     suspend fun joinByCode(code: String): Result<Group>
+
+    /**
+     * 그룹 정보 수정(OWNER 전용) — PATCH /api/groups/{id}.
+     * ⚠️name/description/image는 전체 교체 계약(null=null로 덮어씀) — 폼이 기존 값을 항상 실어 보낸다.
+     * joinType null=기존 유지(라운지는 서버가 가입 방식 자체를 안 바꾼다).
+     */
+    suspend fun updateGroup(
+        groupId: Long,
+        name: String,
+        description: String?,
+        image: String?,
+        joinType: GroupJoinType?
+    ): Result<Group>
+
+    /** 그룹 삭제(OWNER 전용, 라운지 불가) — DELETE /api/groups/{id} */
+    suspend fun deleteGroup(groupId: Long): Result<Unit>
+
+    /** 그룹 나가기(멤버/부방장 — OWNER·라운지는 서버가 거부) — POST /api/groups/{id}/leave */
+    suspend fun leaveGroup(groupId: Long): Result<Unit>
+
+    /**
+     * 그룹 신고함 목록(모더레이터 전용) — GET /api/groups/{id}/reports, status null=전체.
+     * 멤버가 신고한 게시글 요약이 내려온다(웹 /groups/[id]/reports 미러).
+     */
+    suspend fun getGroupReports(groupId: Long, status: ReportStatus? = null): Result<List<PostReport>>
+
+    /**
+     * 신고 처리(모더레이터 전용) — PATCH /api/groups/{id}/reports/{reportId}, 처리된 행을 돌려준다.
+     * 확인(RESOLVED)/기각(DISMISSED)은 기록일 뿐 — 게시글 삭제 등 조치는 기존 기능으로 한다.
+     */
+    suspend fun processGroupReport(groupId: Long, reportId: Long, status: ReportStatus): Result<PostReport>
 }

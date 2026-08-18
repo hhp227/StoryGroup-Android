@@ -2,88 +2,26 @@ import Combine
 import Foundation
 import Shared
 
-/// 그룹 상세 — composeApp GroupDetailViewModel.kt와 1:1 미러(Paging-CRUD 샘플 패턴).
-/// 커버+멤버는 UiState 필드, 피드는 UiState에 담기는 최신 PagingData.
-/// groupId만 받아 스스로 로드한다 — 목록이 페이징으로 바뀌어 스냅샷 lookup이 불가(로드 전 group은 nil).
-/// 피드 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다(홈 피드와 동일 패턴).
-/// 모더레이터(방장/부방장)에겐 승인 대기 가입 신청 인박스가 함께 로드된다(웹 GroupMemberList 미러).
-/// 멤버 스트립에서 타인을 탭하면 1:1 DM을 연다(웹 GroupMemberList의 DM 액션 미러).
-/// 상단바 채팅 버튼용 기본 채팅방 id도 함께 로드한다(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
+/// 그룹 상세 화면 수준 VM — composeApp GroupDetailViewModel.kt(축소판)와 1:1 미러.
+/// 커버(이름/설명/역할)+상단바 채팅 버튼용 기본 방 id만 담당 — 탭 상태는 탭별 VM 5개가 소유.
 final class GroupDetailViewModel: MviViewModel {
-    @Published private(set) var uiState = UiState()
+    typealias Event = Never
 
-    let event = PassthroughSubject<Event, Never>()
+    @Published private(set) var uiState = UiState()
 
     let groupId: Int64
 
     private let getGroupUseCase: GetGroupUseCase
 
-    private let getGroupMembersUseCase: GetGroupMembersUseCase
-
-    private let getJoinRequestsUseCase: GetJoinRequestsUseCase
-
-    private let approveJoinRequestUseCase: ApproveJoinRequestUseCase
-
-    private let rejectJoinRequestUseCase: RejectJoinRequestUseCase
-
-    private let createGroupInviteUseCase: CreateGroupInviteUseCase
-
-    private let openDirectRoomUseCase: OpenDirectRoomUseCase
-
     private let getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase
-
-    private let getBlockedUsersUseCase: GetBlockedUsersUseCase
-
-    // 목록 카드용 좋아요 토글 — 상세용 setPostLikedUseCase와 달리 좋아요 목록을 다시 읽지 않는다
-    private let togglePostLikeUseCase: TogglePostLikeUseCase
-
-    private var cancellables = Set<AnyCancellable>()
-
-    private func setPagingData(_ pagingData: PagingData<Post>) {
-        uiState.pagingData = pagingData
-    }
-
-    /// 수정된 게시글을 현재 스냅샷에서 그 항목만 갈아끼운다 — refresh를 태우면 첫 페이지부터
-    /// 전체 재조회라 이미 쌓아둔 페이지와 스크롤 위치를 잃는다(수정은 목록 구조를 바꾸지 않는다).
-    /// 다음 세대(새로고침·재진입)부턴 서버 값이 그대로 이긴다.
-    /// (Kotlin: pagingData.map { ... } — transform이 suspend라 Swift 클로저를 못 넘겨 브리지 함수 사용)
-    /// 차단한 작성자의 글을 현재 스냅샷에서 걷어낸다(멤버 스트립은 다음 refresh가 걸러낸다) —
-    /// refresh를 태우면 첫 페이지부터 전체 재조회라 쌓아둔 페이지와 스크롤 위치를 잃는다.
-    /// (Kotlin: pagingData.filter { ... } — predicate가 suspend라 Swift 클로저를 못 넘겨 브리지 사용)
-    /// 삭제된 글을 현재 스냅샷에서 걷어낸다 — refresh를 태우면 첫 페이지부터 전체 재조회라
-    /// 쌓아둔 페이지와 스크롤 위치를 잃는다. 다음 세대부턴 서버 응답에 애초에 없다.
-    private func removeDeletedPost(_ postId: Int64) {
-        uiState.pagingData = PostBridgesKt.postPagingDataWithoutPost(pagingData: uiState.pagingData, postId: postId)
-    }
-
-    private func removeBlockedAuthorPosts(_ userId: Int64) {
-        uiState.pagingData = PostBridgesKt.postPagingDataWithoutAuthor(pagingData: uiState.pagingData, userId: userId)
-    }
-
-    private func applyPostUpdate(_ post: Post) {
-        uiState.pagingData = PostBridgesKt.postPagingDataWithUpdate(pagingData: uiState.pagingData, post: post)
-    }
 
     func onAction(_ action: Action) {
         switch action {
         case .refresh: refresh()
-        // 글쓰기 성공 시 발화 — 화면이 refresh()로 피드를 첫 페이지부터 다시 읽는다
-        case .refreshFeed: event.send(.refreshFeed)
-        case .approveJoinRequest(let userId): approveJoinRequest(userId: userId)
-        case .rejectJoinRequest(let userId): rejectJoinRequest(userId: userId)
-        case .createInvite(let maxUses, let expiresInDays):
-            createInvite(maxUses: maxUses, expiresInDays: expiresInDays)
-        case .dismissInvite:
-            uiState.createdInvite = nil
-            uiState.inviteError = nil
-        case .openDm(let userId, let userName): openDm(userId: userId, userName: userName)
-        case .dismissDm: uiState.dmError = nil
-        case .toggleLike(let post): toggleLike(post)
-        case .dismissLikeError: uiState.likeError = nil
         }
     }
 
-    /// 상세 진입 시 발화 — 그룹+멤버(+모더레이터면 가입 신청) 로드(피드는 Pager가 자체 로드/재시도)
+    /// 상세 진입 시 발화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
     private func refresh() {
         if uiState.isLoading { return }
 
@@ -92,23 +30,10 @@ final class GroupDetailViewModel: MviViewModel {
         Task { @MainActor in
             do {
                 let group = try await getGroupUseCase.invoke(groupId: groupId)
-                let members = try await getGroupMembersUseCase.invoke(groupId: groupId)
-                // 가입 신청 목록은 모더레이터 전용 API — 권한이 있을 때만 조회하고,
-                // 실패해도 상세 자체는 그린다(웹 GroupMemberList 미러, 라운지는 가입 신청 자체가 없다)
-                let canModerate = !group.isLounge && group.myRole != .member
-                let joinRequests = canModerate
-                    ? ((try? await getJoinRequestsUseCase.invoke(groupId: groupId)) ?? [])
-                    : []
-                // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨고 다음 refresh가 따라잡는다)
+                // 상단바 채팅 버튼용 기본 방 id — 실패해도 상세는 그린다(버튼만 숨는다)
                 let defaultChatRoomId = ((try? await getGroupDefaultChatRoomUseCase.invoke(groupId: groupId)) ?? nil)?.int64Value
-                // 서버는 멤버 목록에서 차단 사용자를 빼주지 않는다 — 스트립에서 직접 걸러내려고 함께 읽는다.
-                // 실패해도 상세는 그린다(안 걸러진 멤버가 보일 뿐, 다음 refresh가 따라잡는다)
-                let blockedUserIds = Set(((try? await getBlockedUsersUseCase.invoke()) ?? []).map { $0.userId })
                 uiState.isLoading = false
                 uiState.group = group
-                uiState.members = members
-                uiState.blockedUserIds = blockedUserIds
-                uiState.joinRequests = joinRequests
                 uiState.defaultChatRoomId = defaultChatRoomId
             } catch {
                 uiState.isLoading = false
@@ -117,212 +42,26 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
-    /// 가입 신청 승인 — 성공 시 인박스에서 제거하고 새 멤버를 목록에 반영한다(웹 handleApprove 미러)
-    private func approveJoinRequest(userId: Int64) {
-        if uiState.processingRequestUserId != nil { return }
-
-        uiState.processingRequestUserId = userId
-        uiState.actionError = nil
-        Task { @MainActor in
-            do {
-                try await approveJoinRequestUseCase.invoke(groupId: groupId, userId: userId)
-                // 승인은 확정됐으므로 멤버 재조회 실패는 무시한다 — 다음 refresh가 따라잡는다
-                if let members = try? await getGroupMembersUseCase.invoke(groupId: groupId) {
-                    uiState.members = members
-                }
-                uiState.joinRequests.removeAll { $0.userId == userId }
-                uiState.processingRequestUserId = nil
-            } catch {
-                uiState.processingRequestUserId = nil
-                uiState.actionError = error.kotlinMessage(fallback: "가입 승인에 실패했습니다.")
-            }
-        }
-    }
-
-    /// 가입 신청 거절 — 성공 시 인박스에서만 제거한다(웹 handleReject 미러)
-    private func rejectJoinRequest(userId: Int64) {
-        if uiState.processingRequestUserId != nil { return }
-
-        uiState.processingRequestUserId = userId
-        uiState.actionError = nil
-        Task { @MainActor in
-            do {
-                try await rejectJoinRequestUseCase.invoke(groupId: groupId, userId: userId)
-                uiState.joinRequests.removeAll { $0.userId == userId }
-                uiState.processingRequestUserId = nil
-            } catch {
-                uiState.processingRequestUserId = nil
-                uiState.actionError = error.kotlinMessage(fallback: "가입 거절에 실패했습니다.")
-            }
-        }
-    }
-
-    /// 초대코드 생성(모더레이터 전용) — 성공 시 다이얼로그가 결과(코드) 뷰로 전환된다
-    private func createInvite(maxUses: Int?, expiresInDays: Int?) {
-        if uiState.isCreatingInvite { return }
-
-        uiState.isCreatingInvite = true
-        uiState.inviteError = nil
-        Task { @MainActor in
-            do {
-                let invite = try await createGroupInviteUseCase.invoke(
-                    groupId: groupId,
-                    maxUses: maxUses.map { KotlinInt(int: Int32($0)) },
-                    expiresInDays: expiresInDays.map { KotlinInt(int: Int32($0)) }
-                )
-                uiState.isCreatingInvite = false
-                uiState.createdInvite = invite
-            } catch {
-                uiState.isCreatingInvite = false
-                uiState.inviteError = error.kotlinMessage(fallback: "초대코드 생성에 실패했습니다.")
-            }
-        }
-    }
-
-    /// 멤버와 1:1 DM 열기 — get-or-create(멱등)라 이미 방이 있으면 그 방으로 간다(웹 handleDm 미러)
-    private func openDm(userId: Int64, userName: String) {
-        if uiState.isOpeningDm { return }
-
-        uiState.isOpeningDm = true
-        uiState.dmError = nil
-        Task { @MainActor in
-            do {
-                let chatRoomId = try await openDirectRoomUseCase.invoke(otherUserId: userId)
-                uiState.isOpeningDm = false
-                // 방 이름은 서버가 "DM" 고정이라 상대 이름을 제목으로 넘긴다(허브와 동일)
-                event.send(.dmOpened(chatRoomId: chatRoomId.int64Value, title: userName))
-            } catch {
-                // 차단 관계(403 BLOCKED) 등 — 다이얼로그 안에 표시된다
-                uiState.isOpeningDm = false
-                uiState.dmError = error.kotlinMessage(fallback: "DM을 열지 못했습니다.")
-            }
-        }
-    }
-
-    /// 성공 반영은 리포지토리의 postUpdates 알림(applyPostUpdate)이 담당 — 여기선 실패만 다룬다
-    private func toggleLike(_ post: Post) {
-        Task { @MainActor in
-            do {
-                try await togglePostLikeUseCase.invoke(groupId: post.groupId, postId: post.id, liked: !post.likedByMe)
-            } catch {
-                uiState.likeError = error.kotlinMessage(fallback: "좋아요 처리에 실패했습니다.")
-            }
-        }
-    }
-
-    init(
-        groupId: Int64,
-        getGroupUseCase: GetGroupUseCase,
-        getGroupMembersUseCase: GetGroupMembersUseCase,
-        getJoinRequestsUseCase: GetJoinRequestsUseCase,
-        approveJoinRequestUseCase: ApproveJoinRequestUseCase,
-        rejectJoinRequestUseCase: RejectJoinRequestUseCase,
-        createGroupInviteUseCase: CreateGroupInviteUseCase,
-        openDirectRoomUseCase: OpenDirectRoomUseCase,
-        getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase,
-        getBlockedUsersUseCase: GetBlockedUsersUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
-        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
-        observePostUpdatesUseCase: ObservePostUpdatesUseCase,
-        observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-        observePostDeletionsUseCase: ObservePostDeletionsUseCase,
-        togglePostLikeUseCase: TogglePostLikeUseCase
-    ) {
+    init(groupId: Int64, getGroupUseCase: GetGroupUseCase, getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase
-        self.getGroupMembersUseCase = getGroupMembersUseCase
-        self.getJoinRequestsUseCase = getJoinRequestsUseCase
-        self.approveJoinRequestUseCase = approveJoinRequestUseCase
-        self.rejectJoinRequestUseCase = rejectJoinRequestUseCase
-        self.createGroupInviteUseCase = createGroupInviteUseCase
-        self.openDirectRoomUseCase = openDirectRoomUseCase
         self.getGroupDefaultChatRoomUseCase = getGroupDefaultChatRoomUseCase
-        self.getBlockedUsersUseCase = getBlockedUsersUseCase
-        self.togglePostLikeUseCase = togglePostLikeUseCase
-        uiState.myUserId = getCurrentUserIdUseCase.invoke()?.int64Value
-
-        // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        // (Kotlin: useCase(groupId).cachedIn(viewModelScope).onEach(::setPagingData).launchIn)
-        getGroupPostsPagingDataUseCase(groupId: groupId)
-            .cachedIn()
-            .sink { [weak self] in self?.setPagingData($0) }
-            .store(in: &cancellables)
-        // 상세 화면에서 수정하면 목록도 바뀐 본문을 보여야 한다 — 재조회 대신 그 항목만 교체
-        KotlinFlowPublisher<Post> { onEach in
-            observePostUpdatesUseCase.updatesFlow().subscribe(onEach: onEach)
-        }
-        .sink { [weak self] post in self?.applyPostUpdate(post) }
-        .store(in: &cancellables)
-        // 차단하면 그 사람의 글이 목록에서 사라져야 한다 — 재조회 대신 그 항목들만 제거
-        KotlinFlowPublisher<KotlinLong> { onEach in
-            observeUserBlocksUseCase.blocksFlow().subscribe(onEach: onEach)
-        }
-        .sink { [weak self] userId in self?.removeBlockedAuthorPosts(userId.int64Value) }
-        .store(in: &cancellables)
-        // 상세에서 삭제하면 목록에서도 사라져야 한다 — 재조회 대신 그 항목만 제거
-        KotlinFlowPublisher<KotlinLong> { onEach in
-            observePostDeletionsUseCase.deletionsFlow().subscribe(onEach: onEach)
-        }
-        .sink { [weak self] postId in self?.removeDeletedPost(postId.int64Value) }
-        .store(in: &cancellables)
     }
 
     struct UiState {
-        // 로드 전 nil — 화면은 그룹 정보 자리만 비워 두고 커버/피드를 먼저 그린다
         var group: Group? = nil
-        // 상단바 채팅 버튼이 여는 기본 채팅방(가장 먼저 생성된 방) — 로드 전/실패 시 nil이면 버튼이 숨는다
         var defaultChatRoomId: Int64? = nil
-        // Kotlin의 PagingData.empty() 대응 — ObjC 제네릭 클래스에는 static 확장을 못 붙여 브리지 함수 직접 호출
-        var pagingData: PagingData<Post> = PostBridgesKt.emptyPostPagingData()
-        var members: [GroupMember] = []
-        /// 내가 차단한 사용자 — 서버가 멤버 목록에선 걸러주지 않아 화면이 직접 뺀다
-        var blockedUserIds: Set<Int64> = []
-        // 모더레이터에게만 채워진다 — 일반 멤버는 항상 빈 목록이라 인박스가 그려지지 않는다
-        var joinRequests: [GroupJoinRequest] = []
-        // 승인/거절 버튼 로딩 표시용 — 동시에 하나만 처리(웹 busyFor 미러)
-        var processingRequestUserId: Int64? = nil
         var isLoading = false
         var error: String? = nil
-        // 승인/거절 실패 문구 — 로드 에러(error)와 달리 상세 화면을 대체하지 않는다
-        var actionError: String? = nil
-        // 초대코드 다이얼로그 전용 — 생성 성공 시 createdInvite가 채워져 결과 뷰로 전환된다
-        var createdInvite: GroupInvite? = nil
-        var isCreatingInvite = false
-        var inviteError: String? = nil
-        // 멤버 스트립에서 본인을 구분(본인은 DM 대상이 아니다) — 세션이 있는 한 nil이 아니다
-        var myUserId: Int64? = nil
-        // DM 확인 다이얼로그 전용 — 실패 문구(차단 관계 등)는 다이얼로그 안에 표시된다
-        var isOpeningDm = false
-        var dmError: String? = nil
-        var likeError: String? = nil
 
-        // 초대코드 만들기 버튼 노출 조건 — 인박스와 동일한 모더레이터 판정(라운지 제외)
+        // 초대코드 버튼·일정 삭제(모더레이터) 노출 조건 — 웹 lib/roles canModerate 미러(라운지 제외)
         var canModerate: Bool {
             guard let group = group else { return false }
             return !group.isLounge && group.myRole != .member
         }
-
-        /// 멤버 스트립에 그릴 멤버 — 차단한 사용자는 뺀다(차단=내 화면에서 숨김).
-        /// 탭하면 DM인데 차단하면 DM 자체가 막히므로, 남겨두면 열 수 없는 진입점이 된다.
-        var visibleMembers: [GroupMember] { members.filter { !blockedUserIds.contains($0.userId) } }
     }
 
     enum Action {
         case refresh
-        case refreshFeed
-        case approveJoinRequest(userId: Int64)
-        case rejectJoinRequest(userId: Int64)
-        case createInvite(maxUses: Int?, expiresInDays: Int?)
-        case dismissInvite
-        case openDm(userId: Int64, userName: String)
-        case dismissDm
-        case toggleLike(Post)
-        case dismissLikeError
-    }
-
-    enum Event {
-        case refreshFeed
-        /// DM 방 확보 성공 — 화면이 채팅방(groupId=nil)으로 push한다
-        case dmOpened(chatRoomId: Int64, title: String)
     }
 }

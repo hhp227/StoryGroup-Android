@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -54,25 +59,31 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
+import app.cash.paging.compose.LazyPagingItems
 import app.cash.paging.compose.collectAsLazyPagingItems
 import app.cash.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.Post
+import kr.hhp227.storygroup.ui.components.CollapsingTabRowHeight
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
-import kr.hhp227.storygroup.ui.components.SgCollapsingHeaderScaffold
+import kr.hhp227.storygroup.ui.components.SgCollapsingTabScaffold
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPostCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
-import kr.hhp227.storygroup.ui.components.collapsingParallax
+import kr.hhp227.storygroup.ui.navigation.NavResult
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
+import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 import kr.hhp227.storygroup.ui.util.postShareText
@@ -86,15 +97,18 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
         GroupDetailViewModel(
             groupId = groupId,
             getGroupUseCase = container.getGroupUseCase,
-            getGroupMembersUseCase = container.getGroupMembersUseCase,
-            getJoinRequestsUseCase = container.getJoinRequestsUseCase,
-            approveJoinRequestUseCase = container.approveJoinRequestUseCase,
-            rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
-            createGroupInviteUseCase = container.createGroupInviteUseCase,
-            openDirectRoomUseCase = container.openDirectRoomUseCase,
-            getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase,
-            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
+            getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase
+        )
+    }
+}
+
+@Composable
+private fun groupFeedViewModel(groupId: Long): GroupFeedViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-feed-$groupId") {
+        GroupFeedViewModel(
+            groupId = groupId,
             getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
             observePostUpdatesUseCase = container.observePostUpdatesUseCase,
             observeUserBlocksUseCase = container.observeUserBlocksUseCase,
@@ -104,33 +118,126 @@ private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
     }
 }
 
+@Composable
+private fun groupAlbumViewModel(groupId: Long): GroupAlbumViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-album-$groupId") {
+        GroupAlbumViewModel(
+            groupId = groupId,
+            getGroupPhotosPagingDataUseCase = container.getGroupPhotosPagingDataUseCase
+        )
+    }
+}
+
+@Composable
+private fun groupMembersViewModel(groupId: Long): GroupMembersViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-members-$groupId") {
+        GroupMembersViewModel(
+            groupId = groupId,
+            getGroupMembersUseCase = container.getGroupMembersUseCase,
+            getJoinRequestsUseCase = container.getJoinRequestsUseCase,
+            approveJoinRequestUseCase = container.approveJoinRequestUseCase,
+            rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
+            createGroupInviteUseCase = container.createGroupInviteUseCase,
+            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
+            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
+        )
+    }
+}
+
+@Composable
+private fun groupEventsViewModel(groupId: Long): GroupEventsViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-events-$groupId") {
+        GroupEventsViewModel(
+            groupId = groupId,
+            getGroupEventsUseCase = container.getGroupEventsUseCase,
+            getEventDetailUseCase = container.getEventDetailUseCase,
+            createEventUseCase = container.createEventUseCase,
+            deleteEventUseCase = container.deleteEventUseCase,
+            rsvpEventUseCase = container.rsvpEventUseCase,
+            cancelEventRsvpUseCase = container.cancelEventRsvpUseCase,
+            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
+        )
+    }
+}
+
+@Composable
+private fun groupSettingsViewModel(groupId: Long): GroupSettingsViewModel {
+    val container = LocalAppContainer.current
+
+    return viewModel(key = "group-settings-$groupId") {
+        GroupSettingsViewModel(
+            groupId = groupId,
+            getGroupUseCase = container.getGroupUseCase,
+            deleteGroupUseCase = container.deleteGroupUseCase,
+            leaveGroupUseCase = container.leaveGroupUseCase
+        )
+    }
+}
+
 /**
- * 그룹 상세 — 웹 /groups/[id] 미러: 커버 배너(그라데이션 폴백+이름/설명/역할 칩)+멤버 스트립+피드.
- * 커버는 레거시 fragment_group_detail.xml처럼 콜랩싱(SgCollapsingHeaderScaffold).
+ * 그룹 상세 — 웹 /groups/[id] 미러: 커버 배너(그라데이션 폴백+이름/설명/역할 칩)+5탭
+ * (소식/앨범/일정/멤버/설정). 커버는 레거시 fragment_group_detail.xml처럼 콜랩싱
+ * (SgCollapsingTabScaffold, 탭바는 레거시 TabLayout+ViewPager2 미러).
  * 계층은 iosApp GroupDetailView.swift와 1:1 미러 — Screen=상태 소유(VM 선언), Content=구독+UI.
  */
 @Composable
 fun GroupDetailScreen(
     groupId: Long,
-    onBack: () -> Unit,
-    onCreatePost: () -> Unit,
-    // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘긴다
-    onOpenPostDetail: (postId: Long) -> Unit,
-    onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
-    refreshRequested: Boolean,
-    onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
-    // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴)
-    viewModel: GroupDetailViewModel = groupDetailViewModel(groupId)
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
+    // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴).
+    // 탭 상태는 레거시(탭 Fragment마다 VM)처럼 탭별 VM이 각자 소유한다
+    viewModel: GroupDetailViewModel = groupDetailViewModel(groupId),
+    feedViewModel: GroupFeedViewModel = groupFeedViewModel(groupId),
+    albumViewModel: GroupAlbumViewModel = groupAlbumViewModel(groupId),
+    membersViewModel: GroupMembersViewModel = groupMembersViewModel(groupId),
+    eventsViewModel: GroupEventsViewModel = groupEventsViewModel(groupId),
+    settingsViewModel: GroupSettingsViewModel = groupSettingsViewModel(groupId),
+    // 유저 설정 행(설정 탭) — 프로필 탭/드로어 헤더와 같은 세션 스코프 인스턴스
+    profileViewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
 ) {
     GroupDetailContent(
         viewModel = viewModel,
-        onBack = onBack,
-        onCreatePost = onCreatePost,
-        onOpenPostDetail = onOpenPostDetail,
-        onOpenChatRoom = onOpenChatRoom,
-        refreshRequested = refreshRequested,
-        onRefreshHandled = onRefreshHandled,
+        feedViewModel = feedViewModel,
+        albumViewModel = albumViewModel,
+        membersViewModel = membersViewModel,
+        eventsViewModel = eventsViewModel,
+        settingsViewModel = settingsViewModel,
+        profileViewModel = profileViewModel,
+        onBack = { onNavigationAction(NavigationAction.NavigateBack) },
+        onCreatePost = { onNavigationAction(NavigationAction.NavigateToCreatePost(groupId)) },
+        // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘어온다
+        onOpenPostDetail = { postId -> onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, postId)) },
+        onOpenChatRoom = { chatRoomId, gid, title ->
+            onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, gid, title))
+        },
+        // 작성 화면이 남긴 결과 — 그룹 피드는 화면이 lazyPagingItems.refresh()로 갱신
+        refreshRequested = NavResult.PostCreated(groupId) in pendingResults,
+        onRefreshHandled = { onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostCreated(groupId))) },
+        // 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다
+        onGroupClosed = {
+            onNavigationAction(NavigationAction.PublishResult(NavResult.GroupsChanged))
+            onNavigationAction(NavigationAction.NavigateBack)
+        },
+        // 그룹 정보 수정 화면에서 돌아온 결과 — 상세·설정 탭을 다시 읽는다
+        groupUpdateRequested = NavResult.GroupUpdated(groupId) in pendingResults,
+        onGroupUpdateHandled = {
+            onNavigationAction(NavigationAction.ConsumeResult(NavResult.GroupUpdated(groupId)))
+        },
+        // 설정 탭 메뉴의 풀스크린 진입 4종 — 이제 화면이 직접 라우팅 액션을 낸다
+        onOpenGroupEdit = { onNavigationAction(NavigationAction.NavigateToGroupEdit(groupId)) },
+        onOpenAccountSettings = { onNavigationAction(NavigationAction.NavigateToAccountSettings) },
+        onOpenAppSettings = { onNavigationAction(NavigationAction.NavigateToAppSettings) },
+        onOpenGroupReports = { onNavigationAction(NavigationAction.NavigateToGroupReports(groupId)) },
+        // 멤버 탭 셀 탭 → 공개 프로필 다이얼로그(DM은 프로필의 버튼 몫)
+        onOpenUserProfile = { userId -> onNavigationAction(NavigationAction.NavigateToUserProfile(userId)) },
         modifier = modifier
     )
 }
@@ -138,6 +245,12 @@ fun GroupDetailScreen(
 @Composable
 private fun GroupDetailContent(
     viewModel: GroupDetailViewModel,
+    feedViewModel: GroupFeedViewModel,
+    albumViewModel: GroupAlbumViewModel,
+    membersViewModel: GroupMembersViewModel,
+    eventsViewModel: GroupEventsViewModel,
+    settingsViewModel: GroupSettingsViewModel,
+    profileViewModel: ProfileViewModel,
     onBack: () -> Unit,
     onCreatePost: () -> Unit,
     // 이 그룹의 글이라 groupId는 화면이 이미 알고 있다 — postId만 넘긴다
@@ -145,51 +258,76 @@ private fun GroupDetailContent(
     onOpenChatRoom: (chatRoomId: Long, groupId: Long?, title: String) -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
+    onGroupClosed: () -> Unit,
+    groupUpdateRequested: Boolean,
+    onGroupUpdateHandled: () -> Unit,
+    onOpenGroupEdit: () -> Unit,
+    onOpenAccountSettings: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    onOpenGroupReports: () -> Unit,
+    onOpenUserProfile: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    // 상태에서 pagingData만 뽑아낸 스트림을 수집 — Paging-CRUD 샘플·iOS($state.map)와 동일 관용구
-    val pagingDataFlow = remember(viewModel) {
-        viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
+    val profileUiState by profileViewModel.uiState.collectAsState()
+    val feedUiState by feedViewModel.uiState.collectAsState()
+    val membersUiState by membersViewModel.uiState.collectAsState()
+    val eventsUiState by eventsViewModel.uiState.collectAsState()
+    val settingsUiState by settingsViewModel.uiState.collectAsState()
+    // 상태에서 pagingData만 뽑아낸 스트림을 수집 — Paging-CRUD 샘플·iOS($state.map)와 동일 관용구.
+    // 프레젠터는 페이저 밖(Content 수준)에서 수집한다 — 페이지 dispose에 스크롤·스냅샷을 잃지 않게
+    val pagingDataFlow = remember(feedViewModel) {
+        feedViewModel.uiState.map { it.pagingData }.distinctUntilChanged()
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
+    // 앨범 탭 — 피드와 동일 관용구, 상태에서 photosPagingData만 뽑아낸 스트림을 수집
+    val photosPagingDataFlow = remember(albumViewModel) {
+        albumViewModel.uiState.map { it.photosPagingData }.distinctUntilChanged()
+    }
+    val photoLazyPagingItems = photosPagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
-    // 그룹/멤버는 UiState, 피드는 Paging3 LoadState — 다음 페이지 트리거는 prefetchDistance가 담당
-    val refreshState = lazyPagingItems.loadState.refresh
+    // 레거시 R.array.tab_name(소식/앨범/맴버/설정)에 일정 추가 — 일정·설정은 빈 화면(추후 구현)
+    val tabs = remember { listOf("소식", "앨범", "일정", "멤버", "설정") }
+    val pagerState = rememberPagerState { tabs.size }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
-    // DM 확인 다이얼로그 대상 — 멤버 스트립에서 타인을 탭하면 채워진다
-    var dmTargetMember by remember { mutableStateOf<GroupMember?>(null) }
     // 컴포지션에서 한 번만 선언해 카드마다 재사용한다
     val share = rememberShareLauncher()
 
-    // 상세 진입 시 신선화 — VM이 탭 전환에도 유지되므로 재진입 때도 최신화된다
+    // 상세 진입 시 신선화 — VM들이 탭 전환에도 유지되므로 재진입 때도 최신화된다
     LaunchedEffect(viewModel) {
         viewModel.onAction(GroupDetailViewModel.Action.Refresh)
+        membersViewModel.onAction(GroupMembersViewModel.Action.Refresh)
     }
-    // 작성 화면에서 돌아온 결과 — 피드를 첫 페이지부터 다시 읽는다
+    // 작성 화면에서 돌아온 결과 — 피드·앨범을 첫 페이지부터 다시 읽는다(프레젠터 직접 refresh)
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
-            viewModel.onAction(GroupDetailViewModel.Action.RefreshFeed)
+            lazyPagingItems.refresh()
+            photoLazyPagingItems.refresh()
             onRefreshHandled()
         }
     }
-    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
-    // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
-    LaunchedEffect(Unit) {
-        viewModel.event.collect { event ->
+    // 그룹 정보 수정에서 돌아온 결과 — 커버·제목과 설정 탭 판정 그룹을 다시 읽는다
+    LaunchedEffect(groupUpdateRequested) {
+        if (groupUpdateRequested) {
+            viewModel.onAction(GroupDetailViewModel.Action.Refresh)
+            settingsViewModel.onAction(GroupSettingsViewModel.Action.Refresh)
+            onGroupUpdateHandled()
+        }
+    }
+    // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 위 groupUpdateRequested/
+    // pendingResults의 NavResult.GroupUpdated 소비 경로)
+    LaunchedEffect(settingsViewModel) {
+        settingsViewModel.event.collect { event ->
             when (event) {
-                GroupDetailViewModel.Event.RefreshFeed -> lazyPagingItems.refresh()
-                is GroupDetailViewModel.Event.DmOpened -> {
-                    dmTargetMember = null
-                    // DM 방은 groupId 없이 접근한다(/api/dm 경로) — 제목은 상대 이름
-                    onOpenChatRoom(event.chatRoomId, null, event.title)
-                }
+                GroupSettingsViewModel.Event.Closed -> onGroupClosed()
             }
         }
     }
-    SgCollapsingHeaderScaffold(
+    SgCollapsingTabScaffold(
         // 로드 전엔 빈 제목 — 커버 그라데이션(groupId 기반)은 즉시 그려진다
         title = uiState.group?.name.orEmpty(),
+        tabs = tabs,
+        pagerState = pagerState,
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
@@ -207,27 +345,33 @@ private fun GroupDetailContent(
                 }
             }
         },
-        // 레거시 fragment_group_detail.xml의 fab 미러
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreatePost,
-                backgroundColor = sg.accent,
-                contentColor = sg.onAccent
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "글쓰기")
+        // 레거시 isTabPositionZero 미러 — 글쓰기 FAB는 소식 탭에서만
+        floatingActionButton = if (pagerState.currentPage == 0) {
+            {
+                // 레거시 fragment_group_detail.xml의 fab 미러
+                FloatingActionButton(
+                    onClick = onCreatePost,
+                    backgroundColor = sg.accent,
+                    contentColor = sg.onAccent
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "글쓰기")
+                }
             }
-        },
-        // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드를 함께 갱신한다.
-        // 스피너는 데이터가 이미 있는 갱신에만 돈다 — 첫 로드는 목록 중앙 스피너가 담당(홈과 동일)
-        isRefreshing = lazyPagingItems.itemCount > 0 && refreshState is LoadStateLoading,
+        } else null,
+        // 스피너는 데이터가 이미 있는 갱신에만(첫 로드는 각 탭의 중앙 스피너 담당 — 기존 규칙 유지)
+        isRefreshing = uiState.isLoading && uiState.group != null,
+        // 현재 탭 무관하게 상세+멤버+피드+앨범 함께 갱신 — iOS .refreshable과 대칭(단순 우선)
         onRefresh = {
             viewModel.onAction(GroupDetailViewModel.Action.Refresh)
-            viewModel.onAction(GroupDetailViewModel.Action.RefreshFeed)
+            membersViewModel.onAction(GroupMembersViewModel.Action.Refresh)
+            lazyPagingItems.refresh()
+            photoLazyPagingItems.refresh()
+            eventsViewModel.onAction(GroupEventsViewModel.Action.Refresh)
         },
-        header = { listState ->
-            // group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백 — 콘텐츠 전체가 패럴럭스로 접힌다
+        header = { _ ->
+            // group.image 있으면 실사진, 없으면 웹 GroupCover 그라데이션 폴백
             val coverImage = uiState.group?.image
-            Box(Modifier.matchParentSize().collapsingParallax(listState)) {
+            Box(Modifier.matchParentSize()) {
                 if (coverImage != null) {
                     AsyncImage(
                         model = coverImage,
@@ -253,7 +397,8 @@ private fun GroupDetailContent(
                     Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        // 커버가 탭바 영역까지 커졌다 — 텍스트는 투명 탭바 위에서 끝나야 안 가린다
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp + CollapsingTabRowHeight)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -282,67 +427,122 @@ private fun GroupDetailContent(
             }
         },
         modifier = modifier
-    ) {
-        val appendState = lazyPagingItems.loadState.append
-
-        // 모더레이터 인박스 — 웹 GroupMemberList처럼 멤버 목록 위에 노출(joinRequests는 모더레이터에게만 채워진다)
-        if (uiState.joinRequests.isNotEmpty()) {
-            item(key = "join-requests") {
-                JoinRequestInbox(
-                    requests = uiState.joinRequests,
-                    processingUserId = uiState.processingRequestUserId,
-                    actionError = uiState.actionError,
-                    onApprove = { viewModel.onAction(GroupDetailViewModel.Action.ApproveJoinRequest(it)) },
-                    onReject = { viewModel.onAction(GroupDetailViewModel.Action.RejectJoinRequest(it)) },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
+    ) { page ->
+        when (page) {
+            0 -> GroupFeedTab(
+                detailError = uiState.error,
+                lazyPagingItems = lazyPagingItems,
+                onRetryDetail = { viewModel.onAction(GroupDetailViewModel.Action.Refresh) },
+                onToggleLike = { feedViewModel.onAction(GroupFeedViewModel.Action.ToggleLike(it)) },
+                onShare = { share(postShareText(it)) },
+                onOpenPostDetail = onOpenPostDetail
+            )
+            1 -> GroupAlbumTab(
+                lazyPagingItems = photoLazyPagingItems,
+                onOpenPostDetail = onOpenPostDetail
+            )
+            2 -> GroupEventsTab(
+                uiState = eventsUiState,
+                canModerate = uiState.canModerate,
+                onAction = eventsViewModel::onAction
+            )
+            3 -> GroupMembersTab(
+                uiState = membersUiState,
+                canModerate = uiState.canModerate,
+                onRetry = { membersViewModel.onAction(GroupMembersViewModel.Action.Refresh) },
+                onApprove = { membersViewModel.onAction(GroupMembersViewModel.Action.ApproveJoinRequest(it)) },
+                onReject = { membersViewModel.onAction(GroupMembersViewModel.Action.RejectJoinRequest(it)) },
+                onShowInvite = { showInviteDialog = true },
+                // 멤버 탭=프로필 다이얼로그 진입 — DM은 프로필의 버튼 몫(검색·친구 탭과 동일 규칙)
+                onMemberClick = { onOpenUserProfile(it.userId) }
+            )
+            else -> GroupSettingsTab(
+                uiState = settingsUiState,
+                profile = profileUiState.profile,
+                onAction = settingsViewModel::onAction,
+                onOpenGroupEdit = onOpenGroupEdit,
+                onOpenAccountSettings = onOpenAccountSettings,
+                onOpenAppSettings = onOpenAppSettings,
+                onOpenGroupReports = onOpenGroupReports
+            )
         }
-        // 모더레이터 전용 초대코드 만들기 — 승인 우회 가입 경로라 인박스와 같은 조정 도구로 묶는다
-        if (uiState.canModerate) {
-            item(key = "invite-code") {
-                OutlinedButton(
-                    onClick = { showInviteDialog = true },
-                    shape = SgTheme.shapes.button,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    Text("초대코드 만들기", style = SgTheme.typography.labelLarge, color = sg.accent)
+    }
+    if (showInviteDialog) {
+        InviteDialog(
+            invite = membersUiState.createdInvite,
+            isLoading = membersUiState.isCreatingInvite,
+            error = membersUiState.inviteError,
+            onDismiss = {
+                showInviteDialog = false
+                // 닫을 때 결과를 비워 다음에 열면 다시 생성 폼부터 시작한다
+                membersViewModel.onAction(GroupMembersViewModel.Action.DismissInvite)
+            },
+            onCreate = { maxUses, expiresInDays ->
+                membersViewModel.onAction(GroupMembersViewModel.Action.CreateInvite(maxUses, expiresInDays))
+            }
+        )
+    }
+    feedUiState.likeError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { feedViewModel.onAction(GroupFeedViewModel.Action.DismissLikeError) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { feedViewModel.onAction(GroupFeedViewModel.Action.DismissLikeError) }) {
+                    Text("확인", color = SgTheme.colors.accent)
                 }
             }
+        )
+    }
+}
+
+/** 소식 탭 — 기존 피드 목록 그대로(인박스·멤버 섹션은 멤버 탭으로 이동). iosApp feedTab 미러 */
+@Composable
+private fun GroupFeedTab(
+    // 상세(커버) 로드 실패 문구 — 피드 목록 위에 재시도와 함께 그린다(기존 배치 유지)
+    detailError: String?,
+    lazyPagingItems: LazyPagingItems<Post>,
+    onRetryDetail: () -> Unit,
+    onToggleLike: (Post) -> Unit,
+    onShare: (Post) -> Unit,
+    onOpenPostDetail: (postId: Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+    val refreshState = lazyPagingItems.loadState.refresh
+    val appendState = lazyPagingItems.loadState.append
+
+    // 첫 로드·복귀 재표출 중엔 리스트를 컴포즈하지 않는다 — 빈 리스트로 한 프레임이라도
+    // 측정되면 복원된 LazyListState 인덱스가 0으로 클램프돼, 채팅방·게시글 상세 등을
+    // 다녀올 때 스크롤 위치가 사라진다(캐시 표출 전 itemCount=0 프레임이 원인)
+    if (lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading) {
+        Box(
+            modifier.fillMaxSize().padding(top = 48.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            CircularProgressIndicator(color = sg.accent)
         }
-        if (uiState.visibleMembers.isNotEmpty()) {
-            item(key = "members") {
-                MemberStrip(
-                    members = uiState.visibleMembers,
-                    myUserId = uiState.myUserId,
-                    onMemberClick = { dmTargetMember = it },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-        }
-        if (uiState.error != null) {
+        return
+    }
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (detailError != null) {
             item(key = "detail-error") {
                 Column(
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    Text(detailError, style = SgTheme.typography.bodyMedium, color = sg.rust)
                     Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.onAction(GroupDetailViewModel.Action.Refresh) }) {
+                    TextButton(onClick = onRetryDetail) {
                         Text("다시 시도", color = sg.accent)
                     }
                 }
             }
         }
         when {
-            lazyPagingItems.itemCount == 0 && refreshState is LoadStateLoading -> item(key = "feed-loading") {
-                Box(
-                    Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = sg.accent)
-                }
-            }
             lazyPagingItems.itemCount == 0 && refreshState is LoadStateError -> item(key = "feed-error") {
                 Column(
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp),
@@ -372,8 +572,8 @@ private fun GroupDetailContent(
                         SgPostCard(
                             post,
                             Modifier.padding(horizontal = 16.dp),
-                            onToggleLike = { viewModel.onAction(GroupDetailViewModel.Action.ToggleLike(post)) },
-                            onShare = { share(postShareText(post)) }
+                            onToggleLike = { onToggleLike(post) },
+                            onShare = { onShare(post) }
                         ) { onOpenPostDetail(post.id) }
                     }
                 }
@@ -389,89 +589,93 @@ private fun GroupDetailContent(
             }
         }
     }
-    if (showInviteDialog) {
-        InviteDialog(
-            invite = uiState.createdInvite,
-            isLoading = uiState.isCreatingInvite,
-            error = uiState.inviteError,
-            onDismiss = {
-                showInviteDialog = false
-                // 닫을 때 결과를 비워 다음에 열면 다시 생성 폼부터 시작한다
-                viewModel.onAction(GroupDetailViewModel.Action.DismissInvite)
-            },
-            onCreate = { maxUses, expiresInDays ->
-                viewModel.onAction(GroupDetailViewModel.Action.CreateInvite(maxUses, expiresInDays))
-            }
-        )
-    }
-    dmTargetMember?.let { member ->
-        DmConfirmDialog(
-            memberName = member.name,
-            isLoading = uiState.isOpeningDm,
-            error = uiState.dmError,
-            onDismiss = {
-                dmTargetMember = null
-                viewModel.onAction(GroupDetailViewModel.Action.DismissDm)
-            },
-            onConfirm = { viewModel.onAction(GroupDetailViewModel.Action.OpenDm(member.userId, member.name)) }
-        )
-    }
-    uiState.likeError?.let { message ->
-        AlertDialog(
-            onDismissRequest = { viewModel.onAction(GroupDetailViewModel.Action.DismissLikeError) },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onAction(GroupDetailViewModel.Action.DismissLikeError) }) {
-                    Text("확인", color = SgTheme.colors.accent)
-                }
-            }
-        )
-    }
 }
 
-/** 멤버 탭 → 1:1 DM 확인 다이얼로그 — 성공 시 DmOpened 이벤트로 채팅방으로 이동한다 */
+/**
+ * 멤버 탭 — 가입 신청 인박스+초대코드(모더레이터, 멤버 관리 성격이라 여기 모음) 위에
+ * 4열 멤버 그리드(레거시 MemberFragment 미러 — 기존 수평 MemberStrip 대체).
+ * 멤버를 탭하면 공개 프로필로 이어진다(DM은 프로필의 버튼 몫). iosApp membersTab 미러.
+ */
 @Composable
-private fun DmConfirmDialog(
-    memberName: String,
-    isLoading: Boolean,
-    error: String?,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+private fun GroupMembersTab(
+    uiState: GroupMembersViewModel.UiState,
+    canModerate: Boolean,
+    onRetry: () -> Unit,
+    onApprove: (Long) -> Unit,
+    onReject: (Long) -> Unit,
+    onShowInvite: () -> Unit,
+    onMemberClick: (GroupMember) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
 
-    Dialog(onDismissRequest = onDismiss) {
-        SgCard(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "1:1 DM",
-                    style = SgTheme.typography.titleMedium,
-                    color = sg.ink,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "${memberName}님과 1:1 DM을 시작할까요?",
-                    style = SgTheme.typography.bodyMedium,
-                    color = sg.ink
-                )
-                error?.let {
-                    Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        shape = SgTheme.shapes.button,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("취소", color = sg.ink)
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // 멤버 로드 실패 — 탭 자체가 자기 로드를 소유하므로 여기서 재시도를 준다
+        if (uiState.error != null) {
+            item(key = "members-error", span = { GridItemSpan(maxLineSpan) }) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(uiState.error, style = SgTheme.typography.bodyMedium, color = sg.rust)
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = onRetry) {
+                        Text("다시 시도", color = sg.accent)
                     }
-                    SgPrimaryButton(
-                        text = "DM 시작",
-                        onClick = onConfirm,
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
                 }
+            }
+        }
+        if (uiState.isLoading && uiState.members.isEmpty()) {
+            item(key = "members-loading", span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = sg.accent)
+                }
+            }
+        }
+        if (uiState.joinRequests.isNotEmpty()) {
+            item(key = "join-requests", span = { GridItemSpan(maxLineSpan) }) {
+                JoinRequestInbox(
+                    requests = uiState.joinRequests,
+                    processingUserId = uiState.processingRequestUserId,
+                    actionError = uiState.actionError,
+                    onApprove = onApprove,
+                    onReject = onReject
+                )
+            }
+        }
+        // 모더레이터 전용 초대코드 만들기 — 승인 우회 가입 경로라 인박스와 같은 조정 도구로 묶는다
+        if (canModerate) {
+            item(key = "invite-code", span = { GridItemSpan(maxLineSpan) }) {
+                OutlinedButton(
+                    onClick = onShowInvite,
+                    shape = SgTheme.shapes.button,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("초대코드 만들기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                }
+            }
+        }
+        item(key = "member-count", span = { GridItemSpan(maxLineSpan) }) {
+            Text("멤버 ${uiState.visibleMembers.size}", style = SgTheme.typography.titleSmall, color = sg.ink)
+        }
+        items(uiState.visibleMembers, key = GroupMember::userId) { member ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                // 본인 포함 전원 탭 가능 — 프로필 진입(본인=프로필 수정, DM 버튼은 타인에게만 보인다)
+                modifier = Modifier.clickable { onMemberClick(member) }
+            ) {
+                SgAvatar(member.name, imageUrl = member.profileImg)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    member.name,
+                    style = SgTheme.typography.labelSmall,
+                    color = sg.inkSoft,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -666,42 +870,6 @@ private fun JoinRequestCard(
             }
             OutlinedButton(onClick = onReject, enabled = enabled, shape = SgTheme.shapes.button) {
                 Text("거절", color = if (enabled) sg.ink else sg.inkFaint)
-            }
-        }
-    }
-}
-
-/** 웹 사이드바 MemberPanel의 앱 변형 — 수평 아바타 스트립. 타인을 탭하면 1:1 DM 확인으로 이어진다 */
-@Composable
-private fun MemberStrip(
-    members: List<GroupMember>,
-    myUserId: Long?,
-    onMemberClick: (GroupMember) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-
-    Column(modifier) {
-        Text("멤버 ${members.size}", style = SgTheme.typography.titleSmall, color = sg.ink)
-        Spacer(Modifier.height(8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(members, key = GroupMember::userId) { member ->
-                // 본인은 DM 대상이 아니라 탭도 막는다(서버도 self-DM은 400)
-                val isSelf = member.userId == myUserId
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = if (isSelf) Modifier else Modifier.clickable { onMemberClick(member) }
-                ) {
-                    SgAvatar(member.name, imageUrl = member.profileImg)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        member.name,
-                        style = SgTheme.typography.labelSmall,
-                        color = sg.inkSoft,
-                        maxLines = 1
-                    )
-                }
             }
         }
     }

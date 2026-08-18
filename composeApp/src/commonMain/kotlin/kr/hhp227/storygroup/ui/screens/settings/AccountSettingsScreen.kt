@@ -46,6 +46,8 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.components.SgTopBar
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
@@ -72,8 +74,8 @@ private fun accountSettingsViewModel(): AccountSettingsViewModel {
  */
 @Composable
 fun AccountSettingsScreen(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: AccountSettingsViewModel = accountSettingsViewModel(),
     // 저장 성공 반영용 — 프로필 탭/드로어 헤더와 같은 세션 스코프 인스턴스
     profileViewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
@@ -127,7 +129,7 @@ fun AccountSettingsScreen(
         SgTopBar(
             title = "계정 설정",
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                 }
             }

@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.data.repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
@@ -15,10 +16,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kr.hhp227.storygroup.shared.data.network.dto.BlockedUserResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChangePasswordRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ProfileResponse
+import kr.hhp227.storygroup.shared.data.network.dto.PublicProfileResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ReportUserRequest
 import kr.hhp227.storygroup.shared.data.network.dto.UpdateProfileRequest
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
+import kr.hhp227.storygroup.shared.domain.model.PublicProfile
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
 
 class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
@@ -71,10 +74,19 @@ class UserRepositoryImpl(private val client: HttpClient) : UserRepository {
             _userBlocks.tryEmit(userId)
         }
 
+    override suspend fun unblockUser(userId: Long): Result<Unit> =
+        runCatching {
+            client.delete("/api/users/$userId/block")
+            Unit
+        }
+
     override suspend fun getBlockedUsers(): Result<List<BlockedUser>> =
         runCatching {
             client.get("/api/users/me/blocks").body<List<BlockedUserResponse>>().map { it.toDomain() }
         }
+
+    override suspend fun getPublicProfile(userId: Long): Result<PublicProfile> =
+        runCatching { client.get("/api/users/$userId").body<PublicProfileResponse>().toDomain() }
 }
 
 private fun ProfileResponse.toDomain() = Profile(
@@ -92,4 +104,13 @@ private fun BlockedUserResponse.toDomain() = BlockedUser(
     name = name,
     profileImg = profileImg,
     blockedAt = blockedAt
+)
+
+private fun PublicProfileResponse.toDomain() = PublicProfile(
+    id = id,
+    name = name,
+    profileImg = profileImg,
+    bio = bio,
+    statusMessage = statusMessage,
+    createdAt = createdAt
 )

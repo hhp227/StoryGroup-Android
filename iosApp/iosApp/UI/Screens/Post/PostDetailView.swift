@@ -1,6 +1,12 @@
 import Shared
 import SwiftUI
 
+/// 공개 프로필 시트에서 고른 후속 push 대상 — 시트가 완전히 닫힌 뒤(onDismiss) 실행해야 유실되지 않는다
+private enum ProfileFollowUp {
+    case chatRoom(ChatRoomRef)
+    case accountSettings
+}
+
 /// 게시글 상세 — composeApp PostDetailScreen.kt와 1:1 미러.
 /// 본문·이미지·좋아요·댓글(답글 포함). 삭제·차단 성공은 화면을 닫기만 하고,
 /// 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
@@ -11,6 +17,11 @@ struct PostDetailView: View {
     private let groupId: Int64
 
     private let postId: Int64
+
+    /// 작성자 프로필 시트의 후속 push(채팅방/계정 설정)에 필요 — 셸 소유 세션 VM pass-through
+    private let chatViewModel: ChatViewModel
+
+    private let profileViewModel: ProfileViewModel
 
     @Environment(\.sgColors) private var colors
 
@@ -23,6 +34,18 @@ struct PostDetailView: View {
     /// 더보기 메뉴에서 고른 "수정" — 메뉴 안에서는 NavigationLink가 동작하지 않아 상태로 push한다
     @State private var showEdit = false
 
+    /// 본문·댓글 작성자 탭 → 공개 프로필 시트(웹 작성자 메뉴의 "프로필 보기" 직행 미러)
+    @State private var selectedAuthorId: Int64? = nil
+
+    /// 프로필 시트에서 DM 성공 후속 push — MainShellView 채팅방 미러
+    @State private var selectedChatRoom: ChatRoomRef? = nil
+
+    /// 프로필 시트에서 본인 "프로필 수정" 후속 push — MainShellView 계정 설정 미러
+    @State private var showAccountSettings = false
+
+    /// 프로필 시트의 후속 이동(채팅방/계정 설정) — 시트 dismiss 완료 후 push한다
+    @State private var profileFollowUp: ProfileFollowUp? = nil
+
     /// 되돌릴 수 없는 액션은 확인을 받는다(웹 confirm 미러)
     @State private var confirmAction: ConfirmAction?
 
@@ -30,19 +53,43 @@ struct PostDetailView: View {
     /// 순수 뷰 상태라 UiState가 아니라 화면이 들고 있는다(Compose playingVideoUrl 미러)
     @State private var playingVideoUrl: String?
 
-    /// 수정 화면 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
+    /// 수정·후속 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러).
+    /// 작성자 프로필은 push가 아니라 시트 — 후속 이동(채팅방/계정 설정)은 시트가 완전히
+    /// 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
     var body: some View {
         if #available(iOS 16.0, *) {
-            core.navigationDestination(isPresented: $showEdit) { editDestination }
+            core
+                .navigationDestination(isPresented: $showEdit) { editDestination }
+                .navigationDestination(isPresented: showChatRoom) { chatRoomDestination }
+                .navigationDestination(isPresented: $showAccountSettings) { accountSettingsDestination }
+                .sheet(isPresented: showAuthorProfile, onDismiss: runProfileFollowUp) { authorProfileDestination }
         } else {
-            core.background(
-                NavigationLink(isActive: $showEdit) {
-                    editDestination
-                } label: {
-                    EmptyView()
-                }
-                .hidden()
-            )
+            core
+                .background(
+                    NavigationLink(isActive: $showEdit) {
+                        editDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: showChatRoom) {
+                        chatRoomDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .background(
+                    NavigationLink(isActive: $showAccountSettings) {
+                        accountSettingsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
+                .sheet(isPresented: showAuthorProfile, onDismiss: runProfileFollowUp) { authorProfileDestination }
         }
     }
 
@@ -97,6 +144,66 @@ struct PostDetailView: View {
             // 자기 스냅샷에서 그 항목만 갈아끼운다(refresh를 태우면 첫 페이지부터 전체 재조회가 된다)
             postDetailViewModel.onAction(.reload)
         }
+    }
+
+    @ViewBuilder private var authorProfileDestination: some View {
+        if let authorId = selectedAuthorId {
+            UserProfileView(
+                userId: authorId,
+                container: container,
+                onOpenChatRoom: { room in
+                    profileFollowUp = .chatRoom(room)
+                    selectedAuthorId = nil
+                },
+                onOpenAccountSettings: {
+                    profileFollowUp = .accountSettings
+                    selectedAuthorId = nil
+                }
+            )
+        }
+    }
+
+    @ViewBuilder private var chatRoomDestination: some View {
+        if let room = selectedChatRoom {
+            ChatRoomView(
+                chatRoomId: room.chatRoomId,
+                groupId: room.groupId,
+                title: room.title,
+                container: container,
+                chatViewModel: chatViewModel
+            )
+        }
+    }
+
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
+    private var accountSettingsDestination: some View {
+        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+    }
+
+    /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
+    private func runProfileFollowUp() {
+        switch profileFollowUp {
+        case .chatRoom(let room): selectedChatRoom = room
+        case .accountSettings: showAccountSettings = true
+        case nil: break
+        }
+        profileFollowUp = nil
+    }
+
+    /// 시트를 닫으면(X·드래그) selectedAuthorId를 nil로 되돌리는 브리지
+    private var showAuthorProfile: Binding<Bool> {
+        Binding(
+            get: { selectedAuthorId != nil },
+            set: { if !$0 { selectedAuthorId = nil } }
+        )
+    }
+
+    /// pop(백 버튼/스와이프) 시 selectedChatRoom을 nil로 되돌리는 브리지(MainShellView 선례)
+    private var showChatRoom: Binding<Bool> {
+        Binding(
+            get: { selectedChatRoom != nil },
+            set: { if !$0 { selectedChatRoom = nil } }
+        )
     }
 
     @ViewBuilder private var core: some View {
@@ -182,6 +289,8 @@ struct PostDetailView: View {
         }
         .navigationTitle("게시글")
         .navigationBarTitleDisplayMode(.inline)
+        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+        .navigationBarScrim(visible: true)
         // ⚠️조건 분기는 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 buildIf는 iOS 16+라
         // .toolbar { if ... } 는 배포 타깃 15.0에서 컴파일되지 않는다(GroupDetailView와 같은 형태)
         .toolbar {
@@ -236,12 +345,18 @@ struct PostDetailView: View {
     private func postBody(_ uiState: PostDetailViewModel.UiState) -> some View {
         if let post = uiState.post {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                // 작성자 영역만 탭 타깃(본문·첨부 제외) — 본인 글이면 본인 프로필(프로필 수정)로 간다
+                HStack(spacing: 0) {
+                    Button(action: { selectedAuthorId = post.userId }) {
+                        HStack(spacing: 10) {
+                            SGAvatar(name: post.authorName, imageUrl: post.authorProfileImg)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(post.authorName).font(.subheadline.bold()).foregroundColor(colors.ink)
+                                Text(TimeFormats.relative(post.createdAt)).font(.caption).foregroundColor(colors.inkFaint)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                     Spacer()
                 }
                 if !post.text.isEmpty {
@@ -287,10 +402,16 @@ struct PostDetailView: View {
 
     private func commentRow(_ comment: Comment, isMine: Bool, canReply: Bool) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            SGAvatar(name: comment.authorName, size: 28, imageUrl: comment.authorProfileImg)
+            Button(action: { selectedAuthorId = comment.userId }) {
+                SGAvatar(name: comment.authorName, size: 28, imageUrl: comment.authorProfileImg)
+            }
+            .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(comment.authorName).font(.caption.bold()).foregroundColor(colors.ink)
+                    Button(action: { selectedAuthorId = comment.userId }) {
+                        Text(comment.authorName).font(.caption.bold()).foregroundColor(colors.ink)
+                    }
+                    .buttonStyle(.plain)
                     Text(TimeFormats.relative(comment.createdAt)).font(.caption2).foregroundColor(colors.inkFaint)
                 }
                 Text(comment.text).font(.subheadline).foregroundColor(colors.ink)
@@ -352,10 +473,10 @@ struct PostDetailView: View {
                 .padding(.vertical, 6)
                 .background(colors.accentSoft)
             }
+            // 레거시 fragment_post_detail.xml 미러 — 헤어라인 아래 여백 얇은 한 줄:
+            // 테두리 없는 입력란 + 작은 전송 버튼. 채팅방 inputBar와 같은 치수다.
             HStack(spacing: 8) {
-                // 라벨 없이 입력창만 — SGTextField의 label은 필드 위에 별도 줄로 그려져서
-                // 한 줄짜리 댓글 입력에는 군더더기다(답글 대상은 위 칩이 이미 알려준다).
-                SGTextField(text: $commentText)
+                SGComposerField(placeholder: "댓글을 입력하세요.", text: $commentText)
                 Button {
                     postDetailViewModel.onAction(.submitComment(text: commentText))
                 } label: {
@@ -366,16 +487,20 @@ struct PostDetailView: View {
                 }
                 .disabled(uiState.isSubmittingComment || commentText.isEmpty)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            // 좌측 10pt + 필드 자체 6pt = 댓글 목록과 같은 16pt 글자 시작선
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .padding(.vertical, 6)
         }
         .background(colors.paper)
     }
     
-    init(container: AppContainer, groupId: Int64, postId: Int64) {
+    init(container: AppContainer, groupId: Int64, postId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         self.container = container
         self.groupId = groupId
         self.postId = postId
+        self.chatViewModel = chatViewModel
+        self.profileViewModel = profileViewModel
         _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
             groupId: groupId,
             postId: postId,

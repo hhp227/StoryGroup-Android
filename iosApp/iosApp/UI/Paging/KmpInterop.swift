@@ -135,6 +135,33 @@ struct PostPagingPublisher: Publisher {
     }
 }
 
+// Kotlin: getGroupPhotosPagingDataUseCase(groupId) → Flow<PagingData<GroupPhoto>>
+extension GetGroupPhotosPagingDataUseCase {
+    func callAsFunction(groupId: Int64) -> GroupPhotoPagingPublisher {
+        GroupPhotoPagingPublisher(adapter: pagingFlow(groupId: groupId))
+    }
+}
+
+// Kotlin의 Flow<PagingData<GroupPhoto>> 대응 퍼블리셔 — GroupPagingPublisher의 GroupPhoto 타입 대응
+struct GroupPhotoPagingPublisher: Publisher {
+    typealias Output = PagingData<GroupPhoto>
+
+    typealias Failure = Never
+
+    fileprivate let adapter: GroupPhotoPagingFlowAdapter
+
+    func cachedIn() -> GroupPhotoPagingPublisher {
+        GroupPhotoPagingPublisher(adapter: adapter.cachedIn())
+    }
+
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == Output, S.Failure == Never {
+        KotlinFlowPublisher<Output> { onEach in
+            self.adapter.subscribe(onEach: onEach)
+        }
+        .receive(subscriber: subscriber)
+    }
+}
+
 // Compose의 pagingDataFlow.collectAsLazyPagingItems()와 동일한 소비 지점.
 // State에서 꺼낸 PagingData 퍼블리셔를 presenter 브리지(PagingDataSubject)로 밀어넣는다.
 // Output 제약 없이 받고 원소를 런타임 캐스팅한다(ObjC 제네릭 인자는 소거되므로 항상 성공).
@@ -176,6 +203,16 @@ extension Publisher where Failure == Never {
         let adapter = KmpPagingBridgeAdapter(bridge)
 
         adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<AppNotification>) }
+        return LazyPagingItems(bridge: adapter)
+    }
+
+    // GroupPhoto 타입 대응 — 반환 타입 오버로드(호출부의 LazyPagingItems<GroupPhoto> 프로퍼티 타입으로 선택된다)
+    func collectAsLazyPagingItems() -> LazyPagingItems<GroupPhoto> {
+        let subject = PagingDataSubject<GroupPhoto>()
+        let bridge = unsafeDowncast(subject.bridge, to: SwiftUiPagingBridge<GroupPhoto>.self)
+        let adapter = KmpPagingBridgeAdapter(bridge)
+
+        adapter.retained = sink { subject.send(pagingData: $0 as! PagingData<GroupPhoto>) }
         return LazyPagingItems(bridge: adapter)
     }
 }

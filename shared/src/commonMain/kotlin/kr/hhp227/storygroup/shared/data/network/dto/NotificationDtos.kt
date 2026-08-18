@@ -38,5 +38,8 @@ data class PersonalSocketEventResponse(
     val groupId: Long? = null,
     val roomName: String? = null,
     // CALL_INVITE 전용 — false면 보이스톡. 구서버는 필드가 없어 null(페이스톡 간주)
-    val video: Boolean? = null
+    val video: Boolean? = null,
+    // PRESENCE_CHANGED 전용
+    val userId: Long? = null,
+    val online: Boolean? = null
 )

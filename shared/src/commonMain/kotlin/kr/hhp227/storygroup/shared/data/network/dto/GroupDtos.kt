@@ -35,6 +35,17 @@ data class CreateGroupRequest(
     val joinType: String = "AUTO_APPROVE"
 )
 
+// PATCH /api/groups/{id} 요청 본문 — group/dto/GroupDtos.kt UpdateGroupRequest와 1:1.
+// ⚠️name/description/image는 전체 교체 계약(null=null로 덮어씀) — 호출부가 기존 값을 실어 보낸다.
+// joinType만 null=기존 유지(배포 전 클라이언트 하위호환용 서버 시맨틱).
+@Serializable
+data class UpdateGroupRequest(
+    val name: String,
+    val description: String? = null,
+    val image: String? = null,
+    val joinType: String? = null
+)
+
 // GET /api/groups/discover 응답 — group/dto/GroupDtos.kt DiscoverGroupResponse와 1:1
 @Serializable
 data class DiscoverGroupResponse(
@@ -77,6 +88,25 @@ data class InviteResponse(
     val code: String,
     val maxUses: Int? = null,
     val expiresAt: String? = null
+)
+
+// GET /api/groups/{id}/photos 응답 — 웹 lib/api.ts GroupPhoto/GroupPhotosPage와 1:1.
+// 다른 목록과 달리 {totalCount, photos} 오브젝트다 — totalCount는 앱에선 미사용(탭 구조라 "N장" 표기 없음)
+@Serializable
+data class GroupPhotoResponse(
+    val id: Long,
+    val postId: Long,
+    val image: String,
+    val mediaType: String = "image",
+    val userId: Long,
+    val authorName: String,
+    val createdAt: String
+)
+
+@Serializable
+data class GroupPhotosPageResponse(
+    val totalCount: Long = 0,
+    val photos: List<GroupPhotoResponse> = emptyList()
 )
 
 // 4xx 공통 에러 본문 — common/exception/GlobalExceptionHandler.kt ErrorResponse와 1:1
