@@ -22,6 +22,8 @@ struct GroupEditView: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle("그룹 정보 수정")
         .navigationBarTitleDisplayMode(.inline)
+        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+        .navigationBarScrim(visible: true)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker { data, fileName, contentType in
                 viewModel.onAction(.changeImage(bytes: data, fileName: fileName, contentType: contentType))

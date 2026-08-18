@@ -12,6 +12,8 @@ struct BlockedUsersView: View {
         content
             .navigationTitle("차단 사용자 관리")
             .navigationBarTitleDisplayMode(.inline)
+            // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+            .navigationBarScrim(visible: true)
     }
 
     @ViewBuilder private var content: some View {

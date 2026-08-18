@@ -58,6 +58,8 @@ struct SearchView: View {
         pushContainer
             .navigationTitle("검색")
             .navigationBarTitleDisplayMode(.inline)
+            // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+            .navigationBarScrim(visible: true)
             // 공개 프로필 시트 — Compose dialog<UserProfileRoute> 미러. 후속 이동(채팅방/계정 설정)은
             // 시트가 완전히 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
             .sheet(isPresented: showUserProfile, onDismiss: runProfileFollowUp) { userProfileDestination }

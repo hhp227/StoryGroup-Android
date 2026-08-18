@@ -316,6 +316,8 @@ struct ChatRoomView: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+        .navigationBarScrim(visible: true)
         // 통화 발신 — 채팅방 세션에 통화가 붙는다(페이스톡 미러, Compose ChatRoomScreen과 동일).
         // DM=상대 벨울림(웹 D6), 그룹 방=방 멤버 전원 벨울림 팬아웃(진행 중 통화 합류면 서버가 다시 울리지 않는다)
         .toolbar {

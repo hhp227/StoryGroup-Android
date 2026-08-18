@@ -446,6 +446,13 @@ struct NavigationBarScrimVisibleKey: PreferenceKey {
 extension View {
     /// 내비바 배경을 명시 제어 — false면 투명(헤더 사진이 비침), true면 기본 머티리얼.
     /// iOS 15/16+ 공통으로 UIKit appearance를 직접 스왑한다.
+    ///
+    /// ⚠️내비바는 **스택 전체가 공유하는 하나의 UINavigationBar**다. 마지막으로 설정한 값이 그대로
+    /// 남으므로, 투명(false)을 쓰는 화면(셸 홈·그룹 상세의 펼친 커버, 열린 드로어) 위로 push되는
+    /// 화면은 **자기 자신이 `visible: true`를 선언**해야 한다. 안 하면 push된 화면까지 투명해진다.
+    ///
+    /// 반대 방향(아래 깔린 화면이 위 화면 설정을 덮어쓰는 것)은 Helper가 막는다 —
+    /// 스택 최상단일 때만 바에 쓰고, 복귀 시 viewWillAppear/viewDidAppear가 자기 값을 재적용한다.
     func navigationBarScrim(visible: Bool) -> some View {
         background(NavigationBarScrimSetter(visible: visible))
     }
@@ -462,7 +469,8 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
     }
 
     /// SwiftUI 계층 안에서 부모 UINavigationController에 접근하기 위한 숨은 VC.
-    /// push/pop 복귀 시(viewWillAppear) 최신 상태를 다시 적용한다(pushed 화면이 덮어썼을 수 있음).
+    /// push/pop 복귀 시(viewWillAppear/viewDidAppear) 최신 상태를 다시 적용한다
+    /// (내가 가려진 동안 위 화면이 바를 자기 값으로 바꿔놨을 수 있다).
     final class Helper: UIViewController {
         var visible = false
 
@@ -471,8 +479,22 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
             applyIfPossible()
         }
 
+        /// 전환이 끝난 시점의 보정 — viewWillAppear 때 아직 스택 최상단이 아니었던 경우를 구제한다
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            applyIfPossible()
+        }
+
         func applyIfPossible() {
-            guard let bar = navigationController?.navigationBar else { return }
+            guard let nav = navigationController else { return }
+
+            // 내비바는 스택 전체가 공유하는 하나뿐이라, 내가 아래 깔린 동안 값을 쓰면 위에 올라간
+            // 화면의 설정을 덮어쓴다. 가려진 뒤에도 상태가 바뀌는 화면이 실제로 있다 —
+            // 드로어는 "설정"을 push하면서 동시에 drawerOpen=false로 바꾸고(투명↔불투명 재계산),
+            // 홈·그룹 상세는 push된 뒤에도 스크롤 오프셋 preference가 흐른다.
+            // 소유 VC를 못 찾으면 판정을 포기하고 그냥 적용한다(최소한 종전 동작은 보장)
+            if let owner = owningStackViewController(in: nav), owner !== nav.topViewController { return }
+
             let appearance = UINavigationBarAppearance()
 
             if visible {
@@ -480,9 +502,21 @@ private struct NavigationBarScrimSetter: UIViewControllerRepresentable {
             } else {
                 appearance.configureWithTransparentBackground()
             }
+            let bar = nav.navigationBar
             bar.standardAppearance = appearance
             bar.scrollEdgeAppearance = appearance
             bar.compactAppearance = appearance
+        }
+
+        /// 이 헬퍼를 품은 "스택에 직접 실린" 조상 VC(= 화면 하나). 못 찾으면 nil
+        private func owningStackViewController(in nav: UINavigationController) -> UIViewController? {
+            var node: UIViewController? = self
+
+            while let current = node {
+                if nav.viewControllers.contains(current) { return current }
+                node = current.parent
+            }
+            return nil
         }
     }
 }

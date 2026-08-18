@@ -123,6 +123,8 @@ private struct CallContent: View {
         .background(colors.paper.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+        .navigationBarScrim(visible: true)
         // 진입 즉시 권한 → 참가 — 이미 통화 중(재진입)이면 VM 가드가 무시한다(Compose 미러)
         .onAppear { requestPermissionsAndJoin() }
         .onReceive(viewModel.event) { event in

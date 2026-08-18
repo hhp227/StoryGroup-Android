@@ -289,6 +289,8 @@ struct PostDetailView: View {
         }
         .navigationTitle("게시글")
         .navigationBarTitleDisplayMode(.inline)
+        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
+        .navigationBarScrim(visible: true)
         // ⚠️조건 분기는 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 buildIf는 iOS 16+라
         // .toolbar { if ... } 는 배포 타깃 15.0에서 컴파일되지 않는다(GroupDetailView와 같은 형태)
         .toolbar {
