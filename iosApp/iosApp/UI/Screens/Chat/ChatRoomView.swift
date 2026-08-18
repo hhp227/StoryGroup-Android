@@ -151,9 +151,16 @@ struct ChatRoomView: View {
         )
     }
 
-    /// core + 우측 드로어 오버레이 — 드로어가 입력 바·패널 위까지 덮어야 해서 가장 바깥에 얹는다
+    /// core + 우측 드로어 — 스크림과 패널을 **별개 오버레이**로 얹는다.
+    ///
+    /// ⚠️한 ZStack에 같이 넣으면 안 된다: 스크림의 .ignoresSafeArea()가 ZStack을 안전영역 밖까지
+    /// 넓혀 패널이 상태바 밑으로 딸려 올라가고, 그렇다고 스크림을 빼면 ZStack이 패널 폭(288)으로
+    /// 쪼그라들어 오버레이 기본 정렬대로 화면 가운데에 뜬다. 둘로 나누면 스크림은 화면 전체를
+    /// 덮고 패널은 alignment: .trailing으로 안전영역 안 우측에 붙는다.
     @ViewBuilder private var coreWithDrawer: some View {
-        core.overlay { chatRoomDrawer }
+        core
+            .overlay { drawerScrim }
+            .overlay(alignment: .trailing) { drawerPanelLayer }
     }
 
     @ViewBuilder private var core: some View {
@@ -332,18 +339,28 @@ struct ChatRoomView: View {
             }
         }
         .background(colors.paper.ignoresSafeArea())
-        .navigationTitle(title)
+        // 드로어가 열리면 제목도 비운다 — UIKit 내비바는 SwiftUI 콘텐츠보다 항상 위에 그려져서
+        // 오버레이로 덮을 수가 없다. 대신 배경을 투명으로 돌리고(아래 navigationBarScrim) 제목·버튼을
+        // 걷어내면, 그 자리를 드로어 스크림과 패널이 채워 덮인 것처럼 보인다(셸 드로어와 같은 수법)
+        .navigationTitle(showDrawer ? "" : title)
         .navigationBarTitleDisplayMode(.inline)
-        // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
-        .navigationBarScrim(visible: true)
+        .navigationBarBackButtonHidden(showDrawer)
+        // 평소엔 기본 내비바(호출 화면이 투명 바 상태로 push해도 이 화면은 불투명),
+        // 드로어가 열린 동안만 투명 — 복귀 시엔 호출 화면이 자기 값을 재적용한다
+        .navigationBarScrim(visible: !showDrawer)
         // 우측 사이드 드로어(카톡 미러) — 통화는 드로어 하단과 + 첨부 패널 두 곳에 남는다
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    showDrawer = true
-                    viewModel.onAction(.loadMembers)
-                }) {
-                    Image(systemName: "line.3.horizontal")
+                // ⚠️조건 분기는 ToolbarItem "안"에 둔다 — ToolbarContentBuilder의 buildIf는 iOS 16+라
+                // .toolbar { if ... } 는 배포 타깃 15.0에서 컴파일되지 않는다(PostDetailView와 같은 형태)
+                if !showDrawer {
+                    Button(action: {
+                        // ⚠️withAnimation 없이 상태만 바꾸면 transition이 안 걸려 툭 나타난다
+                        withAnimation(.easeOut(duration: 0.25)) { showDrawer = true }
+                        viewModel.onAction(.loadMembers)
+                    }) {
+                        Image(systemName: "line.3.horizontal")
+                    }
                 }
             }
         }
@@ -431,27 +448,34 @@ struct ChatRoomView: View {
         viewModel.uiState.messages.first { $0.userId != viewModel.uiState.myUserId }
     }
 
-    /**
-     * 우측 사이드 드로어(카카오톡 채팅방 서랍 미러) — 대화상대 / 사진 / 통화.
-     * 셸 드로어(DrawerShellView)와 같은 관용구: 스크림 탭으로 닫히고 0.2초 슬라이드.
-     */
-    @ViewBuilder private var chatRoomDrawer: some View {
+    /// 드로어 뒤 스크림 — 화면 전체(안전영역 포함)를 덮고, 탭하면 닫힌다(셸 드로어 미러)
+    @ViewBuilder private var drawerScrim: some View {
         if showDrawer {
-            ZStack(alignment: .trailing) {
-                drawerPanel
-                    .frame(width: 288)
-                    .background(colors.paper)
-                    .transition(.move(edge: .trailing))
-            }
-            // ⚠️스크림을 ZStack의 "자식"으로 두고 .ignoresSafeArea()를 걸면 그만큼 ZStack이
-            // 안전영역 밖까지 넓어지고, 높이를 채우는 패널이 딸려 올라가 헤더(방 이름)가 상태바에
-            // 가린다. background로 두면 칠은 화면 끝까지 나가면서 레이아웃은 안전영역 안에 남는다
-            .background(
-                Color.black.opacity(0.35)
-                    .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeIn(duration: 0.2)) { showDrawer = false } }
-            )
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture { closeDrawer() }
+                .transition(.opacity)
         }
+    }
+
+    /// 우측 사이드 드로어 패널(카카오톡 채팅방 서랍 미러) — 대화상대 / 사진 / 통화.
+    /// 우측 끝에 붙어 높이를 꽉 채우고, 열고 닫을 때 옆에서 밀려 나온다(DrawerShellView 미러)
+    @ViewBuilder private var drawerPanelLayer: some View {
+        if showDrawer {
+            drawerPanel
+                .frame(width: 288)
+                .frame(maxHeight: .infinity)
+                // 칠만 아래 안전영역까지 내린다 — 레이아웃은 그대로라 헤더 위치엔 영향이 없고,
+                // 홈 인디케이터 자리에 스크림만 남아 어두운 띠가 보이는 것을 막는다.
+                // 위쪽(내비바 자리)은 헤더가 자기 linen을 끌어올려 채운다
+                .background(colors.paper.ignoresSafeArea(edges: .bottom))
+                .transition(.move(edge: .trailing))
+        }
+    }
+
+    /// 드로어 닫기 — 여는 쪽과 같은 애니메이션으로 묶어 슬라이드가 양방향으로 걸리게 한다
+    private func closeDrawer() {
+        withAnimation(.easeOut(duration: 0.25)) { showDrawer = false }
     }
 
     private var drawerPanel: some View {
@@ -468,14 +492,17 @@ struct ChatRoomView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Button {
-                    withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+                    closeDrawer()
                 } label: {
                     Image(systemName: "xmark").foregroundColor(colors.inkSoft)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(colors.linen)
+            // 칠만 위 안전영역까지 끌어올린다 — 드로어가 열리면 내비바가 투명해지므로 그 자리를
+            // 헤더 linen이 채워, 오른쪽 288pt가 화면 맨 위부터 드로어로 보인다.
+            // 레이아웃은 그대로라 방 이름은 내비바 아래 제자리에 남는다
+            .background(colors.linen.ignoresSafeArea(edges: .top))
             Divider().background(colors.stoneBorder)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -551,7 +578,7 @@ struct ChatRoomView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 3), spacing: 4) {
                 ForEach(Array(drawerPhotos.prefix(9))) { photo in
                     Button {
-                        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+                        closeDrawer()
                         jumpToMessageId = photo.id
                     } label: {
                         // 앨범 탭과 같은 정사각 셀 관용구 — scaledToFill은 명시 프레임이 있어야 크롭된다
@@ -634,12 +661,12 @@ struct ChatRoomView: View {
 
     /// 드로어를 닫고 프로필 시트를 연다 — 드로어 위에 시트를 겹치면 닫힘 처리가 꼬인다
     private func openProfileFromDrawer(userId: Int64) {
-        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+        closeDrawer()
         selectedProfileUserId = userId
     }
 
     private func startCallFromDrawer(video: Bool) {
-        withAnimation(.easeIn(duration: 0.2)) { showDrawer = false }
+        closeDrawer()
         callVideo = video
         showCall = true
     }
