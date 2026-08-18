@@ -172,6 +172,9 @@ private struct GroupDetailContent: View {
     @State private var barScrimVisible = false
 
     /// 내비바 아래 노출 커버 높이(탭바 제외) — HomeView headerHeight와 동일 규칙(Compose 170dp - 툴바 56dp)
+    /// 스크롤 변위 측정용 좌표계 이름 — 스크롤뷰 프레임이 원점이라 rest에서 항상 0이다
+    private static let scrollSpace = "groupDetailScroll"
+
     private let headerHeight: CGFloat = 114
 
     /// 커버 하단에 겹치는 탭바 높이 — Compose CollapsingTabRowHeight(48dp) 미러
@@ -287,6 +290,9 @@ private struct GroupDetailContent: View {
             .background(colors.paper)
             // 커버가 투명한 내비바·상태바 뒤까지 깔리도록
             .ignoresSafeArea(edges: .top)
+            // 스크롤 변위 측정 기준 — 전역 좌표가 아니라 이 스크롤뷰 프레임 기준으로 잰다.
+            // ⚠️.ignoresSafeArea "뒤"에 붙여야 원점이 확장된 프레임(화면 최상단)이 된다
+            .coordinateSpace(name: Self.scrollSpace)
             // 당겨서 새로고침 — 그룹 정보(멤버/가입 신청 포함)와 피드+앨범을 함께 갱신한다.
             // Compose GroupDetailScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
             .refreshable {
@@ -382,15 +388,14 @@ private struct GroupDetailContent: View {
     private func cover(topInset: CGFloat) -> some View {
         let total = headerHeight + Self.tabBarHeight + topInset
         return GeometryReader { geo in
-            let raw = geo.frame(in: .global).minY
-            // 커버는 .ignoresSafeArea(edges: .top)를 건 스크롤뷰의 첫 요소라 rest 상태의 global minY가
-            // 0이다 — raw 자체가 곧 스크롤 변위다. 아래 스크림 임계값(raw <= -headerHeight)도 이미
-            // 같은 "rest = 0" 전제를 쓴다.
+            let raw = geo.frame(in: .named(Self.scrollSpace)).minY
+            // 커버는 스크롤뷰의 첫 요소라 이 좌표계에선 rest가 정확히 0 — raw가 곧 스크롤 변위다.
             //
-            // ⚠️예전엔 onAppear에서 기준값(headerRestMinY)을 한 번 잡아 빼는 보정을 썼는데,
-            // push 전환 중 아직 안전영역이 반영되지 않은 raw(≈ 내비바+상태바 높이)를 잡으면
-            // rest에서도 변위가 0이 되지 않았다. 그러면 커버 콘텐츠가 통째로 아래로 밀리고
-            // 그만큼 clipped에 잘려, 맨 아래 있던 그룹 설명이 진입하자마자 사라졌다.
+            // ⚠️전역 좌표(.global)로 재면 안 된다. push 전환 중에는 안전영역·프레임이 아직 정착하지
+            // 않아 raw가 순간적으로 양수가 되고, 그대로 stretch에 실려 커버가 부풀었다 줄어든다
+            // (진입 깜빡임). onAppear에서 기준값을 한 번 잡아 빼던 예전 보정은 그 부풀음은 막았지만
+            // 잘못된 값이 잡히면 rest에서도 변위가 남아, 커버 콘텐츠가 밀린 채 clipped에 잘려
+            // 그룹 설명이 사라졌다. 스크롤뷰 프레임 기준이면 둘 다 생기지 않는다.
             let minY = raw
             let stretch = max(0, minY)
             ZStack(alignment: .bottomLeading) {
