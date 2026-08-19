@@ -23,6 +23,8 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            // 콜드 스타트 스플래시 — 12+ 시스템 스플래시와 하위 버전을 한 API로 통일(정석 androidx 라이브러리)
+            implementation(libs.androidx.core.splashscreen)
             // 회의 영상 통화 — 미디어는 플랫폼 네이티브(README 원칙), 시그널링만 shared가 담당
             implementation(libs.getstream.webrtc)
             // 게시글 첨부 동영상 재생 — PlayerView가 컨트롤·시크·종횡비 resize를 준다.

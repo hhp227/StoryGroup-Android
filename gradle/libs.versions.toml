@@ -4,6 +4,7 @@ android-compileSdk = "35"
 android-minSdk = "24"
 android-targetSdk = "35"
 androidx-activity = "1.10.1"
+androidx-core-splashscreen = "1.0.1"
 jetbrains-lifecycle = "2.9.1"
 jetbrains-navigation = "2.9.0"
 cash-paging = "3.3.0-alpha02-0.5.1"
@@ -22,6 +23,7 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 # CMP 1.8+에선 icons 아티팩트가 플러그인 accessor에서 빠짐 — 마지막 멀티플랫폼 배포판을 직접 지정
 compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeMaterialIcons" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
 jetbrains-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "jetbrains-lifecycle" }
 jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrains-navigation" }
 cash-paging-common = { module = "app.cash.paging:paging-common", version.ref = "cash-paging" }

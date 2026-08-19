@@ -26,6 +26,7 @@
         <activity
             android:exported="true"
             android:name="kr.hhp227.storygroup.MainActivity"
+            android:theme="@style/Theme.StoryGroup.Splash"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
