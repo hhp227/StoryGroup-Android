@@ -12,8 +12,9 @@ enum class PersonalEventType {
 
 /**
  * 개인 큐(/user/queue/notifications) 실시간 이벤트 — type별로 채워지는 필드가 다르다.
- * NOTIFICATION은 notification, CHAT_MESSAGE는 chatRoomId/messageId/senderId만 온다
- * (뱃지에는 "어느 방에 새 메시지" 사실만 필요해 서버가 본문을 싣지 않는 계약).
+ * NOTIFICATION은 notification, CHAT_MESSAGE는 chatRoomId/messageId/senderId에 더해
+ * 허브 목록 미리보기용 본문(text/attachmentType/createdAt)이 온다 — 본문 표시는 여전히
+ * 방 입장 REST 몫이고, 구서버는 미리보기 필드가 없어 null(그 경우 미리보기 갱신만 생략).
  * CALL_INVITE는 chatRoomId/senderId/senderName — DB에 남지 않는 휘발 벨울림이라
  * 그 순간에만 의미가 있다(부재중 이력 없음, 웹 D6 미러).
  */
@@ -24,6 +25,10 @@ data class PersonalEvent(
     val messageId: Long? = null,
     val senderId: Long? = null,
     val senderName: String? = null,
+    // CHAT_MESSAGE 전용 — 첨부 전용 메시지는 text가 빈 문자열(종류는 attachmentType), createdAt은 메시지 시각
+    val text: String? = null,
+    val attachmentType: String? = null,
+    val createdAt: String? = null,
     // CALL_INVITE 그룹 방 벨울림 전용(페이스톡 미러) — 배너 제목/이동 경로용, DM이면 null
     val groupId: Long? = null,
     val roomName: String? = null,

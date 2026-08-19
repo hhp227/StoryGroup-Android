@@ -31,6 +31,10 @@ data class PersonalSocketEventResponse(
     val chatRoomId: Long? = null,
     val messageId: Long? = null,
     val senderId: Long? = null,
+    // CHAT_MESSAGE 전용 — 허브 목록 미리보기 갱신용 본문(구서버는 필드가 없어 null)
+    val text: String? = null,
+    val attachmentType: String? = null,
+    val createdAt: String? = null,
     // CALL_INVITE 전용 — 서버 CallInviteEvent는 발신자를 fromUserId/fromUserName으로 싣는다
     val fromUserId: Long? = null,
     val fromUserName: String? = null,

@@ -4,7 +4,8 @@ import Shared
 
 /// 게시글 작성 — composeApp CreatePostViewModel.kt와 1:1 미러.
 /// groupId가 nil이면 라운지(홈 피드)에 게시한다(웹 메인 피드 폼 미러).
-/// 이미지·동영상은 선택 즉시 업로드해 URL을 UiState에 쌓아두고, 등록 시 함께 전송한다(웹 ImageUploadField 미러).
+/// 이미지·동영상은 선택 즉시 업로드해 첨부한 순서대로 attachments에 쌓아두고, 등록 시
+/// images/videos로 갈라 전송한다(레거시 WriteListAdapter itemList 미러 — 화면이 이 순서로 리스트에 그린다).
 /// 성공은 Event.created 일회성 발화 — 호출부가 피드 갱신+닫기를 처리한다.
 final class CreatePostViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
@@ -33,9 +34,8 @@ final class CreatePostViewModel: MviViewModel {
         case .submit(let text): submit(text: text)
         case .clearError: uiState.error = nil
         case .addImage(let data, let fileName, let contentType): addImage(data: data, fileName: fileName, contentType: contentType)
-        case .removeImage(let url): uiState.images.removeAll { $0 == url }
         case .addVideo(let data, let fileName, let contentType): addVideo(data: data, fileName: fileName, contentType: contentType)
-        case .removeVideo(let url): uiState.videos.removeAll { $0 == url }
+        case .removeAttachment(let url): uiState.attachments.removeAll { $0.url == url }
         }
     }
 
@@ -52,7 +52,7 @@ final class CreatePostViewModel: MviViewModel {
                     contentType: contentType
                 )
                 uiState.isUploadingImage = false
-                uiState.images.append(url)
+                uiState.attachments.append(Attachment(url: url, isVideo: false))
             } catch {
                 uiState.isUploadingImage = false
                 uiState.error = error.kotlinMessage(fallback: "이미지 업로드에 실패했습니다.")
@@ -78,7 +78,7 @@ final class CreatePostViewModel: MviViewModel {
                     contentType: contentType
                 )
                 uiState.isUploadingVideo = false
-                uiState.videos.append(url)
+                uiState.attachments.append(Attachment(url: url, isVideo: true))
             } catch {
                 uiState.isUploadingVideo = false
                 uiState.error = error.kotlinMessage(fallback: "동영상 업로드에 실패했습니다.")
@@ -151,10 +151,11 @@ final class CreatePostViewModel: MviViewModel {
                 do {
                     let post = try await getPostUseCase.invoke(groupId: groupId, postId: postId)
                     uiState.isLoading = false
-                    uiState.images = post.imageUrls
                     // ⚠️videos도 반드시 채운다 — 저장이 전체 교체라 비워둔 채 보내면
-                    // 웹에서 올린 동영상이 수정 한 번에 전부 삭제된다(images와 같은 이유)
-                    uiState.videos = post.videoUrls
+                    // 웹에서 올린 동영상이 수정 한 번에 전부 삭제된다(images와 같은 이유).
+                    // 서버엔 타입 간 순서 정보가 없어 이미지들 뒤에 동영상들을 잇는다(상세 표시 순서와 동일)
+                    uiState.attachments = post.imageUrls.map { Attachment(url: $0, isVideo: false) }
+                        + post.videoUrls.map { Attachment(url: $0, isVideo: true) }
                     uiState.loadedText = post.text
                 } catch {
                     uiState.isLoading = false
@@ -164,25 +165,34 @@ final class CreatePostViewModel: MviViewModel {
         }
     }
 
+    /// 첨부 한 건 — 화면이 첨부한 순서 그대로 리스트에 그린다(이미지/동영상 구분은 렌더링용)
+    struct Attachment: Equatable {
+        let url: String
+        let isVideo: Bool
+    }
+
     struct UiState {
         var isLoading = false
         var error: String? = nil
-        var images: [String] = []
+        /// 첨부 목록 — 업로드 성공 순서대로 append(레거시 itemList 미러)
+        var attachments: [Attachment] = []
         var isUploadingImage = false
-        var videos: [String] = []
         var isUploadingVideo = false
         var isEditMode = false
         /// 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(nil이면 아직 로드 전)
         var loadedText: String? = nil
+
+        /// 서버 계약(images/videos 분리 전송)과 타입별 상한 판정용 파생 목록
+        var images: [String] { attachments.filter { !$0.isVideo }.map(\.url) }
+        var videos: [String] { attachments.filter(\.isVideo).map(\.url) }
     }
 
     enum Action {
         case submit(text: String)
         case clearError
         case addImage(data: Data, fileName: String, contentType: String)
-        case removeImage(url: String)
         case addVideo(data: Data, fileName: String, contentType: String)
-        case removeVideo(url: String)
+        case removeAttachment(url: String)
     }
 
     enum Event {

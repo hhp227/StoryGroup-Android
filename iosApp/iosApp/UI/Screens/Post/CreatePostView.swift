@@ -18,39 +18,29 @@ struct CreatePostView: View {
     private let onCreated: () -> Void
 
     var body: some View {
+        // 레거시 fragment_create_post 미러 — 리스트[본문 입력 + 첨부가 순서대로 append] + 1px 구분선 + 첨부 버튼 바
         VStack(spacing: 0) {
             ZStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let error = viewModel.uiState.error {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(colors.rust)
-                    }
-                    TextEditor(text: Binding(
-                        get: { text },
-                        set: {
-                            text = $0
-                            if viewModel.uiState.error != nil { viewModel.onAction(.clearError) }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let error = viewModel.uiState.error {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(colors.rust)
                         }
-                    ))
-                    .disabled(viewModel.uiState.isLoading)
-                    .overlay(alignment: .topLeading) {
-                        if text.isEmpty {
-                            Text("무슨 이야기가 있나요?")
-                                .foregroundColor(colors.inkFaint)
-                                .padding(.top, 8)
-                                .padding(.leading, 4)
-                                .allowsHitTesting(false)
+                        growingTextEditor
+                        ForEach(viewModel.uiState.attachments, id: \.url) { attachment in
+                            attachmentItem(attachment)
                         }
                     }
+                    .padding()
                 }
-                .padding()
                 if viewModel.uiState.isLoading {
                     ProgressView()
                 }
             }
-            imageAttachmentRow
-            videoAttachmentRow
+            Divider().background(colors.stoneBorder)
+            attachBar
         }
         .background(colors.paper)
         .navigationTitle(viewModel.uiState.isEditMode ? "글 수정" : "글쓰기")
@@ -93,84 +83,97 @@ struct CreatePostView: View {
         }
     }
 
-    /// 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장)
-    private var imageAttachmentRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.uiState.images, id: \.self) { urlString in
-                    ZStack(alignment: .topTrailing) {
-                        if let url = URL(string: urlString) {
-                            AsyncImage(url: url) { phase in
-                                if case .success(let image) = phase {
-                                    image.resizable().scaledToFill()
-                                } else {
-                                    colors.linen
-                                }
-                            }
-                            .frame(width: 72, height: 72)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        Button(action: { viewModel.onAction(.removeImage(url: urlString)) }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.white)
-                                .background(Circle().fill(colors.ink))
-                        }
-                        .padding(4)
-                    }
+    /// 배경·테두리 없는 본문 입력(레거시 input_text 미러) — TextEditor는 iOS 15에서 내용만큼 자라지 않아
+    /// 같은 글꼴의 보이지 않는 Text를 사이징 미러로 깔아 높이를 만든다(내부 스크롤이 생기지 않게)
+    private var growingTextEditor: some View {
+        ZStack(alignment: .topLeading) {
+            Text(text.isEmpty ? " " : text)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(0)
+            TextEditor(text: Binding(
+                get: { text },
+                set: {
+                    text = $0
+                    if viewModel.uiState.error != nil { viewModel.onAction(.clearError) }
                 }
-                let canAddMore = viewModel.uiState.images.count < CreatePostViewModel.maxImages
-                Button(action: { activePicker = .image }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10).fill(colors.linen)
-                        if viewModel.uiState.isUploadingImage {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "camera.fill")
-                                .foregroundColor(canAddMore ? colors.inkSoft : colors.inkFaint)
-                        }
-                    }
-                    .frame(width: 72, height: 72)
-                }
-                .disabled(!canAddMore || viewModel.uiState.isUploadingImage)
+            ))
+            .disabled(viewModel.uiState.isLoading)
+            if text.isEmpty {
+                Text("무슨 이야기가 있나요?")
+                    .foregroundColor(colors.inkFaint)
+                    .padding(.top, 8)
+                    .padding(.leading, 4)
+                    .allowsHitTesting(false)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+        }
+        .frame(minHeight: 160, alignment: .topLeading)
+    }
+
+    /// 첨부 한 아이템 — 리스트 폭을 꽉 채우는 실비율 미리보기(레거시 input_contents 미러) + 우상단 제거 버튼
+    @ViewBuilder
+    private func attachmentItem(_ attachment: CreatePostViewModel.Attachment) -> some View {
+        ZStack(alignment: .topTrailing) {
+            if attachment.isVideo {
+                SGVideoPoster(urlString: attachment.url)
+            } else if let url = URL(string: attachment.url) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFit()
+                    } else {
+                        colors.linen.frame(height: 180)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            Button(action: { viewModel.onAction(.removeAttachment(url: attachment.url)) }) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.white)
+                    .background(Circle().fill(colors.ink))
+            }
+            .padding(8)
         }
     }
 
-    /// 동영상 첨부 행 — 사진 행과 같은 모양이되 썸네일 자리엔 첫 프레임 + ▶를 쓴다
-    private var videoAttachmentRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.uiState.videos, id: \.self) { urlString in
-                    ZStack(alignment: .topTrailing) {
-                        SGVideoThumbnail(urlString: urlString, size: 72)
-                        Button(action: { viewModel.onAction(.removeVideo(url: urlString)) }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.white)
-                                .background(Circle().fill(colors.ink))
-                        }
-                        .padding(4)
-                    }
-                }
-                let canAddMore = viewModel.uiState.videos.count < CreatePostViewModel.maxVideos
-                Button(action: { activePicker = .video }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10).fill(colors.linen)
-                        if viewModel.uiState.isUploadingVideo {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "video.badge.plus")
-                                .foregroundColor(canAddMore ? colors.inkSoft : colors.inkFaint)
-                        }
-                    }
-                    .frame(width: 72, height: 72)
-                }
-                .disabled(!canAddMore || viewModel.uiState.isUploadingVideo)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+    /// 하단 첨부 버튼 바 — 레거시 ib_image/ib_video 미러(업로드 중 스피너, 타입별 상한 도달 시 비활성)
+    private var attachBar: some View {
+        HStack(spacing: 4) {
+            attachBarButton(
+                systemImage: "camera.fill",
+                isUploading: viewModel.uiState.isUploadingImage,
+                canAddMore: viewModel.uiState.images.count < CreatePostViewModel.maxImages
+            ) { activePicker = .image }
+            attachBarButton(
+                systemImage: "video.badge.plus",
+                isUploading: viewModel.uiState.isUploadingVideo,
+                canAddMore: viewModel.uiState.videos.count < CreatePostViewModel.maxVideos
+            ) { activePicker = .video }
+            Spacer()
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+
+    private func attachBarButton(
+        systemImage: String,
+        isUploading: Bool,
+        canAddMore: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            ZStack {
+                if isUploading {
+                    ProgressView()
+                } else {
+                    Image(systemName: systemImage)
+                        .foregroundColor(canAddMore ? colors.inkSoft : colors.inkFaint)
+                }
+            }
+            .frame(width: 44, height: 44)
+        }
+        .disabled(!canAddMore || isUploading)
     }
 
     /// postId가 있으면 같은 폼이 수정 모드로 동작한다(Compose CreatePostScreen 미러)

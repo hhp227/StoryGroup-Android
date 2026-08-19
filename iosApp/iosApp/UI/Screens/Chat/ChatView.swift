@@ -43,17 +43,23 @@ struct ChatView: View {
             )
             .background(colors.paper)
         } else {
+            // 카카오톡식 풀블리드 행 — 카드 없이 행이 자체 패딩을 갖고, 섹션 제목만 좌우 여백을 준다
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: 0) {
                     if !uiState.groupRooms.isEmpty {
                         SGSectionTitle(text: "그룹 채팅")
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 4)
                         ForEach(uiState.groupRooms, id: \.id) { room in
                             ChatRoomRow(
                                 title: room.groupName,
-                                subtitle: room.name,
+                                roomName: room.name,
                                 imageUrl: nil,
                                 isGroup: true,
-                                unreadCount: room.unreadCount
+                                unreadCount: room.unreadCount,
+                                lastMessageText: room.lastMessageText,
+                                lastMessageType: room.lastMessageType,
+                                lastMessageAt: room.lastMessageAt
                             ) {
                                 onOpenChatRoom(ChatRoomRef(chatRoomId: room.id, groupId: room.groupId, title: room.groupName))
                             }
@@ -64,20 +70,25 @@ struct ChatView: View {
                             Spacer().frame(height: 12)
                         }
                         SGSectionTitle(text: "다이렉트 메시지")
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 4)
                         ForEach(uiState.directRooms, id: \.id) { room in
                             ChatRoomRow(
                                 title: room.otherUserName,
-                                subtitle: nil,
+                                roomName: nil,
                                 imageUrl: room.otherUserProfileImg,
                                 isGroup: false,
-                                unreadCount: room.unreadCount
+                                unreadCount: room.unreadCount,
+                                lastMessageText: room.lastMessageText,
+                                lastMessageType: room.lastMessageType,
+                                lastMessageAt: room.lastMessageAt
                             ) {
                                 onOpenChatRoom(ChatRoomRef(chatRoomId: room.id, groupId: nil, title: room.otherUserName))
                             }
                         }
                     }
                 }
-                .padding(16)
+                .padding(.vertical, 8)
             }
             .background(colors.paper)
         }
@@ -89,10 +100,12 @@ struct ChatView: View {
     }
 }
 
+/// 채팅방 한 줄 — 카카오톡식(아바타 + 제목·마지막 메시지 2줄 + 우측 시각·미읽음 버블), 카드 없음.
+/// Compose ChatRoomRow와 1:1 미러
 private struct ChatRoomRow: View {
     let title: String
 
-    let subtitle: String?
+    let roomName: String?
 
     let imageUrl: String?
 
@@ -100,36 +113,63 @@ private struct ChatRoomRow: View {
 
     let unreadCount: Int64
 
+    let lastMessageText: String?
+
+    let lastMessageType: String?
+
+    let lastMessageAt: String?
+
     let onTap: () -> Void
 
     @Environment(\.sgColors) private var colors
 
     var body: some View {
         Button(action: onTap) {
-            SGCard {
-                HStack(spacing: 12) {
-                    SGAvatar(
-                        name: title,
-                        imageUrl: imageUrl,
-                        background: isGroup ? colors.accent2Soft : colors.accentSoft,
-                        foreground: isGroup ? colors.accent2 : colors.accent
-                    )
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title).font(.subheadline.bold()).foregroundColor(colors.ink)
-                        if let subtitle {
-                            Text(subtitle)
+            HStack(spacing: 12) {
+                SGAvatar(
+                    name: title,
+                    size: 52,
+                    imageUrl: imageUrl,
+                    background: isGroup ? colors.accent2Soft : colors.accentSoft,
+                    foreground: isGroup ? colors.accent2 : colors.accent
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(title).font(.subheadline.bold()).foregroundColor(colors.ink).lineLimit(1)
+                        if let roomName {
+                            Text(roomName)
                                 .font(.caption)
                                 .foregroundColor(colors.inkSoft)
                                 .lineLimit(1)
                         }
                     }
-                    Spacer()
+                    Text(preview)
+                        .font(.caption)
+                        .foregroundColor(colors.inkSoft)
+                        .lineLimit(1)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    if let lastMessageAt {
+                        Text(TimeFormats.relative(lastMessageAt))
+                            .font(.caption2)
+                            .foregroundColor(colors.inkSoft)
+                    }
                     SGUnreadBadge(count: unreadCount)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// 미리보기 라벨 — 첨부 전용 메시지(text 빈 문자열)는 종류로 표기한다. Compose messagePreview와 1:1 미러
+    private var preview: String {
+        if lastMessageAt == nil { return "아직 메시지가 없습니다" }
+        if let lastMessageText, !lastMessageText.isEmpty { return lastMessageText }
+        if lastMessageType?.hasPrefix("image/") == true { return "사진" }
+        return "파일"
     }
 }

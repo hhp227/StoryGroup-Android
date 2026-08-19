@@ -58,6 +58,22 @@ fun SgVideoAttachment(
 }
 
 /**
+ * 작성 폼용 풀폭 동영상 포스터 — SgVideoAttachment와 같은 실비율 상자지만 재생하지 않는다
+ * (작성 중 미리보기 전용, 레거시 input_contents의 VideoView 자리 미러).
+ */
+@Composable
+fun SgVideoPoster(url: String, modifier: Modifier = Modifier) {
+    val frame = rememberVideoFrame(url)
+    val aspectRatio = frame?.let { it.width.toFloat() / it.height } ?: FALLBACK_VIDEO_ASPECT_RATIO
+
+    VideoPoster(
+        frame = frame,
+        badgeSize = 56.dp,
+        modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio).clip(RoundedCornerShape(12.dp))
+    )
+}
+
+/**
  * 피드 카드·작성 폼용 동영상 썸네일 — 이미지 썸네일과 같은 정사각 칸에 첫 프레임과 ▶를 얹는다.
  * 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다).
  */

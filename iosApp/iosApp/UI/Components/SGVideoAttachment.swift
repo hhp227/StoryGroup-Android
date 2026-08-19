@@ -80,6 +80,36 @@ private struct SGVideoPlayer: View {
     }
 }
 
+/// 작성 폼용 풀폭 동영상 포스터 — SGVideoAttachment와 같은 실비율 상자지만 재생하지 않는다
+/// (작성 중 미리보기 전용, Compose SgVideoPoster 미러)
+struct SGVideoPoster: View {
+    let urlString: String
+
+    @State private var poster: UIImage?
+
+    private var aspectRatio: CGFloat {
+        guard let size = poster?.size, size.height > 0 else { return fallbackVideoAspectRatio }
+        return size.width / size.height
+    }
+
+    var body: some View {
+        VideoPoster(image: poster, badgeSize: 56)
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .task(id: urlString) {
+                if poster == nil {
+                    poster = await VideoPosterLoader.load(urlString)
+                }
+            }
+    }
+
+    init(urlString: String) {
+        self.urlString = urlString
+        _poster = State(initialValue: VideoPosterLoader.cached(urlString))
+    }
+}
+
 /// 피드 카드·작성 폼용 동영상 썸네일 — 이미지 썸네일과 같은 정사각 칸에 첫 프레임과 ▶를 얹는다.
 /// 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다).
 struct SGVideoThumbnail: View {

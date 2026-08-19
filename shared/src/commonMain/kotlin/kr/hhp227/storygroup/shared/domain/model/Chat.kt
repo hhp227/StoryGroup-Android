@@ -9,7 +9,12 @@ data class GroupChatRoom(
     // 서버 ISO-8601(OffsetDateTime) 원문 — 표시 포맷팅은 각 플랫폼 UI가 담당
     val createdAt: String = "",
     // 내 읽음 위치 이후의 남의 메시지 수(차단·삭제 제외) — 서버 집계 스냅숏, 실시간 증가는 개인 큐 이벤트로 클라가 얹는다
-    val unreadCount: Long = 0
+    val unreadCount: Long = 0,
+    // 목록 미리보기용 마지막 가시 메시지(삭제·차단 제외) — lastMessageAt이 null이면 메시지 없음,
+    // 첨부 전용이면 text가 빈 문자열(종류는 lastMessageType=첨부 contentType). 라벨 파생은 각 플랫폼 UI 몫
+    val lastMessageText: String? = null,
+    val lastMessageType: String? = null,
+    val lastMessageAt: String? = null
 )
 
 /** 1:1 DM 방(GET /api/dm) — 웹 DirectRoom 미러. 방 이름은 서버에 "DM" 고정이라 상대 정보로 표시한다 */
@@ -19,7 +24,11 @@ data class DirectRoom(
     val otherUserName: String,
     val otherUserProfileImg: String? = null,
     val createdAt: String = "",
-    val unreadCount: Long = 0
+    val unreadCount: Long = 0,
+    // 그룹 방과 같은 계약의 마지막 메시지 미리보기
+    val lastMessageText: String? = null,
+    val lastMessageType: String? = null,
+    val lastMessageAt: String? = null
 )
 
 /** 메시지 첨부(메시지당 최대 1개) — 이미지/파일 구분은 contentType으로 판단 */

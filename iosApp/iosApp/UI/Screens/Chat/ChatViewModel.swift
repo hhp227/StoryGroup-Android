@@ -6,7 +6,9 @@ import Shared
 /// 그룹 채팅방(GET /api/chat-rooms, 라운지 제외)+DM 방(GET /api/dm) 두 목록을 조회한다.
 /// 방별 미읽음 수는 서버 집계(unreadCount)를 스냅숏으로 받고, 개인 큐(STOMP) CHAT_MESSAGE
 /// 이벤트로 실시간 증가시킨다 — 셸 채팅 탭 뱃지(totalUnread)도 이 값의 합(셸이 소유·주입).
-/// 열려 있는 방(roomOpened~roomClosed)의 이벤트는 방 화면이 직접 표시·읽음 보고하므로 올리지 않는다.
+/// 마지막 메시지 미리보기(lastMessage*)도 같은 이벤트로 갱신하고 섹션 안은 최근 활동순으로 유지한다.
+/// 열려 있는 방(roomOpened~roomClosed)의 이벤트는 방 화면이 직접 표시·읽음 보고하므로 올리지 않고,
+/// 방에서 나오면(roomClosed) 재조회로 내가 보내거나 읽은 메시지를 목록에 반영한다.
 /// (Kotlin은 두 목록을 async 병렬 조회하지만 KMP suspend는 메인 스레드 호출 제약이 있어 순차 await)
 final class ChatViewModel: MviViewModel {
     typealias Event = Never
@@ -43,8 +45,9 @@ final class ChatViewModel: MviViewModel {
                 let groupRooms = try await getGroupChatRoomsUseCase.invoke()
                 let directRooms = try await getDirectRoomsUseCase.invoke()
                 uiState.isLoading = false
-                uiState.groupRooms = groupRooms
-                uiState.directRooms = directRooms
+                // 섹션 안은 최근 활동순(카카오톡 관례) — 같은 서버가 같은 오프셋으로 주는 ISO-8601이라 문자열 내림차순=최신순
+                uiState.groupRooms = groupRooms.sorted { ($0.lastMessageAt ?? $0.createdAt) > ($1.lastMessageAt ?? $1.createdAt) }
+                uiState.directRooms = directRooms.sorted { ($0.lastMessageAt ?? $0.createdAt) > ($1.lastMessageAt ?? $1.createdAt) }
             } catch {
                 uiState.isLoading = false
                 uiState.error = error.kotlinMessage(fallback: "채팅방을 불러오지 못했습니다.")
@@ -60,6 +63,8 @@ final class ChatViewModel: MviViewModel {
 
     private func onRoomClosed(chatRoomId: Int64) {
         if activeRoomId == chatRoomId { activeRoomId = nil }
+        // 방에 있는 동안의 활동(내 전송·읽음, 남의 메시지)은 이벤트를 올리지 않았으므로 재조회로 반영한다
+        load()
     }
 
     /// 개인 큐 실시간 이벤트 — 목록에 있는 방이면 미읽음 +1, 모르는 방(새 DM 등)이면 목록 재조회
@@ -74,7 +79,7 @@ final class ChatViewModel: MviViewModel {
             if roomId == activeRoomId { return }
             if uiState.groupRooms.contains(where: { $0.id == roomId })
                 || uiState.directRooms.contains(where: { $0.id == roomId }) {
-                setUnreadCount(chatRoomId: roomId) { $0 + 1 }
+                applyIncomingMessage(chatRoomId: roomId, event: personalEvent)
             } else {
                 load()
             }
@@ -94,7 +99,10 @@ final class ChatViewModel: MviViewModel {
                 groupName: room.groupName,
                 name: room.name,
                 createdAt: room.createdAt,
-                unreadCount: transform(room.unreadCount)
+                unreadCount: transform(room.unreadCount),
+                lastMessageText: room.lastMessageText,
+                lastMessageType: room.lastMessageType,
+                lastMessageAt: room.lastMessageAt
             )
         }
         uiState.directRooms = uiState.directRooms.map { room in
@@ -105,9 +113,46 @@ final class ChatViewModel: MviViewModel {
                 otherUserName: room.otherUserName,
                 otherUserProfileImg: room.otherUserProfileImg,
                 createdAt: room.createdAt,
-                unreadCount: transform(room.unreadCount)
+                unreadCount: transform(room.unreadCount),
+                lastMessageText: room.lastMessageText,
+                lastMessageType: room.lastMessageType,
+                lastMessageAt: room.lastMessageAt
             )
         }
+    }
+
+    /// 목록에 있는 방의 새 메시지 — 미읽음 +1에 더해 미리보기를 갱신하고 최근 활동순을 다시 맞춘다
+    private func applyIncomingMessage(chatRoomId: Int64, event: PersonalEvent) {
+        // 구서버 이벤트(미리보기 필드 없음)면 미읽음만 올린다 — createdAt 유무로 판별
+        let hasPreview = event.createdAt != nil
+        uiState.groupRooms = uiState.groupRooms.map { room in
+            guard room.id == chatRoomId else { return room }
+            return GroupChatRoom(
+                id: room.id,
+                groupId: room.groupId,
+                groupName: room.groupName,
+                name: room.name,
+                createdAt: room.createdAt,
+                unreadCount: room.unreadCount + 1,
+                lastMessageText: hasPreview ? event.text : room.lastMessageText,
+                lastMessageType: hasPreview ? event.attachmentType : room.lastMessageType,
+                lastMessageAt: hasPreview ? event.createdAt : room.lastMessageAt
+            )
+        }.sorted { ($0.lastMessageAt ?? $0.createdAt) > ($1.lastMessageAt ?? $1.createdAt) }
+        uiState.directRooms = uiState.directRooms.map { room in
+            guard room.id == chatRoomId else { return room }
+            return DirectRoom(
+                id: room.id,
+                otherUserId: room.otherUserId,
+                otherUserName: room.otherUserName,
+                otherUserProfileImg: room.otherUserProfileImg,
+                createdAt: room.createdAt,
+                unreadCount: room.unreadCount + 1,
+                lastMessageText: hasPreview ? event.text : room.lastMessageText,
+                lastMessageType: hasPreview ? event.attachmentType : room.lastMessageType,
+                lastMessageAt: hasPreview ? event.createdAt : room.lastMessageAt
+            )
+        }.sorted { ($0.lastMessageAt ?? $0.createdAt) > ($1.lastMessageAt ?? $1.createdAt) }
     }
 
     init(
