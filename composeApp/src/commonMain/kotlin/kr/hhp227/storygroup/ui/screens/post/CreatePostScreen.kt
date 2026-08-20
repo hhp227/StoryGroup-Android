@@ -55,10 +55,13 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.PickerMode
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
+import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
 
 @Composable
 private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
     val container = LocalAppContainer.current
+    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
+    val videoCompressor = rememberVideoCompressor()
 
     return viewModel(key = "create-post-$groupId-$postId") {
         CreatePostViewModel(
@@ -69,7 +72,8 @@ private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewMo
             uploadImageUseCase = container.uploadImageUseCase,
             uploadVideoUseCase = container.uploadVideoUseCase,
             getPostUseCase = container.getPostUseCase,
-            updatePostUseCase = container.updatePostUseCase
+            updatePostUseCase = container.updatePostUseCase,
+            videoCompressor = videoCompressor
         )
     }
 }
@@ -103,7 +107,7 @@ fun CreatePostScreen(
         onAction(CreatePostViewModel.Action.AddImage(picked.bytes, picked.fileName, picked.contentType))
     }
     val pickVideo = rememberImagePickerLauncher(PickerMode.Video) { picked ->
-        onAction(CreatePostViewModel.Action.AddVideo(picked.bytes, picked.fileName, picked.contentType))
+        onAction(CreatePostViewModel.Action.AddVideo(picked))
     }
 
     // 일회성 이벤트 수집 — 성공 시 결과를 publish하고 스스로 복귀한다(수정이면 상세가, 신규면 피드가 읽어간다)
@@ -135,8 +139,9 @@ fun CreatePostScreen(
             actions = {
                 TextButton(
                     onClick = { onAction(CreatePostViewModel.Action.Submit(text)) },
-                    // 업로드가 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
-                    enabled = !uiState.isLoading && !uiState.isUploadingImage && !uiState.isUploadingVideo
+                    // 업로드·압축이 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
+                    enabled = !uiState.isLoading && !uiState.isUploadingImage && !uiState.isUploadingVideo &&
+                        uiState.compressionProgress == null
                 ) {
                     Text(
                         if (uiState.isEditMode) "수정" else "등록",
@@ -207,10 +212,17 @@ fun CreatePostScreen(
             AttachBarButton(
                 icon = Icons.Default.VideoCall,
                 description = "동영상 추가",
-                isUploading = uiState.isUploadingVideo,
+                isUploading = uiState.isUploadingVideo || uiState.compressionProgress != null,
                 canAddMore = uiState.videos.size < CreatePostViewModel.MAX_VIDEOS,
                 onClick = pickVideo
             )
+            uiState.compressionProgress?.let { progress ->
+                Text(
+                    "압축 중 ${(progress * 100).toInt()}%",
+                    style = SgTheme.typography.bodySmall,
+                    color = sg.inkFaint
+                )
+            }
         }
     }
 }

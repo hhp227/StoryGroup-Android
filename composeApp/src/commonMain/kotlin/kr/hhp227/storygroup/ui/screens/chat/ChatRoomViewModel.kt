@@ -31,8 +31,15 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatMessageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendChatTypingUseCase
+import kr.hhp227.storygroup.shared.domain.media.VideoCompressionPlanner
+import kr.hhp227.storygroup.shared.domain.media.VideoPlan
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import kr.hhp227.storygroup.ui.util.CompressionState
+import kr.hhp227.storygroup.ui.util.PickedFile
+import kr.hhp227.storygroup.ui.util.VideoCompressor
+import kr.hhp227.storygroup.ui.util.deleteFile
+import kr.hhp227.storygroup.ui.util.readFileBytes
 
 /**
  * 채팅방 — 이력은 REST 최신순 오프셋 페이징(웹은 최신 50 고정, 앱은 "이전 메시지" 추가 로드),
@@ -56,7 +63,9 @@ class ChatRoomViewModel(
     private val getCallRosterUseCase: GetCallRosterUseCase,
     private val getGroupMembersUseCase: GetGroupMembersUseCase,
     observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
-    getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+    getCurrentUserIdUseCase: GetCurrentUserIdUseCase,
+    // 채팅 동영상 압축 실행기(§4-b) — 화면이 rememberVideoCompressor()로 받아 넘긴다
+    private val videoCompressor: VideoCompressor
 ) : ViewModel(), MviViewModel<ChatRoomViewModel.UiState, ChatRoomViewModel.Action, ChatRoomViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(myUserId = getCurrentUserIdUseCase()))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -87,6 +96,7 @@ class ChatRoomViewModel(
                     actionError = null
                 )
             }
+            is Action.AttachVideo -> attachVideo(action.picked)
             Action.ClearAttachment -> _uiState.update { it.copy(pendingAttachment = null) }
             Action.Typing -> sendTypingThrottled()
             Action.LoadMembers -> loadMembers()
@@ -161,11 +171,88 @@ class ChatRoomViewModel(
         }
     }
 
+    /**
+     * 채팅 동영상 첨부(§4-b) — 판정(§2)은 선택 즉시, 압축은 백그라운드, 업로드는 기존대로 전송 시점.
+     * 완료되면 대기 첨부가 압축본(upload.mp4, ≤5MB)으로 채워진다. 화면 이탈 시 viewModelScope가 취소.
+     */
+    private fun attachVideo(picked: PickedFile) {
+        val filePath = picked.filePath
+        if (filePath == null || picked.durationMs == null) {
+            _uiState.update { it.copy(actionError = "동영상 정보를 읽지 못했습니다.") }
+            return
+        }
+        when (val plan = VideoCompressionPlanner.plan(picked.durationMs, picked.sizeBytes, picked.width, picked.height)) {
+            VideoPlan.RejectTooLarge -> _uiState.update { it.copy(actionError = "파일이 너무 큽니다. (최대 500MB)") }
+            VideoPlan.RejectTooLong -> _uiState.update { it.copy(actionError = "동영상은 최대 3분까지 첨부할 수 있습니다.") }
+            VideoPlan.SkipAlreadySmall -> {
+                val bytes = readFileBytes(filePath)
+                deleteFile(filePath)
+                _uiState.update {
+                    it.copy(pendingAttachment = PendingAttachment(bytes, picked.fileName, picked.contentType), actionError = null)
+                }
+            }
+            is VideoPlan.Compress -> compressAndAttach(picked, plan, isRetry = false)
+        }
+    }
+
+    private fun compressAndAttach(picked: PickedFile, plan: VideoPlan.Compress, isRetry: Boolean) {
+        val filePath = picked.filePath ?: return
+        _uiState.update { it.copy(compressionProgress = 0f, actionError = null) }
+        viewModelScope.launch {
+            videoCompressor.compress(filePath, plan).collect { state ->
+                when (state) {
+                    is CompressionState.Progress ->
+                        _uiState.update { it.copy(compressionProgress = state.fraction) }
+                    is CompressionState.Failed -> {
+                        deleteFile(filePath)
+                        _uiState.update { it.copy(compressionProgress = null, actionError = state.message) }
+                    }
+                    is CompressionState.Done -> {
+                        val bytes = readFileBytes(state.outputPath)
+                        deleteFile(state.outputPath)
+                        when {
+                            bytes.size <= VideoCompressionPlanner.TARGET_BYTES -> {
+                                deleteFile(filePath)
+                                _uiState.update {
+                                    it.copy(
+                                        compressionProgress = null,
+                                        // 출력은 항상 MP4(§2) — 업로드는 전송 시점(send)에 나간다
+                                        pendingAttachment = PendingAttachment(bytes, "upload.mp4", "video/mp4")
+                                    )
+                                }
+                            }
+                            !isRetry -> {
+                                // 단일 패스 ABR 오버슈트 — 더 보수적인 마진으로 딱 한 번 재시도(§2-5)
+                                val retryPlan = VideoCompressionPlanner.plan(
+                                    picked.durationMs ?: 0L, picked.sizeBytes, picked.width, picked.height,
+                                    margin = VideoCompressionPlanner.RETRY_MARGIN
+                                )
+                                if (retryPlan is VideoPlan.Compress) {
+                                    compressAndAttach(picked, retryPlan, isRetry = true)
+                                } else {
+                                    deleteFile(filePath)
+                                    _uiState.update { it.copy(compressionProgress = null, actionError = "동영상 압축에 실패했습니다.") }
+                                }
+                            }
+                            else -> {
+                                deleteFile(filePath)
+                                _uiState.update { it.copy(compressionProgress = null, actionError = "동영상 압축에 실패했습니다.") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun send(text: String) {
         val trimmed = text.trim()
         val pending = _uiState.value.pendingAttachment
         // 첨부가 있으면 본문 없이도 보낼 수 있다(웹 미러 — 서버는 둘 다 비었을 때만 400)
-        if ((trimmed.isEmpty() && pending == null) || _uiState.value.isSending) return
+        // 압축이 끝나기 전에 보내면 첨부가 빠진 채 나간다 — 완료까지 전송을 막는다(§4-b)
+        if ((trimmed.isEmpty() && pending == null) || _uiState.value.isSending ||
+            _uiState.value.compressionProgress != null
+        ) return
 
         _uiState.update { it.copy(isSending = true, actionError = null) }
         viewModelScope.launch {
@@ -320,6 +407,8 @@ class ChatRoomViewModel(
         val isSending: Boolean = false,
         // 전송 대기 첨부(메시지당 1개, 전송 시점 업로드) — 실패해도 유지돼 재시도할 수 있다
         val pendingAttachment: PendingAttachment? = null,
+        /** 동영상 압축 진행률(0..1) — null이면 압축 중 아님. 압축 중엔 전송 비활성(§4-b) */
+        val compressionProgress: Float? = null,
         // 입력 중인 타인(userId→이름) — 신호가 끊기면 4초 뒤 자동 소멸
         val typists: Map<Long, String> = emptyMap(),
         // 멤버별 마지막 읽음 위치(userId→messageId, 본인 포함) — "읽음 N"은 화면이 파생한다
@@ -351,6 +440,8 @@ class ChatRoomViewModel(
         data class Send(val text: String) : Action
         /** 피커 선택 결과 — 업로드는 전송 시점까지 미룬다 */
         class Attach(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
+        /** 파일 피커에서 고른 동영상 — 선택 시점에 압축(§4-b), 업로드는 전송 시점 */
+        class AttachVideo(val picked: PickedFile) : Action
         data object ClearAttachment : Action
         /** 입력 변화 신호 — VM이 스로틀해 STOMP 타이핑 신호로 발신한다 */
         data object Typing : Action

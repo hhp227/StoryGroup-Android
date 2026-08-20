@@ -104,6 +104,7 @@ import kr.hhp227.storygroup.ui.util.chatDateKey
 import kr.hhp227.storygroup.ui.util.formatChatDate
 import kr.hhp227.storygroup.ui.util.rememberFilePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
+import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
 import kotlin.math.roundToInt
 
 /**
@@ -150,7 +151,12 @@ fun ChatRoomScreen(
         onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
     }
     val pickFile = rememberFilePickerLauncher { picked ->
-        onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
+        if (picked.contentType.startsWith("video/")) {
+            // 파일 피커로 고른 동영상도 게시글과 같은 5MB 압축을 거친다(§4-b)
+            onAction(ChatRoomViewModel.Action.AttachVideo(picked))
+        } else {
+            onAction(ChatRoomViewModel.Action.Attach(picked.bytes, picked.fileName, picked.contentType))
+        }
     }
     // "읽음 N" 파생용 — 타인의 읽음 위치만 남긴다(내 위치는 세지 않는다, 웹 미러)
     val otherReadPositions = remember(uiState.readPositions, uiState.myUserId) {
@@ -385,6 +391,14 @@ fun ChatRoomScreen(
                 onClear = { onAction(ChatRoomViewModel.Action.ClearAttachment) }
             )
         }
+        uiState.compressionProgress?.let { progress ->
+            Text(
+                "동영상 압축 중 ${(progress * 100).toInt()}%",
+                style = SgTheme.typography.labelSmall,
+                color = SgTheme.colors.inkFaint,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+            )
+        }
         MessageInputBar(
             value = input,
             onValueChange = {
@@ -392,7 +406,8 @@ fun ChatRoomScreen(
                 // 빈 입력은 타이핑 신호를 내지 않는다(웹 미러)
                 if (it.isNotBlank()) onAction(ChatRoomViewModel.Action.Typing)
             },
-            isSending = uiState.isSending,
+            // 압축 중에도 isSending 취급 — 전송·추가 첨부를 막는다(완료되면 압축본이 대기 첨부로 채워진다)
+            isSending = uiState.isSending || uiState.compressionProgress != null,
             hasPendingAttachment = uiState.pendingAttachment != null,
             attachmentsOpen = showAttachments,
             onToggleAttachments = {
@@ -722,6 +737,8 @@ private fun DrawerCallButton(icon: ImageVector, label: String, modifier: Modifie
 @Composable
 private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewModel {
     val container = LocalAppContainer.current
+    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
+    val videoCompressor = rememberVideoCompressor()
 
     return viewModel(key = "chat-room-$chatRoomId") {
         ChatRoomViewModel(
@@ -736,7 +753,8 @@ private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewMod
             getCallRosterUseCase = container.getCallRosterUseCase,
             getGroupMembersUseCase = container.getGroupMembersUseCase,
             observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
+            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
+            videoCompressor = videoCompressor
         )
     }
 }

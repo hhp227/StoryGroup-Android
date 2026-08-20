@@ -5,6 +5,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import ws.schild.jave.MultimediaObject
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -27,9 +28,22 @@ actual fun rememberImagePickerLauncher(mode: PickerMode, onPicked: (PickedImage)
             val directory = dialog.directory
             val fileName = dialog.file
             if (directory != null && fileName != null) {
-                val bytes = File(directory, fileName).readBytes()
+                val file = File(directory, fileName)
+                val picked = if (isVideo) {
+                    // 압축기(jave2)가 경로로 받는다 — 원본을 메모리에 올리지 않는다.
+                    // 메타 판독 실패면 durationMs=0으로 두고 인코더가 실패를 보고하게 한다(여기서 막지 않음)
+                    val info = runCatching { MultimediaObject(file).info }.getOrNull()
+                    val videoSize = info?.video?.size
+                    PickedImage(
+                        bytes = ByteArray(0), fileName = fileName, contentType = contentTypeFor(fileName, true),
+                        filePath = file.absolutePath, durationMs = info?.duration ?: 0L,
+                        width = videoSize?.width ?: 0, height = videoSize?.height ?: 0, sizeBytes = file.length()
+                    )
+                } else {
+                    PickedImage(file.readBytes(), fileName, contentTypeFor(fileName, false))
+                }
                 withContext(Dispatchers.Main) {
-                    onPicked(PickedImage(bytes, fileName, contentTypeFor(fileName, isVideo)))
+                    onPicked(picked)
                 }
             }
         }

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.hhp227.storygroup.shared.domain.media.VideoCompressionPlanner
+import kr.hhp227.storygroup.shared.domain.media.VideoPlan
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPostUseCase
@@ -18,6 +20,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.UpdatePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import kr.hhp227.storygroup.ui.util.CompressionState
+import kr.hhp227.storygroup.ui.util.PickedImage
+import kr.hhp227.storygroup.ui.util.VideoCompressor
+import kr.hhp227.storygroup.ui.util.deleteFile
+import kr.hhp227.storygroup.ui.util.readFileBytes
 
 /**
  * 게시글 작성 — groupId가 null이면 라운지(홈 피드)에 게시한다(웹 메인 피드 폼 미러).
@@ -35,7 +42,9 @@ class CreatePostViewModel(
     private val uploadImageUseCase: UploadImageUseCase,
     private val uploadVideoUseCase: UploadVideoUseCase,
     private val getPostUseCase: GetPostUseCase,
-    private val updatePostUseCase: UpdatePostUseCase
+    private val updatePostUseCase: UpdatePostUseCase,
+    // 동영상 압축 실행기(§5) — 화면이 rememberVideoCompressor()로 받아 넘긴다
+    private val videoCompressor: VideoCompressor
 ) : ViewModel(), MviViewModel<CreatePostViewModel.UiState, CreatePostViewModel.Action, CreatePostViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState(isEditMode = postId != null))
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -74,7 +83,7 @@ class CreatePostViewModel(
             is Action.Submit -> submit(action.text)
             Action.ClearError -> _uiState.update { it.copy(error = null) }
             is Action.AddImage -> addImage(action.bytes, action.fileName, action.contentType)
-            is Action.AddVideo -> addVideo(action.bytes, action.fileName, action.contentType)
+            is Action.AddVideo -> addVideo(action.picked)
             is Action.RemoveAttachment ->
                 _uiState.update { it.copy(attachments = it.attachments.filterNot { a -> a.url == action.url }) }
         }
@@ -97,14 +106,71 @@ class CreatePostViewModel(
         }
     }
 
-    private fun addVideo(bytes: ByteArray, fileName: String, contentType: String) {
+    private fun addVideo(picked: PickedImage) {
         if (_uiState.value.videos.size >= MAX_VIDEOS) return
-        // 올려놓고 서버 거절을 기다리게 하지 않는다 — 큰 파일일수록 헛되이 기다리는 시간이 길다
-        if (bytes.size > MAX_VIDEO_BYTES) {
-            _uiState.update { it.copy(error = "동영상은 ${MAX_VIDEO_BYTES / 1024 / 1024}MB까지 올릴 수 있습니다.") }
+        val filePath = picked.filePath
+        if (filePath == null || picked.durationMs == null) {
+            _uiState.update { it.copy(error = "동영상 정보를 읽지 못했습니다.") }
             return
         }
+        // 올려놓고 서버 거절을 기다리게 하지 않는다 — 판정(§2)은 선택 즉시, 압축은 백그라운드
+        when (val plan = VideoCompressionPlanner.plan(picked.durationMs, picked.sizeBytes, picked.width, picked.height)) {
+            VideoPlan.RejectTooLarge -> _uiState.update { it.copy(error = "파일이 너무 큽니다. (최대 500MB)") }
+            VideoPlan.RejectTooLong -> _uiState.update { it.copy(error = "동영상은 최대 3분까지 첨부할 수 있습니다.") }
+            // 원본이 이미 5MB 이하 — 재인코딩은 시간 낭비+화질 손실(§2-3)
+            VideoPlan.SkipAlreadySmall -> uploadVideoBytes(readFileBytes(filePath), picked.fileName, picked.contentType)
+            is VideoPlan.Compress -> compressAndUpload(picked, plan, isRetry = false)
+        }
+    }
 
+    /** 압축 → 5MB 초과면 RETRY_MARGIN으로 1회 재플랜 → 업로드. 화면 소멸 시 viewModelScope가 압축을 취소한다 */
+    private fun compressAndUpload(picked: PickedImage, plan: VideoPlan.Compress, isRetry: Boolean) {
+        val filePath = picked.filePath ?: return
+        _uiState.update { it.copy(compressionProgress = 0f, error = null) }
+        viewModelScope.launch {
+            videoCompressor.compress(filePath, plan).collect { state ->
+                when (state) {
+                    is CompressionState.Progress ->
+                        _uiState.update { it.copy(compressionProgress = state.fraction) }
+                    is CompressionState.Failed -> {
+                        deleteFile(filePath)
+                        _uiState.update { it.copy(compressionProgress = null, error = state.message) }
+                    }
+                    is CompressionState.Done -> {
+                        val bytes = readFileBytes(state.outputPath)
+                        deleteFile(state.outputPath)
+                        when {
+                            bytes.size <= VideoCompressionPlanner.TARGET_BYTES -> {
+                                deleteFile(filePath)
+                                _uiState.update { it.copy(compressionProgress = null) }
+                                // 출력은 항상 MP4(§2) — 원본 확장자와 무관
+                                uploadVideoBytes(bytes, "upload.mp4", "video/mp4")
+                            }
+                            !isRetry -> {
+                                // 단일 패스 ABR 오버슈트 — 더 보수적인 마진으로 딱 한 번 재시도(§2-5)
+                                val retryPlan = VideoCompressionPlanner.plan(
+                                    picked.durationMs ?: 0L, picked.sizeBytes, picked.width, picked.height,
+                                    margin = VideoCompressionPlanner.RETRY_MARGIN
+                                )
+                                if (retryPlan is VideoPlan.Compress) {
+                                    compressAndUpload(picked, retryPlan, isRetry = true)
+                                } else {
+                                    deleteFile(filePath)
+                                    _uiState.update { it.copy(compressionProgress = null, error = "동영상 압축에 실패했습니다.") }
+                                }
+                            }
+                            else -> {
+                                deleteFile(filePath)
+                                _uiState.update { it.copy(compressionProgress = null, error = "동영상 압축에 실패했습니다.") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun uploadVideoBytes(bytes: ByteArray, fileName: String, contentType: String) {
         _uiState.update { it.copy(isUploadingVideo = true, error = null) }
         viewModelScope.launch {
             runCatching { uploadVideoUseCase(bytes, fileName, contentType) }
@@ -159,6 +225,8 @@ class CreatePostViewModel(
         val attachments: List<Attachment> = emptyList(),
         val isUploadingImage: Boolean = false,
         val isUploadingVideo: Boolean = false,
+        /** 동영상 압축 진행률(0..1) — null이면 압축 중 아님. 업로드 단계는 isUploadingVideo가 따로 표시 */
+        val compressionProgress: Float? = null,
         val isEditMode: Boolean = false,
         /** 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(null이면 아직 로드 전) */
         val loadedText: String? = null
@@ -172,7 +240,7 @@ class CreatePostViewModel(
         data class Submit(val text: String) : Action
         data object ClearError : Action
         class AddImage(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
-        class AddVideo(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
+        class AddVideo(val picked: PickedImage) : Action
         data class RemoveAttachment(val url: String) : Action
     }
 
@@ -184,8 +252,5 @@ class CreatePostViewModel(
         // 서버는 개수 제한이 없지만 앱은 카드 레이아웃 감안해 클라 상한을 둔다(화면의 추가 버튼 비활성 조건과 공유)
         const val MAX_IMAGES = 4
         const val MAX_VIDEOS = 2
-
-        /** 서버 multipart 상한은 20MB지만 클라는 절반으로 조인다 — 모바일 상향 대역폭에서 20MB는 너무 오래 걸린다 */
-        const val MAX_VIDEO_BYTES = 10 * 1024 * 1024
     }
 }

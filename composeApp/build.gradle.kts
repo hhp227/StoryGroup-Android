@@ -31,6 +31,11 @@ kotlin {
             // iOS는 AVKit, Desktop은 브라우저로 넘기므로 이 의존성은 androidMain에만 둔다.
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.ui)
+            // 게시글 첨부 동영상 압축(§6) — WorkManager 워커 안에서 Transformer가 인코딩한다
+            implementation(libs.androidx.media3.transformer)
+            implementation(libs.androidx.media3.effect)
+            implementation(libs.androidx.media3.common)
+            implementation(libs.androidx.work.runtime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -63,6 +68,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            // 게시글 첨부 동영상 압축(§7) — ffmpeg 바이너리 번들이라 별도 설치 불필요
+            implementation(libs.jave.all.deps)
         }
     }
 }

@@ -15,11 +15,13 @@ import kr.hhp227.storygroup.shared.data.storage.FileTokenStorage
 import kr.hhp227.storygroup.shared.data.storage.FileKeyValueStorage
 import kr.hhp227.storygroup.ui.DesktopLaunchScreen
 import kr.hhp227.storygroup.ui.theme.StoryGroupTheme
+import kr.hhp227.storygroup.ui.util.JvmImageCompressor
 
 fun main() {
     val container = AppContainer(
         tokenStorage = FileTokenStorage(),
-        settingsStorage = FileKeyValueStorage()
+        settingsStorage = FileKeyValueStorage(),
+        imageCompressor = JvmImageCompressor()
     )
 
     application {

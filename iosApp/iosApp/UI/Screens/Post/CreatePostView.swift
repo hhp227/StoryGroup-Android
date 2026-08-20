@@ -54,11 +54,12 @@ struct CreatePostView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button(viewModel.uiState.isEditMode ? "수정" : "등록") { viewModel.onAction(.submit(text: text)) }
-                    // 업로드가 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
+                    // 업로드·압축이 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
                     .disabled(
                         viewModel.uiState.isLoading
                             || viewModel.uiState.isUploadingImage
                             || viewModel.uiState.isUploadingVideo
+                            || viewModel.uiState.compressionProgress != nil
                     )
             }
         }
@@ -69,9 +70,9 @@ struct CreatePostView: View {
                     viewModel.onAction(.addImage(data: data, fileName: fileName, contentType: contentType))
                 }
             case .video:
-                ImagePicker(mode: .video) { data, fileName, contentType in
-                    viewModel.onAction(.addVideo(data: data, fileName: fileName, contentType: contentType))
-                }
+                ImagePicker(mode: .video, onPickedVideo: { picked in
+                    viewModel.onAction(.addVideo(picked: picked))
+                })
             }
         }
         .onReceive(viewModel.event) { event in
@@ -147,9 +148,14 @@ struct CreatePostView: View {
             ) { activePicker = .image }
             attachBarButton(
                 systemImage: "video.badge.plus",
-                isUploading: viewModel.uiState.isUploadingVideo,
+                isUploading: viewModel.uiState.isUploadingVideo || viewModel.uiState.compressionProgress != nil,
                 canAddMore: viewModel.uiState.videos.count < CreatePostViewModel.maxVideos
             ) { activePicker = .video }
+            if let progress = viewModel.uiState.compressionProgress {
+                Text("압축 중 \(Int(progress * 100))%")
+                    .font(.caption)
+                    .foregroundColor(colors.inkFaint)
+            }
             Spacer()
         }
         .padding(.horizontal, 8)

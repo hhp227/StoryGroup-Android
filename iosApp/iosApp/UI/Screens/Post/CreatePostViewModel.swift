@@ -34,7 +34,7 @@ final class CreatePostViewModel: MviViewModel {
         case .submit(let text): submit(text: text)
         case .clearError: uiState.error = nil
         case .addImage(let data, let fileName, let contentType): addImage(data: data, fileName: fileName, contentType: contentType)
-        case .addVideo(let data, let fileName, let contentType): addVideo(data: data, fileName: fileName, contentType: contentType)
+        case .addVideo(let picked): addVideo(picked: picked)
         case .removeAttachment(let url): uiState.attachments.removeAll { $0.url == url }
         }
     }
@@ -60,20 +60,81 @@ final class CreatePostViewModel: MviViewModel {
         }
     }
 
-    private func addVideo(data: Data, fileName: String, contentType: String) {
+    private func addVideo(picked: PickedVideo) {
         if uiState.videos.count >= Self.maxVideos { return }
-        // 올려놓고 서버 거절을 기다리게 하지 않는다 — 큰 파일일수록 헛되이 기다리는 시간이 길다
-        if data.count > Self.maxVideoBytes {
-            uiState.error = "동영상은 \(Self.maxVideoBytes / 1024 / 1024)MB까지 올릴 수 있습니다."
-            return
+        // 올려놓고 서버 거절을 기다리게 하지 않는다 — 판정(§2)은 선택 즉시, 압축은 백그라운드 큐
+        let plan = VideoCompressionPlanner.shared.plan(
+            durationMs: picked.durationMs, sizeBytes: picked.sizeBytes,
+            width: picked.width, height: picked.height,
+            margin: VideoCompressionPlanner.shared.FIRST_MARGIN
+        )
+        if plan is VideoPlanRejectTooLarge {
+            uiState.error = "파일이 너무 큽니다. (최대 500MB)"
+        } else if plan is VideoPlanRejectTooLong {
+            uiState.error = "동영상은 최대 3분까지 첨부할 수 있습니다."
+        } else if plan is VideoPlanSkipAlreadySmall {
+            // 원본이 이미 5MB 이하 — 재인코딩은 시간 낭비+화질 손실(§2-3)
+            let bytes = (try? Data(contentsOf: picked.url)) ?? Data()
+            try? FileManager.default.removeItem(at: picked.url)
+            uploadVideoBytes(bytes, fileName: picked.fileName, contentType: picked.contentType)
+        } else if let compress = plan as? VideoPlanCompress {
+            compressAndUpload(picked: picked, plan: compress, isRetry: false)
         }
+    }
 
+    /// 압축 → 5MB 초과면 RETRY_MARGIN으로 1회 재플랜 → 업로드(Compose compressAndUpload 미러)
+    private func compressAndUpload(picked: PickedVideo, plan: VideoPlanCompress, isRetry: Bool) {
+        uiState.compressionProgress = 0
+        uiState.error = nil
+        MediaCompressionQueue.shared.compressVideo(
+            inputURL: picked.url,
+            plan: plan,
+            onProgress: { [weak self] fraction in self?.uiState.compressionProgress = fraction }
+        ) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .failure:
+                try? FileManager.default.removeItem(at: picked.url)
+                self.uiState.compressionProgress = nil
+                self.uiState.error = "동영상 압축에 실패했습니다."
+            case .success(let outputURL):
+                let bytes = (try? Data(contentsOf: outputURL)) ?? Data()
+                try? FileManager.default.removeItem(at: outputURL)
+                if Int64(bytes.count) <= VideoCompressionPlanner.shared.TARGET_BYTES {
+                    try? FileManager.default.removeItem(at: picked.url)
+                    self.uiState.compressionProgress = nil
+                    // 출력은 항상 MP4(§2) — 원본 확장자와 무관
+                    self.uploadVideoBytes(bytes, fileName: "upload.mp4", contentType: "video/mp4")
+                } else if !isRetry {
+                    // 단일 패스 ABR 오버슈트 — 더 보수적인 마진으로 딱 한 번 재시도(§2-5)
+                    let retry = VideoCompressionPlanner.shared.plan(
+                        durationMs: picked.durationMs, sizeBytes: picked.sizeBytes,
+                        width: picked.width, height: picked.height,
+                        margin: VideoCompressionPlanner.shared.RETRY_MARGIN
+                    )
+                    if let retryPlan = retry as? VideoPlanCompress {
+                        self.compressAndUpload(picked: picked, plan: retryPlan, isRetry: true)
+                    } else {
+                        try? FileManager.default.removeItem(at: picked.url)
+                        self.uiState.compressionProgress = nil
+                        self.uiState.error = "동영상 압축에 실패했습니다."
+                    }
+                } else {
+                    try? FileManager.default.removeItem(at: picked.url)
+                    self.uiState.compressionProgress = nil
+                    self.uiState.error = "동영상 압축에 실패했습니다."
+                }
+            }
+        }
+    }
+
+    private func uploadVideoBytes(_ bytes: Data, fileName: String, contentType: String) {
         uiState.isUploadingVideo = true
         uiState.error = nil
         Task { @MainActor in
             do {
                 let url = try await uploadVideoUseCase.invoke(
-                    bytes: data.toKotlinByteArray(),
+                    bytes: bytes.toKotlinByteArray(),
                     fileName: fileName,
                     contentType: contentType
                 )
@@ -178,6 +239,8 @@ final class CreatePostViewModel: MviViewModel {
         var attachments: [Attachment] = []
         var isUploadingImage = false
         var isUploadingVideo = false
+        /// 동영상 압축 진행률(0..1) — nil이면 압축 중 아님. 업로드 단계는 isUploadingVideo가 따로 표시
+        var compressionProgress: Float? = nil
         var isEditMode = false
         /// 수정 모드에서 읽어온 기존 본문 — 화면이 한 번 받아 입력창에 채운다(nil이면 아직 로드 전)
         var loadedText: String? = nil
@@ -191,7 +254,7 @@ final class CreatePostViewModel: MviViewModel {
         case submit(text: String)
         case clearError
         case addImage(data: Data, fileName: String, contentType: String)
-        case addVideo(data: Data, fileName: String, contentType: String)
+        case addVideo(picked: PickedVideo)
         case removeAttachment(url: String)
     }
 
@@ -205,6 +268,8 @@ final class CreatePostViewModel: MviViewModel {
 
     static let maxVideos = 2
 
-    /// 서버 multipart 상한은 20MB지만 클라는 절반으로 조인다(Compose MAX_VIDEO_BYTES 미러)
-    private static let maxVideoBytes = 10 * 1024 * 1024
+    deinit {
+        // 화면 소멸 시 진행 중 압축 취소(§11) — Compose는 viewModelScope 취소가 같은 역할
+        MediaCompressionQueue.shared.cancelAll()
+    }
 }
