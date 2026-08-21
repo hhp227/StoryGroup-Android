@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,7 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,6 +63,9 @@ import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+/** 이미지 로드 전 자리 표시 종횡비 — 실비율은 로드되는 즉시 기억돼 그 뒤로 유지된다(SgVideoAttachment 미러) */
+private const val FALLBACK_IMAGE_ASPECT_RATIO = 4f / 3f
 
 @Composable
 private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
@@ -167,6 +173,9 @@ fun CreatePostScreen(
         // 레거시 fragment_create_post 미러 — 리스트[본문 입력 + 첨부가 순서대로 append] + 1px 구분선 + 첨부 버튼 바
         Box(Modifier.weight(1f)) {
             val listState = rememberLazyListState()
+            // 한 번 잰 이미지 실비율 — 화면 밖으로 나간 아이템이 해체됐다 돌아와도 로드 전 높이가
+            // 0으로 접히지 않게 화면 수준에서 기억한다(높이 붕괴 → 스크롤 위치 튐 방지)
+            val imageAspectRatios = remember { mutableStateMapOf<String, Float>() }
             // 길게 눌러 드래그 재정렬 — 이동 판정·자동 스크롤은 라이브러리가, 실제 순서 교체는 VM이 한다.
             // 키가 url이라 리스트 맨 앞의 본문 입력 아이템("text")은 VM에서 못 찾아 자연히 무시된다
             val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
@@ -207,6 +216,7 @@ fun CreatePostScreen(
 
                         AttachmentItem(
                             attachment = attachment,
+                            imageAspectRatios = imageAspectRatios,
                             onRemove = { onAction(CreatePostViewModel.Action.RemoveAttachment(attachment.url)) },
                             modifier = Modifier
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -254,6 +264,7 @@ fun CreatePostScreen(
 @Composable
 private fun AttachmentItem(
     attachment: CreatePostViewModel.Attachment,
+    imageAspectRatios: MutableMap<String, Float>,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -267,7 +278,14 @@ private fun AttachmentItem(
                 model = attachment.url,
                 contentDescription = null,
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                onSuccess = { state ->
+                    val size = state.painter.intrinsicSize
+                    if (size.height > 0f) imageAspectRatios[attachment.url] = size.width / size.height
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(imageAspectRatios[attachment.url] ?: FALLBACK_IMAGE_ASPECT_RATIO)
+                    .clip(RoundedCornerShape(12.dp))
             )
         }
         IconButton(
