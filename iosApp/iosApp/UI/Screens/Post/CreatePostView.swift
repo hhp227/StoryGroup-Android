@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// 게시글 작성 — Compose CreatePostScreen 미러(웹 작성 폼 + 하단 사진·동영상 첨부 행).
 /// 홈/그룹 상세가 풀스크린 push로 표시(Compose NavHost CreatePostRoute 미러) — 내비바는 루트 스택 몫.
@@ -15,6 +16,9 @@ struct CreatePostView: View {
     /// 지금 열려 있는 피커 — .sheet를 두 개 달면 뒤엣것이 앞엣것을 덮어써서 하나로 합쳤다
     @State private var activePicker: ActivePicker?
 
+    /// 드래그 재정렬 중인 첨부 url — 드롭 델리게이트가 어느 아이템을 옮기는 중인지 알아야 한다
+    @State private var draggingUrl: String?
+
     private let onCreated: () -> Void
 
     var body: some View {
@@ -30,7 +34,19 @@ struct CreatePostView: View {
                         }
                         growingTextEditor
                         ForEach(viewModel.uiState.attachments, id: \.url) { attachment in
+                            // 시스템 드래그 앤 드롭은 길게 눌러야 시작 — 별도 롱프레스 제스처가 필요 없다(Compose longPressDraggableHandle 미러)
                             attachmentItem(attachment)
+                                .onDrag {
+                                    draggingUrl = attachment.url
+                                    return NSItemProvider(object: attachment.url as NSString)
+                                }
+                                .onDrop(of: [.text], delegate: AttachmentReorderDelegate(
+                                    url: attachment.url,
+                                    draggingUrl: $draggingUrl,
+                                    move: { from, to in
+                                        withAnimation { viewModel.onAction(.moveAttachment(fromUrl: from, toUrl: to)) }
+                                    }
+                                ))
                         }
                     }
                     .padding()
@@ -85,7 +101,8 @@ struct CreatePostView: View {
     }
 
     /// 배경·테두리 없는 본문 입력(레거시 input_text 미러) — TextEditor는 iOS 15에서 내용만큼 자라지 않아
-    /// 같은 글꼴의 보이지 않는 Text를 사이징 미러로 깔아 높이를 만든다(내부 스크롤이 생기지 않게)
+    /// 같은 글꼴의 보이지 않는 Text를 사이징 미러로 깔아 높이를 만든다(내부 스크롤이 생기지 않게).
+    /// 높이는 wrap_content(빈 상태=한 줄)라 첨부가 본문 바로 아래 붙는다 — Compose CreatePostScreen 미러
     private var growingTextEditor: some View {
         ZStack(alignment: .topLeading) {
             Text(text.isEmpty ? " " : text)
@@ -109,7 +126,6 @@ struct CreatePostView: View {
                     .allowsHitTesting(false)
             }
         }
-        .frame(minHeight: 160, alignment: .topLeading)
     }
 
     /// 첨부 한 아이템 — 리스트 폭을 꽉 채우는 실비율 미리보기(레거시 input_contents 미러) + 우상단 제거 버튼
@@ -202,5 +218,28 @@ struct CreatePostView: View {
         case video
 
         var id: Int { rawValue }
+    }
+}
+
+/// 첨부 드래그 재정렬 — 드래그 중인 아이템이 다른 아이템 위로 들어오는 즉시 자리를 바꾼다(Compose ReorderableItem 미러)
+private struct AttachmentReorderDelegate: DropDelegate {
+    /// 이 델리게이트가 붙은(드롭 대상) 첨부의 url
+    let url: String
+
+    @Binding var draggingUrl: String?
+
+    let move: (_ fromUrl: String, _ toUrl: String) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging = draggingUrl, dragging != url else { return }
+        move(dragging, url)
+    }
+
+    // .move — 복사(+) 배지가 뜨지 않게
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingUrl = nil
+        return true
     }
 }

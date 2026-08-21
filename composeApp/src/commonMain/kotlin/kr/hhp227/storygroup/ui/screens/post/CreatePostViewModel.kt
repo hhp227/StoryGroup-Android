@@ -86,6 +86,17 @@ class CreatePostViewModel(
             is Action.AddVideo -> addVideo(action.picked)
             is Action.RemoveAttachment ->
                 _uiState.update { it.copy(attachments = it.attachments.filterNot { a -> a.url == action.url }) }
+            is Action.MoveAttachment -> moveAttachment(action.fromUrl, action.toUrl)
+        }
+    }
+
+    /** 드래그 재정렬 — url 기준이라 리스트 앞의 본문 입력 아이템 인덱스 보정이 필요 없다. 못 찾으면 무시 */
+    private fun moveAttachment(fromUrl: String, toUrl: String) {
+        _uiState.update { state ->
+            val from = state.attachments.indexOfFirst { it.url == fromUrl }
+            val to = state.attachments.indexOfFirst { it.url == toUrl }
+            if (from < 0 || to < 0 || from == to) return@update state
+            state.copy(attachments = state.attachments.toMutableList().apply { add(to, removeAt(from)) })
         }
     }
 
@@ -242,6 +253,8 @@ class CreatePostViewModel(
         class AddImage(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
         class AddVideo(val picked: PickedImage) : Action
         data class RemoveAttachment(val url: String) : Action
+        /** 길게 눌러 드래그 재정렬 — fromUrl 첨부를 toUrl 첨부 자리로 옮긴다 */
+        data class MoveAttachment(val fromUrl: String, val toUrl: String) : Action
     }
 
     sealed interface Event {

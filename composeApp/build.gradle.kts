@@ -57,6 +57,8 @@ kotlin {
             // network-okhttp(JVM 엔진)로 충분(iOS는 SwiftUI 네이티브 AsyncImage 별도 사용)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.okhttp)
+            // 게시글 작성 첨부 리스트의 길게 눌러 드래그 순서 변경(자동 스크롤 포함)
+            implementation(libs.reorderable)
             implementation(projects.shared)
         }
         commonTest.dependencies {

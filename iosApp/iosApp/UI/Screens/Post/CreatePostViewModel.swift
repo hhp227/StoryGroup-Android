@@ -36,7 +36,17 @@ final class CreatePostViewModel: MviViewModel {
         case .addImage(let data, let fileName, let contentType): addImage(data: data, fileName: fileName, contentType: contentType)
         case .addVideo(let picked): addVideo(picked: picked)
         case .removeAttachment(let url): uiState.attachments.removeAll { $0.url == url }
+        case .moveAttachment(let fromUrl, let toUrl): moveAttachment(fromUrl: fromUrl, toUrl: toUrl)
         }
+    }
+
+    /// 드래그 재정렬 — url 기준이라 리스트 앞의 본문 입력 인덱스 보정이 필요 없다(Compose moveAttachment 미러). 못 찾으면 무시
+    private func moveAttachment(fromUrl: String, toUrl: String) {
+        guard let from = uiState.attachments.firstIndex(where: { $0.url == fromUrl }),
+              let to = uiState.attachments.firstIndex(where: { $0.url == toUrl }),
+              from != to else { return }
+        let item = uiState.attachments.remove(at: from)
+        uiState.attachments.insert(item, at: to)
     }
 
     private func addImage(data: Data, fileName: String, contentType: String) {
@@ -256,6 +266,8 @@ final class CreatePostViewModel: MviViewModel {
         case addImage(data: Data, fileName: String, contentType: String)
         case addVideo(picked: PickedVideo)
         case removeAttachment(url: String)
+        /// 길게 눌러 드래그 재정렬 — fromUrl 첨부를 toUrl 첨부 자리로 옮긴다
+        case moveAttachment(fromUrl: String, toUrl: String)
     }
 
     enum Event {
