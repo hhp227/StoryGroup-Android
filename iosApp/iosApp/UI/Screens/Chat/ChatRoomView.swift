@@ -352,15 +352,15 @@ struct ChatRoomView: View {
             }
         }
         .background(colors.paper.ignoresSafeArea())
-        // 드로어가 열리면 제목도 비운다 — UIKit 내비바는 SwiftUI 콘텐츠보다 항상 위에 그려져서
-        // 오버레이로 덮을 수가 없다. 대신 배경을 투명으로 돌리고(아래 navigationBarScrim) 제목·버튼을
-        // 걷어내면, 그 자리를 드로어 스크림과 패널이 채워 덮인 것처럼 보인다(셸 드로어와 같은 수법)
-        .navigationTitle(showDrawer ? "" : title)
+        // 드로어가 열려도 내비바(제목·백버튼·불투명 배경)는 그대로 둔다 — UIKit 내비바는 SwiftUI
+        // 콘텐츠보다 항상 위에 그려져 Compose처럼 스크림으로 덮을 수 없고, 종전의 "제목 비우기+투명화"
+        // 우회는 바가 통째로 사라져 보이는 데다 패널 상단에 바 높이만큼 빈 공간을 남겼다(사용자 피드백).
+        // 대신 드로어(스크림·패널)가 바 아래에서 시작한다 — 셸 드로어(DrawerShellView)와 같은 정책
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(showDrawer)
-        // 평소엔 기본 내비바(호출 화면이 투명 바 상태로 push해도 이 화면은 불투명),
-        // 드로어가 열린 동안만 투명 — 복귀 시엔 호출 화면이 자기 값을 재적용한다
-        .navigationBarScrim(visible: !showDrawer)
+        // 항상 불투명 — 호출 화면이 투명 바 상태로 push해도 이 화면은 불투명, 복귀 시엔
+        // 호출 화면이 자기 값을 재적용한다
+        .navigationBarScrim(visible: true)
         // 우측 사이드 드로어(카톡 미러) — 통화는 드로어 하단과 + 첨부 패널 두 곳에 남는다
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -495,15 +495,16 @@ struct ChatRoomView: View {
     }
 
     /// 우측 사이드 드로어 패널(카카오톡 채팅방 서랍 미러) — 대화상대 / 사진 / 통화.
-    /// 우측 끝에 붙어 높이를 꽉 채우고, 열고 닫을 때 옆에서 밀려 나온다(DrawerShellView 미러)
+    /// 우측 끝에 붙어 내비바 아래부터 바닥까지 채우고, 열고 닫을 때 옆에서 밀려 나온다.
+    /// Compose 드로어는 상단바까지 덮지만 UIKit 내비바는 SwiftUI 위라 덮을 수 없다 —
+    /// 바를 유지하고 그 아래에서 시작하는 것이 iOS 근사(셸 DrawerShellView와 같은 정책)
     @ViewBuilder private var drawerPanelLayer: some View {
         if showDrawer {
             drawerPanel
                 .frame(width: 288)
                 .frame(maxHeight: .infinity)
                 // 칠만 아래 안전영역까지 내린다 — 레이아웃은 그대로라 헤더 위치엔 영향이 없고,
-                // 홈 인디케이터 자리에 스크림만 남아 어두운 띠가 보이는 것을 막는다.
-                // 위쪽(내비바 자리)은 헤더가 자기 linen을 끌어올려 채운다
+                // 홈 인디케이터 자리에 스크림만 남아 어두운 띠가 보이는 것을 막는다
                 .background(colors.paper.ignoresSafeArea(edges: .bottom))
                 .transition(.move(edge: .trailing))
         }
@@ -535,10 +536,9 @@ struct ChatRoomView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            // 칠만 위 안전영역까지 끌어올린다 — 드로어가 열리면 내비바가 투명해지므로 그 자리를
-            // 헤더 linen이 채워, 오른쪽 288pt가 화면 맨 위부터 드로어로 보인다.
-            // 레이아웃은 그대로라 방 이름은 내비바 아래 제자리에 남는다
-            .background(colors.linen.ignoresSafeArea(edges: .top))
+            // 내비바가 열림 중에도 유지되므로 헤더는 바로 그 아래에서 시작 — 위 여백은
+            // vertical 12뿐이라 Compose 드로어 헤더와 같은 간격이 된다
+            .background(colors.linen)
             Divider().background(colors.stoneBorder)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
