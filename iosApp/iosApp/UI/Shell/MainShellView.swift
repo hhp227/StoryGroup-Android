@@ -64,6 +64,10 @@ struct MainShellView: View {
     /// 수신 통화 배너(DM·그룹 방) — 개인 큐 CALL_INVITE를 세션 전역에서 받는다(Compose 미러)
     @StateObject private var incomingCallViewModel: IncomingCallViewModel
 
+    /// 채팅방 우측 드로어 게시대 — 방이 세션을 열면 아래 오버레이가 내비 컨테이너 밖에서 그린다.
+    /// Compose ChatRoomDrawer가 스크림으로 상단바까지 덮는 것의 iOS 등가(수신 콜 배너와 같은 층)
+    @StateObject private var chatRoomDrawerHost = ChatRoomDrawerHost()
+
     /// 내비게이션 상태 머신 — composeApp ui/navigation/NavigationViewModel.kt 1:1 미러(세션 스코프,
     /// 로그아웃 시 pendingResults까지 함께 정리된다). 탭(currentTab)과 화면 간 결과(pendingResults)는
     /// 상태로 소유하고, 오버레이 이동만 event로 호스트(NavigationStackCompat)에 위임한다
@@ -82,6 +86,8 @@ struct MainShellView: View {
 
     var body: some View {
         navigationRoot
+            // 채팅방(어느 진입 경로든)이 드로어 세션을 열 수 있게 게시대를 내비 트리 전체에 주입
+            .environmentObject(chatRoomDrawerHost)
             .onReceive(navigationViewModel.event) { event in
                 switch event {
                 case .navigateTo(let route):
@@ -102,6 +108,9 @@ struct MainShellView: View {
             // 공개 프로필 시트 — Compose dialog<UserProfileRoute> 미러. 후속 이동(채팅방/계정 설정)은
             // 시트가 완전히 닫힌 뒤(onDismiss)에 push해야 유실되지 않는다
             .sheet(isPresented: showUserProfile, onDismiss: runProfileFollowUp) { userProfileDestination }
+            // 채팅방 우측 드로어 — 내비 컨테이너 밖이라 스크림이 내비바까지 덮는다(Compose 미러).
+            // 수신 콜 배너보다 아래 레이어에 둔다(배너는 드로어 위에도 떠야 한다)
+            .overlay { ChatRoomDrawerOverlay(host: chatRoomDrawerHost) }
             // 수신 통화 배너 — 어떤 화면 위에서든 뜬다(Compose Box 최상단 오버레이 미러)
             .overlay(alignment: .top) {
                 if let call = incomingCallViewModel.uiState.incomingCall {
