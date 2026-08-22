@@ -483,7 +483,8 @@ private fun GroupDetailDialog(
     }
 }
 
-private fun joinTypeLabel(joinType: GroupJoinType): String = when (joinType) {
+/** 웹 joinTypeLabel 미러 — 그룹 찾기 목록/다이얼로그와 그룹 탭 신청중 행이 공유한다 */
+internal fun joinTypeLabel(joinType: GroupJoinType): String = when (joinType) {
     GroupJoinType.AUTO_APPROVE -> "자동 승인"
     GroupJoinType.APPROVAL_REQUIRED -> "승인제"
 }

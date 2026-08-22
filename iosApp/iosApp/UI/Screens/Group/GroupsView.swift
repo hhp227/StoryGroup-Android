@@ -99,27 +99,27 @@ private struct GroupsContent: View {
     }
 
     private var core: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    groupActionButton("그룹 만들기") { showCreateGroup = true }
-                    groupActionButton("그룹 찾기") { showDiscoverGroups = true }
+        VStack(spacing: 0) {
+            // 찾기/만들기 진입 스트립 — 상단바 아래 고정(레거시 GroupFragment 상단 BottomNavigationView 미러)
+            actionsStrip
+            ScrollView {
+                VStack(spacing: 12) {
+                    // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(Compose PendingGroupsSection 미러)
+                    if !viewModel.uiState.pendingGroups.isEmpty {
+                        pendingGroupsSection
+                    }
+                    content
                 }
-                // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(Compose PendingGroupsSection 미러)
-                if !viewModel.uiState.pendingGroups.isEmpty {
-                    pendingGroupsSection
-                }
-                content
+                .padding(16)
             }
-            .padding(16)
+            // 당겨서 새로고침 — 그룹 생성/가입 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
+            // Compose GroupsScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
+            .refreshable {
+                viewModel.onAction(.refresh)
+                await lazyPagingItems.awaitRefresh()
+            }
         }
         .background(colors.paper)
-        // 당겨서 새로고침 — 그룹 생성/가입 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
-        // Compose GroupsScreen 미러 — ScrollView의 시스템 스피너는 iOS 16+에서 표시(15에선 무동작)
-        .refreshable {
-            viewModel.onAction(.refresh)
-            await lazyPagingItems.awaitRefresh()
-        }
         // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해
         // 같은 스트림이 새 세대(첫 페이지)를 방출한다(홈 피드와 동일 패턴)
         .onReceive(viewModel.event) { event in
@@ -182,25 +182,37 @@ private struct GroupsContent: View {
         }
     }
 
-    /// 가입 신청중(PENDING) 그룹 섹션 — 승인 대기 목록 + 신청 취소(Compose PendingGroupsSection 미러)
+    /// 가입 신청중(PENDING) 그룹 섹션 — linen 카드에 건수 칩+승인 대기 목록+신청 취소(Compose PendingGroupsSection 미러)
     private var pendingGroupsSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("가입 신청중")
-                .font(.subheadline.bold())
-                .foregroundColor(colors.ink)
-            if let error = viewModel.uiState.pendingError {
-                Text(error).font(.caption).foregroundColor(colors.rust)
+        SGCard {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Text("가입 신청중")
+                        .font(.subheadline.bold())
+                        .foregroundColor(colors.ink)
+                    Text("\(viewModel.uiState.pendingGroups.count)")
+                        .font(.caption2.weight(.medium))
+                        .foregroundColor(colors.accent2)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(colors.accent2Soft)
+                        .cornerRadius(colors.radiusButton ?? 12)
+                }
+                if let error = viewModel.uiState.pendingError {
+                    Text(error).font(.caption).foregroundColor(colors.rust)
+                }
+                ForEach(viewModel.uiState.pendingGroups, id: \.id) { group in
+                    pendingGroupRow(group)
+                }
             }
-            ForEach(viewModel.uiState.pendingGroups, id: \.id) { group in
-                pendingGroupRow(group)
-            }
+            .padding(14)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 신청중 그룹 한 줄 — 커버/이름 + 신청중 배지 + 신청 취소(동시에 하나만 처리)
+    /// 신청중 그룹 한 줄 — 커버/이름/멤버·가입방식 + 신청 취소(동시에 하나만 처리).
+    /// 상태는 섹션 헤더가 말하므로 행 배지는 없다(Compose PendingGroupRow 미러)
     private func pendingGroupRow(_ group: DiscoverGroup) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             ZStack {
                 if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
                     AsyncImage(url: url) { phase in
@@ -219,18 +231,18 @@ private struct GroupsContent: View {
             }
             .frame(width: 40, height: 40)
             .clipShape(RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous))
-            Text(group.name)
-                .font(.subheadline.bold())
-                .foregroundColor(colors.ink)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(group.name)
+                    .font(.subheadline.bold())
+                    .foregroundColor(colors.ink)
+                    .lineLimit(1)
+                // 그룹 찾기 목록 행과 동일한 요약 정보 미러(DiscoverGroupsView)
+                Text("멤버 \(group.memberCount)명 · \(joinTypeLabel(group.joinType))")
+                    .font(.caption)
+                    .foregroundColor(colors.inkSoft)
+                    .lineLimit(1)
+            }
             Spacer()
-            Text("신청중")
-                .font(.caption2.weight(.medium))
-                .foregroundColor(colors.accent2)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(colors.accent2Soft)
-                .cornerRadius(colors.radiusButton ?? 12)
             if viewModel.uiState.cancelingGroupId == group.id {
                 ProgressView().padding(.horizontal, 12)
             } else {
@@ -242,18 +254,37 @@ private struct GroupsContent: View {
         }
     }
 
-    private func groupActionButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.bold())
-                .foregroundColor(colors.accent)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 22, style: .continuous)
-                        .stroke(colors.stoneBorder, lineWidth: 1)
-                )
+    /// 찾기/만들기 진입 스트립 — linen 풀폭 바에 세로 헤어라인으로 균등 분할, 순서는 레거시 미러(그룹찾기 → 그룹 만들기).
+    /// Compose GroupActionsStrip 미러
+    private var actionsStrip: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                actionSegment("그룹 찾기", systemImage: "magnifyingglass") { showDiscoverGroups = true }
+                Divider().background(colors.stoneBorder)
+                actionSegment("그룹 만들기", systemImage: "plus") { showCreateGroup = true }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            Rectangle().fill(colors.stoneBorder).frame(height: 1)
         }
+        .background(colors.linen)
+    }
+
+    /// 진입 스트립 한 칸 — 아이콘 위 + 라벨 아래 세로 배치(Compose GroupActionSegment 미러)
+    private func actionSegment(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(colors.accent)
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundColor(colors.ink)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
     }
 
     init(
