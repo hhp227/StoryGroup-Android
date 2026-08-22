@@ -450,6 +450,8 @@ final class ChatRoomViewModel: MviViewModel {
     deinit {
         // 화면 소멸 시 진행 중 압축 취소(§11) — Compose는 viewModelScope 취소가 같은 역할
         MediaCompressionQueue.shared.cancelAll()
+        typingExpiryTasks.values.forEach { $0.cancel() }
+        rosterTask?.cancel()
     }
 
     /// 서버 상한과 동일(웹도 50 고정) — 한 번에 최대한 넓은 공백 메꿈
@@ -462,9 +464,4 @@ final class ChatRoomViewModel: MviViewModel {
 
     /// 웹 라이브 카드(usePolling 6000ms)와 같은 주기 — 라이브 바는 미리보기라 즉시성이 덜 중요하다
     private static let callRosterPollNanos: UInt64 = 6_000_000_000
-
-    deinit {
-        typingExpiryTasks.values.forEach { $0.cancel() }
-        rosterTask?.cancel()
-    }
 }
