@@ -23,12 +23,19 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            // 콜드 스타트 스플래시 — 12+ 시스템 스플래시와 하위 버전을 한 API로 통일(정석 androidx 라이브러리)
+            implementation(libs.androidx.core.splashscreen)
             // 회의 영상 통화 — 미디어는 플랫폼 네이티브(README 원칙), 시그널링만 shared가 담당
             implementation(libs.getstream.webrtc)
             // 게시글 첨부 동영상 재생 — PlayerView가 컨트롤·시크·종횡비 resize를 준다.
             // iOS는 AVKit, Desktop은 브라우저로 넘기므로 이 의존성은 androidMain에만 둔다.
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.ui)
+            // 게시글 첨부 동영상 압축(§6) — WorkManager 워커 안에서 Transformer가 인코딩한다
+            implementation(libs.androidx.media3.transformer)
+            implementation(libs.androidx.media3.effect)
+            implementation(libs.androidx.media3.common)
+            implementation(libs.androidx.work.runtime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -50,6 +57,8 @@ kotlin {
             // network-okhttp(JVM 엔진)로 충분(iOS는 SwiftUI 네이티브 AsyncImage 별도 사용)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.okhttp)
+            // 게시글 작성 첨부 리스트의 길게 눌러 드래그 순서 변경(자동 스크롤 포함)
+            implementation(libs.reorderable)
             implementation(projects.shared)
         }
         commonTest.dependencies {
@@ -61,6 +70,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            // 게시글 첨부 동영상 압축(§7) — ffmpeg 바이너리 번들이라 별도 설치 불필요
+            implementation(libs.jave.all.deps)
         }
     }
 }

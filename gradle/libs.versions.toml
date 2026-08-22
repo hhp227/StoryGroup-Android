@@ -4,6 +4,7 @@ android-compileSdk = "35"
 android-minSdk = "24"
 android-targetSdk = "35"
 androidx-activity = "1.10.1"
+androidx-core-splashscreen = "1.0.1"
 jetbrains-lifecycle = "2.9.1"
 jetbrains-navigation = "2.9.0"
 cash-paging = "3.3.0-alpha02-0.5.1"
@@ -15,16 +16,22 @@ kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.8.1"
 ktor = "3.2.3"
 media3 = "1.4.1"
+reorderable = "2.5.1"
 stream-webrtc = "1.3.8"
+jave = "3.5.0"
+androidx-work = "2.9.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 # CMP 1.8+에선 icons 아티팩트가 플러그인 accessor에서 빠짐 — 마지막 멀티플랫폼 배포판을 직접 지정
 compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeMaterialIcons" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
 jetbrains-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "jetbrains-lifecycle" }
 jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrains-navigation" }
 cash-paging-common = { module = "app.cash.paging:paging-common", version.ref = "cash-paging" }
+# LazyColumn 드래그 재정렬(CMP 지원) — 첨부 순서 변경(게시글 작성)
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 cash-paging-compose = { module = "app.cash.paging:paging-compose-common", version.ref = "cash-paging" }
 coil3-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil3" }
 coil3-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil3" }
@@ -43,8 +50,16 @@ ktor-serialization-kotlinxJson = { module = "io.ktor:ktor-serialization-kotlinx-
 # 게시글 첨부 동영상 재생(Android 전용) — iOS는 AVKit, Desktop은 미지원 자리 표시라 androidMain에만 넣는다
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+# 게시글 첨부 동영상 압축(§6) — Transformer(HW MediaCodec)+Presentation(해상도) 조합
+androidx-media3-transformer = { module = "androidx.media3:media3-transformer", version.ref = "media3" }
+androidx-media3-effect = { module = "androidx.media3:media3-effect", version.ref = "media3" }
+androidx-media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
+# 동영상 압축 백그라운드 워커(§6) — 진행률은 setProgress→WorkInfo Flow로 중계
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-work" }
 # 구글 libwebrtc의 유지보수 배포판(GetStream) — org.webrtc 패키지 그대로
 getstream-webrtc = { module = "io.getstream:stream-webrtc-android", version.ref = "stream-webrtc" }
+# Desktop 동영상 압축(ffmpeg 바이너리 번들) — 배포 용량 증가는 사용자 승인됨(§7)
+jave-all-deps = { module = "ws.schild:jave-all-deps", version.ref = "jave" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -2,8 +2,22 @@ package kr.hhp227.storygroup.ui.util
 
 import androidx.compose.runtime.Composable
 
-/** 피커가 돌려주는 선택 결과 — 업로드(UploadImageUseCase/UploadVideoUseCase)에 필요한 최소 정보만 담는다 */
-data class PickedImage(val bytes: ByteArray, val fileName: String, val contentType: String)
+/**
+ * 피커가 돌려주는 선택 결과 — 이미지는 bytes로(기존 그대로), 동영상은 filePath+메타데이터로 전달한다.
+ * 동영상을 bytes로 들지 않는 것은 ⑴ 압축 워커(WorkManager)가 경로 기반이고(Data 10KB 제한)
+ * ⑵ 수백 MB 원본을 통째로 메모리에 올리지 않기 위해서다. durationMs/width/height/sizeBytes는
+ * VideoCompressionPlanner 판정 입력.
+ */
+data class PickedImage(
+    val bytes: ByteArray,
+    val fileName: String,
+    val contentType: String,
+    val filePath: String? = null,
+    val durationMs: Long? = null,
+    val width: Int = 0,
+    val height: Int = 0,
+    val sizeBytes: Long = bytes.size.toLong()
+)
 
 /** 무엇을 고르게 할지 — Android PickVisualMedia·iOS PHPicker 모두 이 구분을 네이티브로 갖고 있다 */
 enum class PickerMode { Image, Video }

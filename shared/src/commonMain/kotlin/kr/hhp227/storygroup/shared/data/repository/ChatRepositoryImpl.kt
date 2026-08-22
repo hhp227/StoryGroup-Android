@@ -140,7 +140,10 @@ private fun GroupChatRoomResponse.toDomain() = GroupChatRoom(
     groupName = groupName,
     name = name,
     createdAt = createdAt,
-    unreadCount = unreadCount
+    unreadCount = unreadCount,
+    lastMessageText = lastMessageText,
+    lastMessageType = lastMessageType,
+    lastMessageAt = lastMessageAt
 )
 
 private fun DirectRoomResponse.toDomain() = DirectRoom(
@@ -149,7 +152,10 @@ private fun DirectRoomResponse.toDomain() = DirectRoom(
     otherUserName = otherUserName,
     otherUserProfileImg = otherUserProfileImg,
     createdAt = createdAt,
-    unreadCount = unreadCount
+    unreadCount = unreadCount,
+    lastMessageText = lastMessageText,
+    lastMessageType = lastMessageType,
+    lastMessageAt = lastMessageAt
 )
 
 private fun MessageAttachmentResponse.toDomain() = ChatAttachment(

@@ -1,25 +1,30 @@
 package kr.hhp227.storygroup.ui.screens.post
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,12 +35,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -44,17 +53,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.ui.components.SgTopBar
-import kr.hhp227.storygroup.ui.components.SgVideoThumbnail
+import kr.hhp227.storygroup.ui.components.SgVideoPoster
 import kr.hhp227.storygroup.ui.navigation.NavResult
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.PickerMode
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
+import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+
+/** 이미지 로드 전 자리 표시 종횡비 — 실비율은 로드되는 즉시 기억돼 그 뒤로 유지된다(SgVideoAttachment 미러) */
+private const val FALLBACK_IMAGE_ASPECT_RATIO = 4f / 3f
 
 @Composable
 private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
     val container = LocalAppContainer.current
+    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
+    val videoCompressor = rememberVideoCompressor()
 
     return viewModel(key = "create-post-$groupId-$postId") {
         CreatePostViewModel(
@@ -65,7 +82,8 @@ private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewMo
             uploadImageUseCase = container.uploadImageUseCase,
             uploadVideoUseCase = container.uploadVideoUseCase,
             getPostUseCase = container.getPostUseCase,
-            updatePostUseCase = container.updatePostUseCase
+            updatePostUseCase = container.updatePostUseCase,
+            videoCompressor = videoCompressor
         )
     }
 }
@@ -99,7 +117,7 @@ fun CreatePostScreen(
         onAction(CreatePostViewModel.Action.AddImage(picked.bytes, picked.fileName, picked.contentType))
     }
     val pickVideo = rememberImagePickerLauncher(PickerMode.Video) { picked ->
-        onAction(CreatePostViewModel.Action.AddVideo(picked.bytes, picked.fileName, picked.contentType))
+        onAction(CreatePostViewModel.Action.AddVideo(picked))
     }
 
     // 일회성 이벤트 수집 — 성공 시 결과를 publish하고 스스로 복귀한다(수정이면 상세가, 신규면 피드가 읽어간다)
@@ -131,8 +149,9 @@ fun CreatePostScreen(
             actions = {
                 TextButton(
                     onClick = { onAction(CreatePostViewModel.Action.Submit(text)) },
-                    // 업로드가 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
-                    enabled = !uiState.isLoading && !uiState.isUploadingImage && !uiState.isUploadingVideo
+                    // 업로드·압축이 끝나기 전에 등록하면 그 첨부가 빠진 채 저장된다
+                    enabled = !uiState.isLoading && !uiState.isUploadingImage && !uiState.isUploadingVideo &&
+                        uiState.compressionProgress == null
                 ) {
                     Text(
                         if (uiState.isEditMode) "수정" else "등록",
@@ -151,121 +170,156 @@ fun CreatePostScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
+        // 레거시 fragment_create_post 미러 — 리스트[본문 입력 + 첨부가 순서대로 append] + 1px 구분선 + 첨부 버튼 바
         Box(Modifier.weight(1f)) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = {
-                    text = it
-                    if (uiState.error != null) onAction(CreatePostViewModel.Action.ClearError)
-                },
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                placeholder = { Text("무슨 이야기가 있나요?", color = sg.inkFaint) },
-                enabled = !uiState.isLoading,
-                shape = SgTheme.shapes.field,
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = sg.ink,
-                    disabledTextColor = sg.inkFaint,
-                    backgroundColor = sg.linen,
-                    cursorColor = sg.accent,
-                    focusedBorderColor = sg.accent,
-                    unfocusedBorderColor = sg.stoneBorder,
-                    disabledBorderColor = sg.stoneBorder
-                )
-            )
-            if (uiState.isLoading) {
-                CircularProgressIndicator(color = sg.accent, modifier = Modifier.align(Alignment.Center))
-            }
-        }
-        AttachmentRow(
-            urls = uiState.images,
-            isUploading = uiState.isUploadingImage,
-            canAddMore = uiState.images.size < CreatePostViewModel.MAX_IMAGES,
-            addIcon = Icons.Default.AddAPhoto,
-            addDescription = "사진 추가",
-            onAddClick = pickImage,
-            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveImage(url)) },
-            thumbnail = { url ->
-                AsyncImage(
-                    model = url,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(SgTheme.shapes.field)
-                )
-            }
-        )
-        AttachmentRow(
-            urls = uiState.videos,
-            isUploading = uiState.isUploadingVideo,
-            canAddMore = uiState.videos.size < CreatePostViewModel.MAX_VIDEOS,
-            addIcon = Icons.Default.VideoCall,
-            addDescription = "동영상 추가",
-            onAddClick = pickVideo,
-            onRemove = { url -> onAction(CreatePostViewModel.Action.RemoveVideo(url)) },
-            thumbnail = { url -> SgVideoThumbnail(url = url, size = ATTACHMENT_SIZE) }
-        )
-    }
-}
-
-/** 첨부 썸네일 한 칸의 크기 — 사진 행과 동영상 행이 같은 높이로 서도록 값을 공유한다 */
-private val ATTACHMENT_SIZE = 72.dp
-
-/**
- * 첨부 미리보기(가로 스크롤 썸네일+제거)+추가 버튼 — 웹 ImageUploadField 미러(다중 첨부용으로 확장).
- * 사진 행과 동영상 행이 칸 모양만 다르고 나머지가 같아 [thumbnail]만 갈아끼워 공유한다.
- */
-@Composable
-private fun AttachmentRow(
-    urls: List<String>,
-    isUploading: Boolean,
-    canAddMore: Boolean,
-    addIcon: ImageVector,
-    addDescription: String,
-    onAddClick: () -> Unit,
-    onRemove: (String) -> Unit,
-    thumbnail: @Composable (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-
-    LazyRow(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(urls) { url ->
-            Box(Modifier.size(ATTACHMENT_SIZE)) {
-                thumbnail(url)
-                IconButton(
-                    onClick = { onRemove(url) },
-                    modifier = Modifier.size(24.dp).align(Alignment.TopEnd)
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "제거",
-                        tint = sg.onAccent,
-                        modifier = Modifier.background(sg.ink, CircleShape)
-                    )
+            val listState = rememberLazyListState()
+            // 한 번 잰 이미지 실비율 — 화면 밖으로 나간 아이템이 해체됐다 돌아와도 로드 전 높이가
+            // 0으로 접히지 않게 화면 수준에서 기억한다(높이 붕괴 → 스크롤 위치 튐 방지)
+            val imageAspectRatios = remember { mutableStateMapOf<String, Float>() }
+            // 길게 눌러 드래그 재정렬 — 이동 판정·자동 스크롤은 라이브러리가, 실제 순서 교체는 VM이 한다.
+            // 키가 url이라 리스트 맨 앞의 본문 입력 아이템("text")은 VM에서 못 찾아 자연히 무시된다
+            val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+                val fromKey = from.key
+                val toKey = to.key
+                if (fromKey is String && toKey is String) {
+                    onAction(CreatePostViewModel.Action.MoveAttachment(fromKey, toKey))
                 }
             }
-        }
-        item {
-            Box(
-                modifier = Modifier
-                    .size(ATTACHMENT_SIZE)
-                    .background(sg.linen, SgTheme.shapes.field),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isUploading) {
-                    CircularProgressIndicator(color = sg.accent, modifier = Modifier.size(24.dp))
-                } else {
-                    IconButton(onClick = onAddClick, enabled = canAddMore) {
-                        Icon(
-                            addIcon,
-                            contentDescription = addDescription,
-                            tint = if (canAddMore) sg.inkSoft else sg.inkFaint
+
+            LazyColumn(Modifier.fillMaxSize(), listState) {
+                item(key = "text") {
+                    // 레거시 input_text 미러 — 배경·테두리 없는 본문 입력(카드 아님), 높이는 wrap_content라 첨부가 본문 바로 아래 붙는다
+                    TextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+                            if (uiState.error != null) onAction(CreatePostViewModel.Action.ClearError)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("무슨 이야기가 있나요?", color = sg.inkFaint) },
+                        enabled = !uiState.isLoading,
+                        colors = TextFieldDefaults.textFieldColors(
+                            textColor = sg.ink,
+                            disabledTextColor = sg.inkFaint,
+                            backgroundColor = Color.Transparent,
+                            cursorColor = sg.accent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
+                    )
+                }
+                items(uiState.attachments, key = { it.url }) { attachment ->
+                    ReorderableItem(reorderableState, key = attachment.url) { isDragging ->
+                        // 드래그 중엔 들어 올린 느낌의 그림자 — 어떤 아이템을 옮기는 중인지 보여준다
+                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+
+                        AttachmentItem(
+                            attachment = attachment,
+                            imageAspectRatios = imageAspectRatios,
+                            onRemove = { onAction(CreatePostViewModel.Action.RemoveAttachment(attachment.url)) },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .shadow(elevation, RoundedCornerShape(12.dp))
+                                .longPressDraggableHandle()
                         )
                     }
                 }
             }
+            if (uiState.isLoading) {
+                CircularProgressIndicator(color = sg.accent, modifier = Modifier.align(Alignment.Center))
+            }
+        }
+        Divider(color = sg.stoneBorder, thickness = 1.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AttachBarButton(
+                icon = Icons.Default.AddAPhoto,
+                description = "사진 추가",
+                isUploading = uiState.isUploadingImage,
+                canAddMore = uiState.images.size < CreatePostViewModel.MAX_IMAGES,
+                onClick = pickImage
+            )
+            AttachBarButton(
+                icon = Icons.Default.VideoCall,
+                description = "동영상 추가",
+                isUploading = uiState.isUploadingVideo || uiState.compressionProgress != null,
+                canAddMore = uiState.videos.size < CreatePostViewModel.MAX_VIDEOS,
+                onClick = pickVideo
+            )
+            uiState.compressionProgress?.let { progress ->
+                Text(
+                    "압축 중 ${(progress * 100).toInt()}%",
+                    style = SgTheme.typography.bodySmall,
+                    color = sg.inkFaint
+                )
+            }
+        }
+    }
+}
+
+/** 첨부 한 아이템 — 리스트 폭을 꽉 채우는 실비율 미리보기(레거시 input_contents 미러) + 우상단 제거 버튼 */
+@Composable
+private fun AttachmentItem(
+    attachment: CreatePostViewModel.Attachment,
+    imageAspectRatios: MutableMap<String, Float>,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sg = SgTheme.colors
+
+    Box(modifier.fillMaxWidth()) {
+        if (attachment.isVideo) {
+            SgVideoPoster(url = attachment.url, modifier = Modifier.fillMaxWidth())
+        } else {
+            AsyncImage(
+                model = attachment.url,
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                onSuccess = { state ->
+                    val size = state.painter.intrinsicSize
+                    if (size.height > 0f) imageAspectRatios[attachment.url] = size.width / size.height
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(imageAspectRatios[attachment.url] ?: FALLBACK_IMAGE_ASPECT_RATIO)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.padding(4.dp).size(24.dp).align(Alignment.TopEnd)
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "제거",
+                tint = sg.onAccent,
+                modifier = Modifier.background(sg.ink, CircleShape)
+            )
+        }
+    }
+}
+
+/** 하단 첨부 버튼 한 칸 — 업로드 중엔 그 자리에 스피너, 타입별 상한에 닿으면 비활성(레거시 ib_image/ib_video 미러) */
+@Composable
+private fun AttachBarButton(
+    icon: ImageVector,
+    description: String,
+    isUploading: Boolean,
+    canAddMore: Boolean,
+    onClick: () -> Unit
+) {
+    val sg = SgTheme.colors
+
+    if (isUploading) {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = sg.accent, modifier = Modifier.size(24.dp))
+        }
+    } else {
+        IconButton(onClick = onClick, enabled = canAddMore) {
+            Icon(icon, contentDescription = description, tint = if (canAddMore) sg.inkSoft else sg.inkFaint)
         }
     }
 }

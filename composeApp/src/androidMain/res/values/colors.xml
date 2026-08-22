@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SgColors WarmLightColors.paper 미러 — 스플래시 배경(다크는 values-night) -->
+    <color name="splash_background">#FCF3EF</color>
+</resources>

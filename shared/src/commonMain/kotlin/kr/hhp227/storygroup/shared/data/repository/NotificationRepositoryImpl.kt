@@ -100,7 +100,12 @@ private fun NotificationResponse.toDomain(): AppNotification? {
         targetType = targetType?.let { raw -> NotificationTargetType.entries.firstOrNull { it.name == raw } },
         targetId = targetId,
         isRead = isRead,
-        createdAt = createdAt
+        createdAt = createdAt,
+        postId = postId,
+        // 이미지만 있는 게시글은 본문이 빈 문자열 — 표시 강등 판정을 단순화하려고 null로 정규화
+        postPreview = postPreview?.takeIf { it.isNotBlank() },
+        groupId = groupId,
+        groupName = groupName?.takeIf { it.isNotBlank() }
     )
 }
 
@@ -109,7 +114,17 @@ private fun PersonalSocketEventResponse.toDomain(): PersonalEvent? = when (type)
     "NOTIFICATION" -> notification?.toDomain()
         ?.let { PersonalEvent(PersonalEventType.NOTIFICATION, notification = it) }
     "CHAT_MESSAGE" -> chatRoomId
-        ?.let { PersonalEvent(PersonalEventType.CHAT_MESSAGE, chatRoomId = it, messageId = messageId, senderId = senderId) }
+        ?.let {
+            PersonalEvent(
+                PersonalEventType.CHAT_MESSAGE,
+                chatRoomId = it,
+                messageId = messageId,
+                senderId = senderId,
+                text = text,
+                attachmentType = attachmentType,
+                createdAt = createdAt
+            )
+        }
     // 통화 벨울림(휘발, DM·그룹 방) — 발신자 필드명이 서버 CallInviteEvent 계약(fromUserId/fromUserName)이라 별도 매핑
     "CALL_INVITE" -> chatRoomId
         ?.let {

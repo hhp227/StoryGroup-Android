@@ -11,7 +11,7 @@ enum class NotificationTargetType { POST, REPLY, MESSAGE, MEETING, GROUP }
 
 /**
  * 알림(GET /api/notifications) 도메인 모델 — 웹 AppNotification 미러(Foundation.Notification과의
- * Swift 이름 충돌을 웹과 같은 방식으로 회피). 서버 응답엔 행위자/본문이 없어 타입 라벨+시각만 그린다.
+ * Swift 이름 충돌을 웹과 같은 방식으로 회피). 행위자는 서버가 저장하지 않아 여전히 없다.
  */
 data class AppNotification(
     val id: Long,
@@ -20,5 +20,10 @@ data class AppNotification(
     val targetId: Long? = null,
     val isRead: Boolean = false,
     // 서버 ISO-8601(OffsetDateTime) 원문 — 표시 포맷팅은 각 플랫폼 UI가 담당
-    val createdAt: String = ""
+    val createdAt: String = "",
+    // 서버가 target에서 역추적한 컨텍스트(어떤 게시글/그룹의 알림인지) — 대상 삭제/접근 불가면 null
+    val postId: Long? = null,
+    val postPreview: String? = null,
+    val groupId: Long? = null,
+    val groupName: String? = null
 )

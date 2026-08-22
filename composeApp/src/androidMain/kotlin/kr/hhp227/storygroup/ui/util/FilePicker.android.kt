@@ -26,9 +26,21 @@ actual fun rememberFilePickerLauncher(onPicked: (PickedFile) -> Unit): () -> Uni
                     val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                     if (nameIndex >= 0 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
                 } ?: "attachment"
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (contentType.startsWith("video/")) {
+                    // 동영상은 압축 대상(§4-b) — 경로+메타로 전달, 원본을 메모리에 올리지 않는다
+                    val extension = contentType.substringAfter('/', "mp4")
+                    cacheVideoFromUri(context, uri, extension)?.let { cached ->
+                        PickedFile(
+                            bytes = ByteArray(0), fileName = fileName, contentType = contentType,
+                            filePath = cached.path, durationMs = cached.durationMs,
+                            width = cached.width, height = cached.height, sizeBytes = cached.sizeBytes
+                        )
+                    }
+                } else {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
-                bytes?.let { PickedFile(it, fileName, contentType) }
+                    bytes?.let { PickedFile(it, fileName, contentType) }
+                }
             }
             picked?.let(onPicked)
         }

@@ -55,6 +55,7 @@ struct TabShellView: View {
                             onNavigationAction(.navigateToChatRoom(chatRoomId: room.chatRoomId, groupId: room.groupId, title: room.title))
                         },
                         onOpenUserProfile: { onNavigationAction(.navigateToUserProfile(userId: $0)) },
+                        onOpenPost: { onNavigationAction(.navigateToPostDetail(groupId: $0, postId: $1)) },
                         // 상세에서 나가기/삭제 후 복귀 — 그룹 탭이 pendingResults를 소비해 목록을 다시 읽는다
                         groupsRefreshRequested: pendingResults.contains(.groupsChanged),
                         onGroupsRefreshHandled: { onNavigationAction(.consumeResult(.groupsChanged)) },

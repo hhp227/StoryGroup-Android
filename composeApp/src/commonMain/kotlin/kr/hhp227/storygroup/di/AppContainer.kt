@@ -15,6 +15,7 @@ import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
+import kr.hhp227.storygroup.shared.domain.media.ImageCompressor
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
 import kr.hhp227.storygroup.shared.domain.repository.EventRepository
@@ -118,14 +119,16 @@ import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
  */
 class AppContainer(
     tokenStorage: TokenStorage,
-    val settingsStorage: KeyValueStorage = InMemoryKeyValueStorage()
+    val settingsStorage: KeyValueStorage = InMemoryKeyValueStorage(),
+    // 이미지 투명 압축 실행기(§4) — Android/Desktop 진입점이 주입, 프리뷰는 null(무압축)
+    imageCompressor: ImageCompressor? = null
 ) {
     private val apiClient = createApiClient(tokenStorage)
     private val authRepository: AuthRepository = AuthRepositoryImpl(apiClient, tokenStorage)
     private val userRepository: UserRepository = UserRepositoryImpl(apiClient)
     private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
     private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
-    private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient)
+    private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient, imageCompressor)
     private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
     private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
     private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)

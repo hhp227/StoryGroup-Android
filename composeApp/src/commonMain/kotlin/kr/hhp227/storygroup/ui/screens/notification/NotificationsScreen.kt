@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.ui.screens.notification
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,14 +12,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.OutlinedButton
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,7 +40,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
@@ -38,24 +54,32 @@ import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.AppNotification
 import kr.hhp227.storygroup.shared.domain.model.NotificationType
-import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
+import kr.hhp227.storygroup.ui.navigation.NavigationAction
+import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
 /**
- * 알림 — 웹 /notifications 미러: 미읽음 헤더(N건+모두 읽음 처리)+타입 라벨 목록.
- * 서버 응답엔 행위자/본문이 없어 타입 라벨+상대시각만 그리고, 클릭 이동도 웹처럼 아직 없다.
+ * 알림 — 미읽음 헤더(N건+모두 읽음 처리)+풀블리드 행 목록(미읽음=linen, 행 사이 헤어라인).
+ * 서버가 target에서 역추적한 컨텍스트(그룹명·게시글 미리보기)를 둘째 줄에 그린다 — 행위자는 서버가
+ * 저장하지 않아 여전히 없다. 게시글 컨텍스트가 풀린 행은 클릭 시 읽음 처리 후 게시글 상세로 이동
+ * (풀리지 않은 행 — 그룹류/삭제된 대상 — 은 표시만).
  * 셸 목적지라 상단바는 셸이 소유. VM은 세션 스코프(추후 셸 종 아이콘 뱃지와 공유 대비).
  * iosApp NotificationsView.swift와 1:1 미러
  */
 @Composable
 fun NotificationsScreen(
     modifier: Modifier = Modifier,
+    onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: NotificationsViewModel = sessionNotificationsViewModel()
 ) {
-    NotificationsContent(viewModel = viewModel, modifier = modifier)
+    NotificationsContent(
+        viewModel = viewModel,
+        onOpenPost = { groupId, postId -> onNavigationAction(NavigationAction.NavigateToPostDetail(groupId, postId)) },
+        modifier = modifier
+    )
 }
 
 /** 세션 공유 알림 VM — 알림 화면과 셸 종 아이콘 뱃지(탭/드로어/홈/그룹)가 같은 인스턴스를 쓴다 */
@@ -71,7 +95,11 @@ fun sessionNotificationsViewModel(): NotificationsViewModel = sessionViewModel {
 }
 
 @Composable
-private fun NotificationsContent(viewModel: NotificationsViewModel, modifier: Modifier = Modifier) {
+private fun NotificationsContent(
+    viewModel: NotificationsViewModel,
+    onOpenPost: (groupId: Long, postId: Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
     val sg = SgTheme.colors
@@ -121,10 +149,10 @@ private fun NotificationsContent(viewModel: NotificationsViewModel, modifier: Mo
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
+        // 풀블리드 목록 — 행이 화면 폭 전체를 쓰므로 가로 contentPadding 없이 행 내부 패딩만 둔다
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             val refreshState = lazyPagingItems.loadState.refresh
             val appendState = lazyPagingItems.loadState.append
@@ -162,7 +190,7 @@ private fun NotificationsContent(viewModel: NotificationsViewModel, modifier: Mo
                 else -> {
                     items(count = lazyPagingItems.itemCount, key = lazyPagingItems.itemKey(AppNotification::id)) { index ->
                         lazyPagingItems[index]?.let { notification ->
-                            NotificationCard(
+                            NotificationRow(
                                 notification = notification,
                                 isRead = uiState.isRead(notification),
                                 // VM이 한 건씩만 처리하므로 처리 중엔 모든 행의 버튼을 잠근다
@@ -170,7 +198,8 @@ private fun NotificationsContent(viewModel: NotificationsViewModel, modifier: Mo
                                 isProcessing = uiState.processingId == notification.id,
                                 onMarkAsRead = {
                                     onAction(NotificationsViewModel.Action.MarkAsRead(notification.id))
-                                }
+                                },
+                                onOpenPost = onOpenPost
                             )
                         }
                     }
@@ -189,31 +218,67 @@ private fun NotificationsContent(viewModel: NotificationsViewModel, modifier: Mo
     }
 }
 
-/** 웹 notification-list 아이템 미러 — 타입 라벨+상대시각, 읽음은 흐리게, 미읽음에만 읽음 버튼 */
+/**
+ * 알림 한 행(풀블리드) — 타입 아이콘 메달리온+라벨+컨텍스트(그룹명 · 게시글 미리보기)+상대시각,
+ * 미읽음=linen 배경·읽음=흐리게, 행 아래 헤어라인. 미읽음에만 읽음 버튼.
+ * 게시글 컨텍스트가 풀린 행만 클릭 가능 — 읽음 처리(가능할 때) 후 게시글 상세로 이동
+ */
 @Composable
-private fun NotificationCard(
+private fun NotificationRow(
     notification: AppNotification,
     isRead: Boolean,
     enabled: Boolean,
     isProcessing: Boolean,
     onMarkAsRead: () -> Unit,
+    onOpenPost: (groupId: Long, postId: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sg = SgTheme.colors
+    // 스마트 캐스트용 로컬 캡처 — shared 모듈 프로퍼티라 널 검사 후에도 직접 참조는 캐스트가 안 된다
+    val groupId = notification.groupId
+    val postId = notification.postId
 
-    SgCard(modifier.fillMaxWidth().alpha(if (isRead) 0.6f else 1f)) {
+    Column(modifier.fillMaxWidth()) {
         Row(
-            Modifier.padding(12.dp),
+            Modifier
+                .fillMaxWidth()
+                .let { m ->
+                    if (groupId != null && postId != null) {
+                        m.clickable {
+                            // 탭=소비: 다른 건 처리 중이 아니면 읽음 처리까지 함께(웹 알림 UX 관례)
+                            if (!isRead && enabled) onMarkAsRead()
+                            onOpenPost(groupId, postId)
+                        }
+                    } else m
+                }
+                .background(if (isRead) Color.Transparent else sg.linen)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .alpha(if (isRead) 0.6f else 1f),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier.size(36.dp).background(sg.accentSoft, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(typeIcon(notification.type), contentDescription = null, tint = sg.accent, modifier = Modifier.size(18.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     typeLabel(notification.type),
                     style = SgTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = sg.ink
                 )
+                contextLine(notification)?.let {
+                    Text(
+                        it,
+                        style = SgTheme.typography.bodySmall,
+                        color = sg.inkSoft,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
                     formatRelativeTime(notification.createdAt),
                     style = SgTheme.typography.labelSmall,
@@ -221,20 +286,49 @@ private fun NotificationCard(
                 )
             }
             if (!isRead) {
-                OutlinedButton(onClick = onMarkAsRead, enabled = enabled, shape = SgTheme.shapes.button) {
-                    if (isProcessing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.width(14.dp).height(14.dp),
-                            strokeWidth = 2.dp,
-                            color = sg.inkFaint
-                        )
-                    } else {
-                        Text("읽음", color = if (enabled) sg.ink else sg.inkFaint)
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(horizontal = 12.dp).size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = sg.inkFaint
+                    )
+                } else {
+                    TextButton(onClick = onMarkAsRead, enabled = enabled) {
+                        Text("읽음", color = if (enabled) sg.accent else sg.inkFaint)
                     }
                 }
             }
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(sg.stoneBorder))
     }
+}
+
+/** 컨텍스트 줄 — 어떤 그룹/게시글의 알림인지. 서버가 못 푼 참조(삭제 등)는 null이라 줄째 숨긴다 */
+private fun contextLine(notification: AppNotification): String? {
+    val group = notification.groupName
+    val preview = notification.postPreview
+
+    return when {
+        group != null && preview != null -> "$group · $preview"
+        preview != null -> preview
+        group != null -> group
+        else -> null
+    }
+}
+
+/** 타입 아이콘 — iosApp typeIcon(SF Symbol)과 1:1 의미 매핑 */
+private fun typeIcon(type: NotificationType): ImageVector = when (type) {
+    NotificationType.NEW_POST -> Icons.Default.Description
+    NotificationType.COMMENT -> Icons.AutoMirrored.Filled.Chat
+    NotificationType.LIKE -> Icons.Default.Favorite
+    NotificationType.MENTION -> Icons.Default.AlternateEmail
+    NotificationType.CHAT -> Icons.Default.Forum
+    NotificationType.MEETING_STARTED -> Icons.Default.Videocam
+    NotificationType.NOTICE -> Icons.Default.Campaign
+    NotificationType.INVITE -> Icons.Default.Email
+    NotificationType.JOIN_REQUEST -> Icons.Default.PersonAdd
+    NotificationType.JOIN_APPROVED -> Icons.Default.CheckCircle
+    NotificationType.JOIN_REJECTED -> Icons.Default.Cancel
 }
 
 /** 웹 TYPE_LABEL 미러 — iosApp typeLabel과 동일 */

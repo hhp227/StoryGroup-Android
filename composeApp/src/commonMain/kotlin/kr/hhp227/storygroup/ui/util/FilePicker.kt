@@ -2,8 +2,20 @@ package kr.hhp227.storygroup.ui.util
 
 import androidx.compose.runtime.Composable
 
-/** 피커가 돌려주는 선택 결과 — 채팅 첨부 업로드(UploadChatFileUseCase)에 필요한 최소 정보만 담는다 */
-data class PickedFile(val bytes: ByteArray, val fileName: String, val contentType: String)
+/**
+ * 피커가 돌려주는 선택 결과 — 일반 파일은 bytes로(전송 시점 업로드), 동영상은 filePath+메타데이터로
+ * 전달한다(PickedImage와 같은 이유: 압축 워커가 경로 기반이고 원본을 메모리에 올리지 않는다 — §4-b).
+ */
+data class PickedFile(
+    val bytes: ByteArray,
+    val fileName: String,
+    val contentType: String,
+    val filePath: String? = null,
+    val durationMs: Long? = null,
+    val width: Int = 0,
+    val height: Int = 0,
+    val sizeBytes: Long = bytes.size.toLong()
+)
 
 /**
  * 단일 파일 피커(MIME 무제한 — 서버 /api/files 계약 미러) — Android는 SAF 문서 피커(권한 불필요),

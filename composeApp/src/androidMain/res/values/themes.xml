@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 매니페스트가 쓰던 프레임워크 테마의 이름 있는 승격판 — postSplashScreenTheme가 참조할 수 있게 -->
+    <style name="Theme.StoryGroup" parent="@android:style/Theme.Material.Light.NoActionBar" />
+
+    <!-- 콜드 스타트 스플래시(androidx SplashScreen 정석) — 아이콘은 기본값(런처 아이콘),
+         배경만 브랜드 paper. 그려진 뒤 postSplashScreenTheme로 본 테마 복귀 -->
+    <style name="Theme.StoryGroup.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.StoryGroup</item>
+    </style>
+</resources>

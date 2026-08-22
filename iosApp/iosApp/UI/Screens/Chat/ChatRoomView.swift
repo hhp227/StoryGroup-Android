@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 import Shared
@@ -329,7 +330,19 @@ struct ChatRoomView: View {
             if let pending = uiState.pendingAttachment {
                 pendingAttachmentChip(pending)
             }
-            inputBar(isSending: uiState.isSending, hasPendingAttachment: uiState.pendingAttachment != nil)
+            if let progress = uiState.compressionProgress {
+                Text("동영상 압축 중 \(Int(progress * 100))%")
+                    .font(.caption2)
+                    .foregroundColor(colors.inkFaint)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 2)
+            }
+            // 압축 중에도 isSending 취급 — 전송·추가 첨부를 막는다(완료되면 압축본이 대기 첨부로 채워진다)
+            inputBar(
+                isSending: uiState.isSending || uiState.compressionProgress != nil,
+                hasPendingAttachment: uiState.pendingAttachment != nil
+            )
             if showAttachments {
                 if showEmojiPicker {
                     emojiPanel
@@ -405,9 +418,32 @@ struct ChatRoomView: View {
             guard case .success(let url) = result else { return }
             let accessed = url.startAccessingSecurityScopedResource()
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else { return }
             let contentType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
                 ?? "application/octet-stream"
+
+            if contentType.hasPrefix("video/") {
+                // 동영상은 압축 대상(§4-b) — tmp 복사+AVAsset 메타로 PickedVideo를 만든다(ImagePicker.loadVideo 미러)
+                let fileExtension = url.pathExtension.isEmpty ? "mp4" : url.pathExtension
+                let copied = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("picked-\(UUID().uuidString).\(fileExtension)")
+                guard (try? FileManager.default.copyItem(at: url, to: copied)) != nil else { return }
+                let asset = AVAsset(url: copied)
+                let durationMs = Int64(CMTimeGetSeconds(asset.duration) * 1000)
+                let track = asset.tracks(withMediaType: .video).first
+                let displaySize = track.map { $0.naturalSize.applying($0.preferredTransform) } ?? .zero
+                let sizeBytes = (try? FileManager.default.attributesOfItem(atPath: copied.path)[.size] as? NSNumber)?.int64Value ?? 0
+                viewModel.onAction(.attachVideo(picked: PickedVideo(
+                    url: copied,
+                    durationMs: durationMs,
+                    width: Int32(abs(displaySize.width)),
+                    height: Int32(abs(displaySize.height)),
+                    sizeBytes: sizeBytes,
+                    fileName: url.lastPathComponent,
+                    contentType: contentType
+                )))
+                return
+            }
+            guard let data = try? Data(contentsOf: url) else { return }
 
             viewModel.onAction(.attach(data: data, fileName: url.lastPathComponent, contentType: contentType))
         }

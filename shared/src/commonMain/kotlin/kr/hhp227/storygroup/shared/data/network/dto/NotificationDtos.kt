@@ -10,7 +10,12 @@ data class NotificationResponse(
     val targetType: String? = null,
     val targetId: Long? = null,
     val isRead: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    // 서버가 target에서 역추적한 컨텍스트 — 대상 삭제/접근 불가·구서버는 null
+    val postId: Long? = null,
+    val postPreview: String? = null,
+    val groupId: Long? = null,
+    val groupName: String? = null
 )
 
 // GET /api/notifications/unread-count 응답 — notification/dto/NotificationDtos.kt UnreadCountResponse와 1:1
@@ -31,6 +36,10 @@ data class PersonalSocketEventResponse(
     val chatRoomId: Long? = null,
     val messageId: Long? = null,
     val senderId: Long? = null,
+    // CHAT_MESSAGE 전용 — 허브 목록 미리보기 갱신용 본문(구서버는 필드가 없어 null)
+    val text: String? = null,
+    val attachmentType: String? = null,
+    val createdAt: String? = null,
     // CALL_INVITE 전용 — 서버 CallInviteEvent는 발신자를 fromUserId/fromUserName으로 싣는다
     val fromUserId: Long? = null,
     val fromUserName: String? = null,

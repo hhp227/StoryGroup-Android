@@ -5,6 +5,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import ws.schild.jave.MultimediaObject
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -27,10 +28,21 @@ actual fun rememberFilePickerLauncher(onPicked: (PickedFile) -> Unit): () -> Uni
                 val file = File(directory, fileName)
                 val contentType = runCatching { Files.probeContentType(file.toPath()) }.getOrNull()
                     ?: "application/octet-stream"
-                val bytes = file.readBytes()
+                val picked = if (contentType.startsWith("video/")) {
+                    // 동영상은 압축 대상(§4-b) — 경로+메타로 전달(ImagePicker.jvm 동영상 분기 미러)
+                    val info = runCatching { MultimediaObject(file).info }.getOrNull()
+                    val videoSize = info?.video?.size
+                    PickedFile(
+                        bytes = ByteArray(0), fileName = fileName, contentType = contentType,
+                        filePath = file.absolutePath, durationMs = info?.duration ?: 0L,
+                        width = videoSize?.width ?: 0, height = videoSize?.height ?: 0, sizeBytes = file.length()
+                    )
+                } else {
+                    PickedFile(file.readBytes(), fileName, contentType)
+                }
 
                 withContext(Dispatchers.Main) {
-                    onPicked(PickedFile(bytes, fileName, contentType))
+                    onPicked(picked)
                 }
             }
         }

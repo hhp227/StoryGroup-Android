@@ -60,6 +60,7 @@ final class ChatRoomViewModel: MviViewModel {
         case .attach(let data, let fileName, let contentType):
             uiState.pendingAttachment = PendingAttachment(data: data, fileName: fileName, contentType: contentType)
             uiState.actionError = nil
+        case .attachVideo(let picked): attachVideo(picked: picked)
         case .clearAttachment: uiState.pendingAttachment = nil
         case .typing: sendTypingThrottled()
         case .loadMembers: loadMembers()
@@ -136,12 +137,80 @@ final class ChatRoomViewModel: MviViewModel {
         }
     }
 
+    /// 채팅 동영상 첨부(§4-b) — 판정(§2)은 선택 즉시, 압축은 백그라운드 큐, 업로드는 기존대로 전송 시점.
+    /// 완료되면 대기 첨부가 압축본(upload.mp4, ≤5MB)으로 채워진다. Compose attachVideo 미러.
+    private func attachVideo(picked: PickedVideo) {
+        let plan = VideoCompressionPlanner.shared.plan(
+            durationMs: picked.durationMs, sizeBytes: picked.sizeBytes,
+            width: picked.width, height: picked.height,
+            margin: VideoCompressionPlanner.shared.FIRST_MARGIN
+        )
+        if plan is VideoPlanRejectTooLarge {
+            uiState.actionError = "파일이 너무 큽니다. (최대 500MB)"
+        } else if plan is VideoPlanRejectTooLong {
+            uiState.actionError = "동영상은 최대 3분까지 첨부할 수 있습니다."
+        } else if plan is VideoPlanSkipAlreadySmall {
+            let bytes = (try? Data(contentsOf: picked.url)) ?? Data()
+            try? FileManager.default.removeItem(at: picked.url)
+            uiState.pendingAttachment = PendingAttachment(data: bytes, fileName: picked.fileName, contentType: picked.contentType)
+            uiState.actionError = nil
+        } else if let compress = plan as? VideoPlanCompress {
+            compressAndAttach(picked: picked, plan: compress, isRetry: false)
+        }
+    }
+
+    private func compressAndAttach(picked: PickedVideo, plan: VideoPlanCompress, isRetry: Bool) {
+        uiState.compressionProgress = 0
+        uiState.actionError = nil
+        MediaCompressionQueue.shared.compressVideo(
+            inputURL: picked.url,
+            plan: plan,
+            onProgress: { [weak self] fraction in self?.uiState.compressionProgress = fraction }
+        ) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .failure:
+                try? FileManager.default.removeItem(at: picked.url)
+                self.uiState.compressionProgress = nil
+                self.uiState.actionError = "동영상 압축에 실패했습니다."
+            case .success(let outputURL):
+                let bytes = (try? Data(contentsOf: outputURL)) ?? Data()
+                try? FileManager.default.removeItem(at: outputURL)
+                if Int64(bytes.count) <= VideoCompressionPlanner.shared.TARGET_BYTES {
+                    try? FileManager.default.removeItem(at: picked.url)
+                    self.uiState.compressionProgress = nil
+                    // 출력은 항상 MP4(§2) — 업로드는 전송 시점(send)에 나간다
+                    self.uiState.pendingAttachment = PendingAttachment(data: bytes, fileName: "upload.mp4", contentType: "video/mp4")
+                } else if !isRetry {
+                    // 단일 패스 ABR 오버슈트 — 더 보수적인 마진으로 딱 한 번 재시도(§2-5)
+                    let retry = VideoCompressionPlanner.shared.plan(
+                        durationMs: picked.durationMs, sizeBytes: picked.sizeBytes,
+                        width: picked.width, height: picked.height,
+                        margin: VideoCompressionPlanner.shared.RETRY_MARGIN
+                    )
+                    if let retryPlan = retry as? VideoPlanCompress {
+                        self.compressAndAttach(picked: picked, plan: retryPlan, isRetry: true)
+                    } else {
+                        try? FileManager.default.removeItem(at: picked.url)
+                        self.uiState.compressionProgress = nil
+                        self.uiState.actionError = "동영상 압축에 실패했습니다."
+                    }
+                } else {
+                    try? FileManager.default.removeItem(at: picked.url)
+                    self.uiState.compressionProgress = nil
+                    self.uiState.actionError = "동영상 압축에 실패했습니다."
+                }
+            }
+        }
+    }
+
     private func send(text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let pending = uiState.pendingAttachment
 
         // 첨부가 있으면 본문 없이도 보낼 수 있다(웹 미러 — 서버는 둘 다 비었을 때만 400)
-        if (trimmed.isEmpty && pending == nil) || uiState.isSending { return }
+        // 압축이 끝나기 전에 보내면 첨부가 빠진 채 나간다 — 완료까지 전송을 막는다(§4-b)
+        if (trimmed.isEmpty && pending == nil) || uiState.isSending || uiState.compressionProgress != nil { return }
 
         uiState.isSending = true
         uiState.actionError = nil
@@ -333,6 +402,8 @@ final class ChatRoomViewModel: MviViewModel {
         var callRoster: [RtcCallPeer] = []
         /// 전송 대기 첨부(메시지당 1개, 전송 시점 업로드) — 실패해도 유지돼 재시도할 수 있다
         var pendingAttachment: PendingAttachment? = nil
+        /// 동영상 압축 진행률(0..1) — nil이면 압축 중 아님. 압축 중엔 전송 비활성(§4-b)
+        var compressionProgress: Float? = nil
         /// 입력 중인 타인(userId→이름) — 신호가 끊기면 4초 뒤 자동 소멸
         var typists: [Int64: String] = [:]
         /// 멤버별 마지막 읽음 위치(userId→messageId, 본인 포함) — "읽음 N"은 화면이 파생한다
@@ -362,6 +433,8 @@ final class ChatRoomViewModel: MviViewModel {
         case send(text: String)
         /// 피커 선택 결과 — 업로드는 전송 시점까지 미룬다
         case attach(data: Data, fileName: String, contentType: String)
+        /// 파일 피커에서 고른 동영상 — 선택 시점에 압축(§4-b), 업로드는 전송 시점
+        case attachVideo(picked: PickedVideo)
         case clearAttachment
         /// 입력 변화 신호 — VM이 스로틀해 STOMP 타이핑 신호로 발신한다
         case typing
@@ -374,6 +447,13 @@ final class ChatRoomViewModel: MviViewModel {
         case sent
     }
 
+    deinit {
+        // 화면 소멸 시 진행 중 압축 취소(§11) — Compose는 viewModelScope 취소가 같은 역할
+        MediaCompressionQueue.shared.cancelAll()
+        typingExpiryTasks.values.forEach { $0.cancel() }
+        rosterTask?.cancel()
+    }
+
     /// 서버 상한과 동일(웹도 50 고정) — 한 번에 최대한 넓은 공백 메꿈
     private static let pageSize: Int32 = 50
 
@@ -384,9 +464,4 @@ final class ChatRoomViewModel: MviViewModel {
 
     /// 웹 라이브 카드(usePolling 6000ms)와 같은 주기 — 라이브 바는 미리보기라 즉시성이 덜 중요하다
     private static let callRosterPollNanos: UInt64 = 6_000_000_000
-
-    deinit {
-        typingExpiryTasks.values.forEach { $0.cancel() }
-        rosterTask?.cancel()
-    }
 }

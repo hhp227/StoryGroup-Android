@@ -136,7 +136,8 @@ final class AppContainer {
         let userRepository = UserRepositoryImpl(client: client)
         let groupRepository = GroupRepositoryImpl(client: client)
         let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
-        let mediaRepository = MediaRepositoryImpl(client: client)
+        // 이미지 투명 압축(§4) — 업로드 경로 전 표면(게시글·채팅·프로필·커버)이 자동으로 거친다
+        let mediaRepository = MediaRepositoryImpl(client: client, imageCompressor: IosImageCompressor())
         // Kotlin 기본 인자(baseUrl)는 ObjC로 내보내지지 않아 명시 전달(createApiClient와 동일)
         let notificationRepository = NotificationRepositoryImpl(
             client: client,

@@ -6,6 +6,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
+import platform.Foundation.NSMutableData
 import platform.posix.memcpy
 
 /**
@@ -22,4 +23,16 @@ fun nsDataToByteArray(data: NSData): ByteArray {
     return ByteArray(size).apply {
         usePinned { pinned -> memcpy(pinned.addressOf(0), data.bytes, data.length) }
     }
+}
+
+/** ByteArray → NSData — Swift ImageCompressor 구현이 Kotlin bytes를 UIImage로 디코딩할 때 사용(역방향도 memcpy 한 번) */
+fun byteArrayToNsData(bytes: ByteArray): NSData {
+    val data = NSMutableData()
+    if (bytes.isEmpty()) return data
+
+    data.setLength(bytes.size.toULong())
+    bytes.usePinned { pinned ->
+        memcpy(data.mutableBytes, pinned.addressOf(0), bytes.size.toULong())
+    }
+    return data
 }

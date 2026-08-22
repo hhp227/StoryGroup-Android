@@ -8,5 +8,12 @@
 	<string>화상 통화에서 내 화면을 보내기 위해 카메라를 사용합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>통화에서 내 음성을 보내기 위해 마이크를 사용합니다.</string>
+	<!-- 정석 LaunchScreen(Info.plist 방식) — 브랜드 paper 배경. 로고 에셋이 생기면 UIImageName 한 줄로 확장.
+	     빌드 설정의 UILaunchScreen_Generation보다 이 파일의 키가 우선한다 -->
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 </dict>
 </plist>
