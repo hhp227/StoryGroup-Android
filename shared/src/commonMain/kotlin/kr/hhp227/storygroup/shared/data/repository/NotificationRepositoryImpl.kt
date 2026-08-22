@@ -100,7 +100,12 @@ private fun NotificationResponse.toDomain(): AppNotification? {
         targetType = targetType?.let { raw -> NotificationTargetType.entries.firstOrNull { it.name == raw } },
         targetId = targetId,
         isRead = isRead,
-        createdAt = createdAt
+        createdAt = createdAt,
+        postId = postId,
+        // 이미지만 있는 게시글은 본문이 빈 문자열 — 표시 강등 판정을 단순화하려고 null로 정규화
+        postPreview = postPreview?.takeIf { it.isNotBlank() },
+        groupId = groupId,
+        groupName = groupName?.takeIf { it.isNotBlank() }
     )
 }
 

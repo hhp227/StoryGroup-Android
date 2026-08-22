@@ -215,8 +215,8 @@ struct MainShellView: View {
                 // 성공 시 결과를 publish — 수정이면 상세가, 신규면 피드가 읽어간다(Compose CreatePostScreen
                 // Event.Created 미러). CreatePostView가 스스로 dismiss()해서 닫으므로 여기서
                 // navigateBack은 부르지 않는다(부르면 path가 두 칸 줄어든다).
-                // ⚠️ postDetail이 오늘은 화면 내부에서만 열려 pendingResults를 읽는 소비자가 없다 —
-                // 이 결과는 postDetail이 path 경로로 도달 가능해지기 전까지 Set에 남아만 있는다
+                // ⚠️ path 경유 postDetail(알림 행 탭)이 생겼지만 PostDetailView는 아직 pendingResults를
+                // 읽지 않는다 — 이 결과는 소비자가 생기기 전까지 Set에 남아만 있는다(화면 내부 경로도 동일)
                 if let groupId, let postId {
                     navigationViewModel.onAction(.publishResult(.postUpdated(groupId: groupId, postId: postId)))
                 } else {
@@ -369,6 +369,10 @@ struct DestinationView: View {
     /// 친구 탭 행 탭 → 공개 프로필(웹 /users/[id] 미러) — MainShellView로 위임
     let onOpenUserProfile: (Int64) -> Void
 
+    /// 알림 행 탭 → 게시글 상세 push — Compose onOpenPost 미러. TabShellView/DrawerShellView가
+    /// onNavigationAction(.navigateToPostDetail)로 어댑팅해 넘긴다(MainShellView path)
+    let onOpenPost: (Int64, Int64) -> Void
+
     /// 상세에서 나가기/삭제 후 복귀 — 그룹 탭이 소비해 목록을 첫 페이지부터 다시 읽는다(Compose groupsRefreshRequested 미러)
     let groupsRefreshRequested: Bool
 
@@ -403,7 +407,7 @@ struct DestinationView: View {
         case .chat:
             ChatView(viewModel: chatViewModel, onOpenChatRoom: onOpenChatRoom)
         case .notifications:
-            NotificationsView(viewModel: notificationsViewModel)
+            NotificationsView(viewModel: notificationsViewModel, onOpenPost: onOpenPost)
         case .profile:
             ProfileView(
                 profile: profile,

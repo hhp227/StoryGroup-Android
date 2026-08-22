@@ -10,7 +10,12 @@ data class NotificationResponse(
     val targetType: String? = null,
     val targetId: Long? = null,
     val isRead: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    // 서버가 target에서 역추적한 컨텍스트 — 대상 삭제/접근 불가·구서버는 null
+    val postId: Long? = null,
+    val postPreview: String? = null,
+    val groupId: Long? = null,
+    val groupName: String? = null
 )
 
 // GET /api/notifications/unread-count 응답 — notification/dto/NotificationDtos.kt UnreadCountResponse와 1:1
