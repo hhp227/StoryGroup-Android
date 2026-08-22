@@ -21,7 +21,8 @@ import kr.hhp227.storygroup.ui.mvi.MviViewModel
 /**
  * 계정 설정 — 웹 설정>프로필(/settings/profile)+비밀번호(/settings/password) 미러.
  * 폼 초기값용 프로필은 스스로 로드한다(백스택 엔트리 스코프 — 진입마다 최신값).
- * 이미지 변경은 선택 즉시 업로드해 pendingProfileImg에 보관하고, 저장 시 함께 전송한다
+ * 이미지 변경은 선택 즉시 업로드 후 곧바로 저장까지 한다(applyProfileImage) — 프로필 미로드/저장
+ * 실패 시에만 pendingProfileImg로 남겨 저장 버튼이 함께 전송한다
  * (변경 없으면 기존 profileImg를 그대로 보내 유지 — PATCH 전체 교체 계약).
  * 성공은 Event 일회성 발화 — 화면이 안내 문구와 세션 ProfileViewModel 갱신을 처리한다.
  * iosApp AccountSettingsViewModel.swift와 1:1 미러
@@ -94,12 +95,38 @@ class AccountSettingsViewModel(
         _uiState.update { it.copy(isUploadingImage = true, saveError = null) }
         viewModelScope.launch {
             runCatching { uploadImageUseCase(bytes, fileName, contentType) }
-                .onSuccess { url ->
-                    _uiState.update { it.copy(isUploadingImage = false, pendingProfileImg = url) }
-                }
+                .onSuccess { url -> applyProfileImage(url) }
                 .onFailure { e ->
                     _uiState.update { it.copy(isUploadingImage = false, saveError = e.message ?: "이미지 업로드에 실패했습니다.") }
                 }
+        }
+    }
+
+    /**
+     * 업로드된 이미지를 선택 즉시 저장 — 업로드만 하고 저장 버튼을 안 누르면 이미지가 조용히
+     * 유실되던 문제 방지(2026-08-21 업로드 3건·PATCH 0건 로그로 확인된 실사고).
+     * 폼의 미저장 name/bio를 함께 저장해버리지 않도록 서버 프로필 값으로 보낸다.
+     * 프로필 미로드면 종전대로 pending 보관(저장 버튼이 함께 전송)
+     */
+    private suspend fun applyProfileImage(url: String) {
+        val profile = _uiState.value.profile
+        if (profile == null) {
+            _uiState.update { it.copy(isUploadingImage = false, pendingProfileImg = url) }
+            return
+        }
+        runCatching {
+            updateMyProfileUseCase(
+                name = profile.name,
+                profileImg = url,
+                bio = profile.bio,
+                statusMessage = profile.statusMessage
+            )
+        }.onSuccess { updated ->
+            _uiState.update { it.copy(isUploadingImage = false, profile = updated, pendingProfileImg = null) }
+            _event.tryEmit(Event.ProfileSaved)
+        }.onFailure { e ->
+            // 저장 실패여도 업로드는 살아 있다 — pending으로 남겨 저장 버튼 재시도 경로를 유지한다
+            _uiState.update { it.copy(isUploadingImage = false, pendingProfileImg = url, saveError = e.message ?: "이미지 저장에 실패했습니다.") }
         }
     }
 
