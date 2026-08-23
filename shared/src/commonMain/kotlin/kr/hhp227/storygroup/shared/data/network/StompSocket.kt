@@ -18,8 +18,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 
-/** STOMP 세션에서 흘러나오는 저수준 이벤트 — Repository가 도메인 이벤트로 매핑한다 */
-internal sealed interface StompSessionEvent {
+/**
+ * STOMP 세션에서 흘러나오는 저수준 이벤트 — Repository가 도메인 이벤트로 매핑한다.
+ * public — 소켓 소유가 소스(data/source)로 내려가며 구독 메소드가 인터페이스 시그니처에
+ * 이 타입을 그대로 노출해야 해서 internal을 풀었다(이 타입만, StompSocket/StompFrame/
+ * parseStompFrame 등 나머지는 여전히 internal — 소켓 구현 자체는 :shared 밖에 안 드러난다).
+ */
+sealed interface StompSessionEvent {
     data object Connected : StompSessionEvent
     data object Disconnected : StompSessionEvent
     data class Message(val body: String) : StompSessionEvent

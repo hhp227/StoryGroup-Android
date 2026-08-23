@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.data.storage
 
 import android.content.Context
 import android.content.SharedPreferences
+import kr.hhp227.storygroup.shared.domain.storage.KeyValueStorage
 
 class SharedPreferencesKeyValueStorage(context: Context) : KeyValueStorage {
     private val prefs: SharedPreferences =

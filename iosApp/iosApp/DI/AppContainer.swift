@@ -132,33 +132,46 @@ final class AppContainer {
         let tokenStorage = UserDefaultsTokenStorage(defaults: UserDefaults.standard)
         let client = ApiClientKt.createApiClient(
             tokenStorage: tokenStorage,
-            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
+            baseUrl: AppLinks.shared.BASE_URL
         )
-        let authRepository = AuthRepositoryImpl(client: client, tokenStorage: tokenStorage)
-        let userRepository = UserRepositoryImpl(client: client)
-        let groupRepository = GroupRepositoryImpl(client: client)
-        let postRepository = PostRepositoryImpl(client: client, groupRepository: groupRepository)
-        // 이미지 투명 압축(§4) — 업로드 경로 전 표면(게시글·채팅·프로필·커버)이 자동으로 거친다
-        let mediaRepository = MediaRepositoryImpl(client: client, imageCompressor: IosImageCompressor())
+        // 소스 Impl 11종 — Kotlin AppContainer.kt 미러(리포지토리가 소비할 원격 소스). groupRemoteDataSource는 Group·Post 리포가 공유.
+        let authRemoteDataSource = AuthRemoteDataSourceImpl(client: client)
+        let userRemoteDataSource = UserRemoteDataSourceImpl(client: client)
+        let groupRemoteDataSource = GroupRemoteDataSourceImpl(client: client)
+        let postRemoteDataSource = PostRemoteDataSourceImpl(client: client)
+        let mediaRemoteDataSource = MediaRemoteDataSourceImpl(client: client)
         // Kotlin 기본 인자(baseUrl)는 ObjC로 내보내지지 않아 명시 전달(createApiClient와 동일)
+        let notificationRemoteDataSource = NotificationRemoteDataSourceImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: AppLinks.shared.BASE_URL
+        )
+        let chatRemoteDataSource = ChatRemoteDataSourceImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: AppLinks.shared.BASE_URL
+        )
+        let rtcRemoteDataSource = RtcRemoteDataSourceImpl(
+            client: client,
+            tokenStorage: tokenStorage,
+            baseUrl: AppLinks.shared.BASE_URL
+        )
+        let eventRemoteDataSource = EventRemoteDataSourceImpl(client: client)
+        let friendRemoteDataSource = FriendRemoteDataSourceImpl(client: client)
+        let searchRemoteDataSource = SearchRemoteDataSourceImpl(client: client)
+
+        let authRepository = AuthRepositoryImpl(authRemoteDataSource: authRemoteDataSource, tokenStorage: tokenStorage)
+        let userRepository = UserRepositoryImpl(userRemoteDataSource: userRemoteDataSource)
+        let groupRepository = GroupRepositoryImpl(groupRemoteDataSource: groupRemoteDataSource)
+        let postRepository = PostRepositoryImpl(postRemoteDataSource: postRemoteDataSource, groupRemoteDataSource: groupRemoteDataSource)
+        // 이미지 투명 압축(§4) — 업로드 경로 전 표면(게시글·채팅·프로필·커버)이 자동으로 거친다
+        let mediaRepository = MediaRepositoryImpl(mediaRemoteDataSource: mediaRemoteDataSource, imageCompressor: IosImageCompressor())
         let networkStatusRepository = NetworkStatusRepositoryImpl(networkStatusDataSource: IosNetworkStatusDataSource())
-        let notificationRepository = NotificationRepositoryImpl(
-            client: client,
-            tokenStorage: tokenStorage,
-            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
-        )
-        let chatRepository = ChatRepositoryImpl(
-            client: client,
-            tokenStorage: tokenStorage,
-            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
-        )
-        let rtcRepository = RtcRepositoryImpl(
-            client: client,
-            tokenStorage: tokenStorage,
-            baseUrl: StoryGroupApi.shared.DEFAULT_BASE_URL
-        )
-        let eventRepository = EventRepositoryImpl(client: client)
-        let friendRepository = FriendRepositoryImpl(client: client)
+        let notificationRepository = NotificationRepositoryImpl(notificationRemoteDataSource: notificationRemoteDataSource)
+        let chatRepository = ChatRepositoryImpl(chatRemoteDataSource: chatRemoteDataSource)
+        let rtcRepository = RtcRepositoryImpl(rtcRemoteDataSource: rtcRemoteDataSource)
+        let eventRepository = EventRepositoryImpl(eventRemoteDataSource: eventRemoteDataSource)
+        let friendRepository = FriendRepositoryImpl(friendRemoteDataSource: friendRemoteDataSource)
 
         isLoggedInUseCase = IsLoggedInUseCase(authRepository: authRepository)
         loginUseCase = LoginUseCase(authRepository: authRepository)
@@ -244,7 +257,7 @@ final class AppContainer {
         addFriendUseCase = AddFriendUseCase(friendRepository: friendRepository)
         removeFriendUseCase = RemoveFriendUseCase(friendRepository: friendRepository)
         searchUsersUseCase = SearchUsersUseCase(friendRepository: friendRepository)
-        let searchRepository = SearchRepositoryImpl(client: client)
+        let searchRepository = SearchRepositoryImpl(searchRemoteDataSource: searchRemoteDataSource)
         searchUseCase = SearchUseCase(searchRepository: searchRepository)
     }
 }

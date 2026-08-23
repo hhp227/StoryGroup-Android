@@ -2,6 +2,7 @@ package kr.hhp227.storygroup.shared.data.storage
 
 import java.io.File
 import java.util.Properties
+import kr.hhp227.storygroup.shared.domain.storage.KeyValueStorage
 
 /** Desktop(JVM)용 설정 저장소 — FileTokenStorage와 같은 위치(~/.storygroup)에 보관 */
 class FileKeyValueStorage(

@@ -13,9 +13,20 @@ import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.SearchRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
+import kr.hhp227.storygroup.shared.data.source.AuthRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.ChatRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.EventRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.FriendRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.GroupRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.MediaRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.NetworkStatusDataSource
+import kr.hhp227.storygroup.shared.data.source.NotificationRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.PostRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.RtcRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.SearchRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.UserRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
-import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
+import kr.hhp227.storygroup.shared.domain.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.media.ImageCompressor
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
@@ -130,17 +141,18 @@ class AppContainer(
     networkStatusDataSource: NetworkStatusDataSource? = null
 ) {
     private val apiClient = createApiClient(tokenStorage)
-    private val authRepository: AuthRepository = AuthRepositoryImpl(apiClient, tokenStorage)
-    private val userRepository: UserRepository = UserRepositoryImpl(apiClient)
-    private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
-    private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
-    private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient, imageCompressor)
-    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
-    private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
-    private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
-    private val friendRepository: FriendRepository = FriendRepositoryImpl(apiClient)
-    private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
-    private val searchRepository: SearchRepository = SearchRepositoryImpl(apiClient)
+    private val authRepository: AuthRepository = AuthRepositoryImpl(AuthRemoteDataSourceImpl(apiClient), tokenStorage)
+    private val userRepository: UserRepository = UserRepositoryImpl(UserRemoteDataSourceImpl(apiClient))
+    private val groupRemoteDataSource = GroupRemoteDataSourceImpl(apiClient)
+    private val groupRepository: GroupRepository = GroupRepositoryImpl(groupRemoteDataSource)
+    private val postRepository: PostRepository = PostRepositoryImpl(PostRemoteDataSourceImpl(apiClient), groupRemoteDataSource)
+    private val mediaRepository: MediaRepository = MediaRepositoryImpl(MediaRemoteDataSourceImpl(apiClient), imageCompressor)
+    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(NotificationRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val chatRepository: ChatRepository = ChatRepositoryImpl(ChatRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val eventRepository: EventRepository = EventRepositoryImpl(EventRemoteDataSourceImpl(apiClient))
+    private val friendRepository: FriendRepository = FriendRepositoryImpl(FriendRemoteDataSourceImpl(apiClient))
+    private val rtcRepository: RtcRepository = RtcRepositoryImpl(RtcRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val searchRepository: SearchRepository = SearchRepositoryImpl(SearchRemoteDataSourceImpl(apiClient))
     private val networkStatusRepository: NetworkStatusRepository = NetworkStatusRepositoryImpl(networkStatusDataSource)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
