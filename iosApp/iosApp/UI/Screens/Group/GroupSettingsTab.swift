@@ -31,10 +31,10 @@ struct GroupSettingsTab: View {
     @State private var confirmingLeave = false
 
     /// 레거시 privacy_policy 미러 — 웹 개인정보처리방침(웹·API 같은 서비스)
-    private static let privacyPolicyUrl = URL(string: "\(StoryGroupApi.shared.DEFAULT_BASE_URL)/privacy")!
+    private static let privacyPolicyUrl = URL(string: AppLinks.shared.PRIVACY_URL)!
 
     /// 약관 — 웹 /terms(설정 허브 "약관 및 정책" 미러)
-    private static let termsUrl = URL(string: "\(StoryGroupApi.shared.DEFAULT_BASE_URL)/terms")!
+    private static let termsUrl = URL(string: AppLinks.shared.TERMS_URL)!
 
     var body: some View {
         content

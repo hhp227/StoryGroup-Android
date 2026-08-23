@@ -34,7 +34,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
+import kr.hhp227.storygroup.shared.config.AppLinks
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
@@ -44,12 +44,12 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberShareLauncher
 
 /** 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, 폐쇄형이라 외부 공개 URL은 서비스 홈뿐) */
-private const val APP_SHARE_TEXT = "StoryGroup — 그룹과 함께하는 이야기\n${StoryGroupApi.DEFAULT_BASE_URL}"
+private const val APP_SHARE_TEXT = "StoryGroup — 그룹과 함께하는 이야기\n${AppLinks.BASE_URL}"
 
 /** 레거시 privacy_policy 미러 — 웹 개인정보처리방침(웹·API 같은 서비스) */
-private const val PRIVACY_POLICY_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/privacy"
+private const val PRIVACY_POLICY_URL = AppLinks.PRIVACY_URL
 
-private const val TERMS_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/terms"
+private const val TERMS_URL = AppLinks.TERMS_URL
 
 /**
  * 설정 탭 — 레거시 SettingsFragment(item_settings.xml) 미러의 섹션별 메뉴 리스트:

@@ -211,7 +211,7 @@ private struct GroupDetailContent: View {
     @State private var showGroupReports = false
 
     /// 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, Compose APP_SHARE_TEXT 미러)
-    private static let appShareText = "StoryGroup — 그룹과 함께하는 이야기\n\(StoryGroupApi.shared.DEFAULT_BASE_URL)"
+    private static let appShareText = "StoryGroup — 그룹과 함께하는 이야기\n\(AppLinks.shared.BASE_URL)"
 
     /// 상세 안에서 채팅방·글쓰기를 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(셸 미러)
     var body: some View {

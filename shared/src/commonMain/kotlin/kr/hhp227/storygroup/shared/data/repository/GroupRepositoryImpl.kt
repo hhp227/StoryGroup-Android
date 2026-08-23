@@ -3,35 +3,21 @@ package kr.hhp227.storygroup.shared.data.repository
 import app.cash.paging.Pager
 import app.cash.paging.PagingData
 import app.cash.paging.filter
-import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.request.patch
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kr.hhp227.storygroup.shared.data.network.dto.CreateGroupRequest
-import kr.hhp227.storygroup.shared.data.network.dto.CreateInviteRequest
-import kr.hhp227.storygroup.shared.data.network.dto.UpdateGroupRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DiscoverGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotoResponse
-import kr.hhp227.storygroup.shared.data.network.dto.GroupPhotosPageResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.InviteResponse
-import kr.hhp227.storygroup.shared.data.network.dto.JoinGroupResponse
 import kr.hhp227.storygroup.shared.data.network.dto.JoinRequestResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MemberResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PostReportResponse
-import kr.hhp227.storygroup.shared.data.network.dto.ProcessReportRequest
 import kr.hhp227.storygroup.shared.data.paging.PagePagingConfig
 import kr.hhp227.storygroup.shared.data.paging.PagePagingSource
+import kr.hhp227.storygroup.shared.data.source.GroupRemoteDataSource
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
 import kr.hhp227.storygroup.shared.domain.model.Group
@@ -49,38 +35,32 @@ import kr.hhp227.storygroup.shared.domain.model.PostReport
 import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 
-class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
+class GroupRepositoryImpl(private val groupRemoteDataSource: GroupRemoteDataSource) : GroupRepository {
 
     override fun getMyGroupsPagingData(): Flow<PagingData<Group>> =
         Pager(PagePagingConfig) {
             PagePagingSource { page, size ->
-                client.get("/api/groups") {
-                    parameter("page", page)
-                    parameter("size", size)
-                }.body<List<GroupResponse>>().map { it.toDomain() }
+                groupRemoteDataSource.getMyGroups(page, size).map { it.toDomain() }
             }
         }.flow
             // 라운지는 홈 탭이 담당 — 웹 내 그룹 목록과 동일하게 목록에서 제외
             .map { pagingData -> pagingData.filter { !it.isLounge } }
 
     override suspend fun getMyGroups(): Result<List<Group>> =
-        runCatching { client.get("/api/groups").body<List<GroupResponse>>().map { it.toDomain() } }
+        runCatching { groupRemoteDataSource.getMyGroups().map { it.toDomain() } }
 
     override suspend fun getGroup(groupId: Long): Result<Group> =
-        runCatching { client.get("/api/groups/$groupId").body<GroupResponse>().toDomain() }
+        runCatching { groupRemoteDataSource.getGroup(groupId).toDomain() }
 
     override suspend fun getMembers(groupId: Long): Result<List<GroupMember>> =
         runCatching {
-            client.get("/api/groups/$groupId/members").body<List<MemberResponse>>().map { it.toDomain() }
+            groupRemoteDataSource.getMembers(groupId).map { it.toDomain() }
         }
 
     override fun getGroupPhotosPagingData(groupId: Long): Flow<PagingData<GroupPhoto>> =
         Pager(PagePagingConfig) {
             PagePagingSource { page, size ->
-                client.get("/api/groups/$groupId/photos") {
-                    parameter("page", page)
-                    parameter("size", size)
-                }.body<GroupPhotosPageResponse>().photos.map { it.toDomain() }
+                groupRemoteDataSource.getGroupPhotos(groupId, page, size).photos.map { it.toDomain() }
             }
         }.flow
 
@@ -90,27 +70,19 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
         image: String?,
         joinType: GroupJoinType
     ): Result<Group> = runCatching {
-        client.post("/api/groups") {
-            contentType(ContentType.Application.Json)
-            setBody(CreateGroupRequest(name = name, description = description, image = image, joinType = joinType.name))
-        }.body<GroupResponse>().toDomain()
+        groupRemoteDataSource.createGroup(name = name, description = description, image = image, joinType = joinType.name).toDomain()
     }
 
     override fun getDiscoverGroupsPagingData(query: String, sort: DiscoverSort): Flow<PagingData<DiscoverGroup>> =
         Pager(PagePagingConfig) {
             PagePagingSource { page, size ->
-                client.get("/api/groups/discover") {
-                    parameter("query", query)
-                    parameter("sort", sort.wire)
-                    parameter("page", page)
-                    parameter("size", size)
-                }.body<List<DiscoverGroupResponse>>().map { it.toDomain() }
+                groupRemoteDataSource.getDiscoverGroups(query, sort.wire, page, size).map { it.toDomain() }
             }
         }.flow
 
     override suspend fun joinGroup(groupId: Long): Result<JoinGroupResult> =
         runCatching {
-            val response = client.post("/api/groups/$groupId/join").body<JoinGroupResponse>()
+            val response = groupRemoteDataSource.joinGroup(groupId)
 
             JoinGroupResult(
                 status = JoinResult.entries.first { it.name == response.status },
@@ -120,44 +92,38 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
 
     override suspend fun cancelJoinRequest(groupId: Long): Result<Unit> =
         runCatching {
-            client.delete("/api/groups/$groupId/join")
-            Unit
+            groupRemoteDataSource.cancelJoinRequest(groupId)
         }
 
     override suspend fun getMyJoinRequestedGroups(): Result<List<DiscoverGroup>> =
         runCatching {
-            client.get("/api/groups/join-requests/mine").body<List<DiscoverGroupResponse>>().map { it.toDomain() }
+            groupRemoteDataSource.getMyJoinRequestedGroups().map { it.toDomain() }
         }
 
     override suspend fun getJoinRequests(groupId: Long): Result<List<GroupJoinRequest>> =
         runCatching {
-            client.get("/api/groups/$groupId/join-requests").body<List<JoinRequestResponse>>().map { it.toDomain() }
+            groupRemoteDataSource.getJoinRequests(groupId).map { it.toDomain() }
         }
 
     override suspend fun approveJoinRequest(groupId: Long, userId: Long): Result<Unit> =
         runCatching {
-            client.post("/api/groups/$groupId/join-requests/$userId/approve")
-            Unit
+            groupRemoteDataSource.approveJoinRequest(groupId, userId)
         }
 
     override suspend fun rejectJoinRequest(groupId: Long, userId: Long): Result<Unit> =
         runCatching {
-            client.delete("/api/groups/$groupId/join-requests/$userId")
-            Unit
+            groupRemoteDataSource.rejectJoinRequest(groupId, userId)
         }
 
     override suspend fun createInvite(groupId: Long, maxUses: Int?, expiresInDays: Int?): Result<GroupInvite> =
         runCatching {
-            client.post("/api/groups/$groupId/invites") {
-                contentType(ContentType.Application.Json)
-                setBody(CreateInviteRequest(maxUses = maxUses, expiresInDays = expiresInDays))
-            }.body<InviteResponse>().toDomain()
+            groupRemoteDataSource.createInvite(groupId, maxUses, expiresInDays).toDomain()
         }
 
     override suspend fun joinByCode(code: String): Result<Group> =
         runCatching {
             try {
-                client.post("/api/groups/join/$code").body<GroupResponse>().toDomain()
+                groupRemoteDataSource.joinByCode(code).toDomain()
             } catch (e: ClientRequestException) {
                 // 코드 오입력/만료가 일상 실패 경로 — Ktor 예외 원문 대신 서버 에러 본문의
                 // 사용자 문구(INVALID_INVITE 등)를 그대로 보여준다(웹 ApiError.message 미러)
@@ -173,45 +139,33 @@ class GroupRepositoryImpl(private val client: HttpClient) : GroupRepository {
         image: String?,
         joinType: GroupJoinType?
     ): Result<Group> = runCatching {
-        client.patch("/api/groups/$groupId") {
-            contentType(ContentType.Application.Json)
-            setBody(
-                UpdateGroupRequest(
-                    name = name,
-                    description = description,
-                    image = image,
-                    joinType = joinType?.name
-                )
-            )
-        }.body<GroupResponse>().toDomain()
+        groupRemoteDataSource.updateGroup(
+            groupId = groupId,
+            name = name,
+            description = description,
+            image = image,
+            joinType = joinType?.name
+        ).toDomain()
     }
 
     override suspend fun deleteGroup(groupId: Long): Result<Unit> =
         runCatching {
-            client.delete("/api/groups/$groupId")
-            Unit
+            groupRemoteDataSource.deleteGroup(groupId)
         }
 
     override suspend fun leaveGroup(groupId: Long): Result<Unit> =
         runCatching {
-            client.post("/api/groups/$groupId/leave")
-            Unit
+            groupRemoteDataSource.leaveGroup(groupId)
         }
 
     override suspend fun getGroupReports(groupId: Long, status: ReportStatus?): Result<List<PostReport>> =
         runCatching {
-            client.get("/api/groups/$groupId/reports") {
-                // null=전체 — 쿼리 자체를 뺀다(웹과 동일)
-                if (status != null) parameter("status", status.name)
-            }.body<List<PostReportResponse>>().map { it.toDomain() }
+            groupRemoteDataSource.getGroupReports(groupId, status?.name).map { it.toDomain() }
         }
 
     override suspend fun processGroupReport(groupId: Long, reportId: Long, status: ReportStatus): Result<PostReport> =
         runCatching {
-            client.patch("/api/groups/$groupId/reports/$reportId") {
-                contentType(ContentType.Application.Json)
-                setBody(ProcessReportRequest(status.name))
-            }.body<PostReportResponse>().toDomain()
+            groupRemoteDataSource.processGroupReport(groupId, reportId, status.name).toDomain()
         }
 }
 
