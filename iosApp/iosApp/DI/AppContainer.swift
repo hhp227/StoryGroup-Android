@@ -91,6 +91,8 @@ final class AppContainer {
     let markNotificationAsReadUseCase: MarkNotificationAsReadUseCase
     let markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase
     let observePersonalEventsUseCase: ObservePersonalEventsUseCase
+    // 인터넷 연결 배너 — AppRootView가 구독한다(composeApp App.kt 미러)
+    let observeNetworkAlertStateUseCase: ObserveNetworkAlertStateUseCase
     let getGroupChatRoomsUseCase: GetGroupChatRoomsUseCase
     let getDirectRoomsUseCase: GetDirectRoomsUseCase
     let getChatMessagesUseCase: GetChatMessagesUseCase
@@ -139,6 +141,7 @@ final class AppContainer {
         // 이미지 투명 압축(§4) — 업로드 경로 전 표면(게시글·채팅·프로필·커버)이 자동으로 거친다
         let mediaRepository = MediaRepositoryImpl(client: client, imageCompressor: IosImageCompressor())
         // Kotlin 기본 인자(baseUrl)는 ObjC로 내보내지지 않아 명시 전달(createApiClient와 동일)
+        let networkStatusRepository = NetworkStatusRepositoryImpl(networkStatusDataSource: IosNetworkStatusDataSource())
         let notificationRepository = NotificationRepositoryImpl(
             client: client,
             tokenStorage: tokenStorage,
@@ -212,6 +215,7 @@ final class AppContainer {
         markNotificationAsReadUseCase = MarkNotificationAsReadUseCase(notificationRepository: notificationRepository)
         markAllNotificationsAsReadUseCase = MarkAllNotificationsAsReadUseCase(notificationRepository: notificationRepository)
         observePersonalEventsUseCase = ObservePersonalEventsUseCase(notificationRepository: notificationRepository)
+        observeNetworkAlertStateUseCase = ObserveNetworkAlertStateUseCase(networkStatusRepository: networkStatusRepository)
         getGroupChatRoomsUseCase = GetGroupChatRoomsUseCase(chatRepository: chatRepository)
         getDirectRoomsUseCase = GetDirectRoomsUseCase(chatRepository: chatRepository)
         getChatMessagesUseCase = GetChatMessagesUseCase(chatRepository: chatRepository)

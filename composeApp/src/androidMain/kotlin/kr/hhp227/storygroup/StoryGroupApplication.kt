@@ -2,6 +2,7 @@ package kr.hhp227.storygroup
 
 import android.app.Application
 import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.data.source.AndroidNetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.storage.SharedPreferencesTokenStorage
 import kr.hhp227.storygroup.shared.data.storage.SharedPreferencesKeyValueStorage
 import kr.hhp227.storygroup.ui.util.AndroidImageCompressor
@@ -16,7 +17,8 @@ class StoryGroupApplication : Application() {
         container = AppContainer(
             tokenStorage = SharedPreferencesTokenStorage(this),
             settingsStorage = SharedPreferencesKeyValueStorage(this),
-            imageCompressor = AndroidImageCompressor(this)
+            imageCompressor = AndroidImageCompressor(this),
+            networkStatusDataSource = AndroidNetworkStatusDataSource(this)
         )
     }
 }

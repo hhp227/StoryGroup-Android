@@ -33,6 +33,8 @@ import kr.hhp227.storygroup.di.AppContainer
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.di.LocalSessionViewModelStoreOwner
 import kr.hhp227.storygroup.di.sessionViewModel
+import kr.hhp227.storygroup.ui.components.NetworkStatusBanner
+import kr.hhp227.storygroup.ui.components.NetworkStatusViewModel
 import kr.hhp227.storygroup.ui.navigation.AppNavHost
 import kr.hhp227.storygroup.ui.navigation.MainDestination
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
@@ -70,13 +72,25 @@ fun App(container: AppContainer) {
             }
             val loginUiState by loginViewModel.uiState.collectAsState()
 
-            if (loginUiState.isLoggedIn) {
-                SessionContent(
-                    themeState = themeState,
-                    onLogout = { loginViewModel.onAction(LoginViewModel.Action.Logout) }
+            // 네트워크 배너 — 로그인 화면 포함 전역 오버레이(ConCafe App.kt 미러)라 세션 아닌 앱 루트 VM
+            val networkStatusViewModel = viewModel {
+                NetworkStatusViewModel(container.observeNetworkAlertStateUseCase)
+            }
+            val networkUiState by networkStatusViewModel.uiState.collectAsState()
+
+            Box(Modifier.fillMaxSize()) {
+                if (loginUiState.isLoggedIn) {
+                    SessionContent(
+                        themeState = themeState,
+                        onLogout = { loginViewModel.onAction(LoginViewModel.Action.Logout) }
+                    )
+                } else {
+                    AuthFlow()
+                }
+                NetworkStatusBanner(
+                    networkAlertState = networkUiState.networkAlertState,
+                    modifier = Modifier.align(Alignment.TopCenter)
                 )
-            } else {
-                AuthFlow()
             }
         }
     }

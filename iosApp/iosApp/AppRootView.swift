@@ -8,6 +8,8 @@ struct AppRootView: View {
 
     @StateObject private var loginViewModel: LoginViewModel
 
+    @StateObject private var networkStatusViewModel: NetworkStatusViewModel
+
     @Environment(\.colorScheme) private var systemScheme
 
     private var isDark: Bool {
@@ -21,13 +23,28 @@ struct AppRootView: View {
     private var colors: SGColors { SGColors.palette(mood: theme.mood, dark: isDark) }
 
     var body: some View {
-        Group {
-            if loginViewModel.uiState.isLoggedIn {
-                MainShellView(container: container, theme: theme, onLogout: { loginViewModel.onAction(.logout) })
-            } else {
-                AuthFlowView(container: container, loginViewModel: loginViewModel)
+        // 네트워크 배너 — 로그인 화면 포함 전역 오버레이(composeApp App.kt Box 미러)
+        ZStack(alignment: .top) {
+            Group {
+                if loginViewModel.uiState.isLoggedIn {
+                    MainShellView(container: container, theme: theme, onLogout: { loginViewModel.onAction(.logout) })
+                } else {
+                    AuthFlowView(container: container, loginViewModel: loginViewModel)
+                }
+            }
+            if networkStatusViewModel.uiState.networkAlertState.isVisible {
+                NetworkStatusBannerView(
+                    message: networkStatusViewModel.uiState.networkAlertState.message,
+                    isConnected: networkStatusViewModel.uiState.networkAlertState.isConnected
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(1)
             }
         }
+        .animation(
+            .easeInOut(duration: 0.2),
+            value: networkStatusViewModel.uiState.networkAlertState.isVisible
+        )
         // Compose CompositionLocalProvider(LocalSgColors provides sg) 미러 — 하위 전체에 테마 전파
         .environment(\.sgColors, colors)
         .preferredColorScheme(theme.nightMode == .system ? nil : (isDark ? .dark : .light))
@@ -39,6 +56,9 @@ struct AppRootView: View {
             isLoggedInUseCase: container.isLoggedInUseCase,
             loginUseCase: container.loginUseCase,
             logoutUseCase: container.logoutUseCase
+        ))
+        _networkStatusViewModel = StateObject(wrappedValue: NetworkStatusViewModel(
+            observeNetworkAlertStateUseCase: container.observeNetworkAlertStateUseCase
         ))
     }
 }
