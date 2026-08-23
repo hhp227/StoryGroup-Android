@@ -58,6 +58,8 @@
 		A1010038AABBCCDDEEFF0038 /* VideoPoster.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */; };
 		A1010056AABBCCDDEEFF0056 /* MediaCompressionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011056AABBCCDDEEFF0056 /* MediaCompressionQueue.swift */; };
 		A1010057AABBCCDDEEFF0057 /* IosImageCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011057AABBCCDDEEFF0057 /* IosImageCompressor.swift */; };
+		A1010058AABBCCDDEEFF0058 /* NetworkStatusViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011058AABBCCDDEEFF0058 /* NetworkStatusViewModel.swift */; };
+		A1010059AABBCCDDEEFF0059 /* NetworkStatusBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011059AABBCCDDEEFF0059 /* NetworkStatusBannerView.swift */; };
 		A1010039AABBCCDDEEFF0039 /* GroupAlbumTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */; };
 		A1010025AABBCCDDEEFF0025 /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */; };
 		A1010026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */; };
@@ -142,6 +144,8 @@
 		A1011038AABBCCDDEEFF0038 /* VideoPoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPoster.swift; sourceTree = "<group>"; };
 		A1011056AABBCCDDEEFF0056 /* MediaCompressionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCompressionQueue.swift; sourceTree = "<group>"; };
 		A1011057AABBCCDDEEFF0057 /* IosImageCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IosImageCompressor.swift; sourceTree = "<group>"; };
+		A1011058AABBCCDDEEFF0058 /* NetworkStatusViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkStatusViewModel.swift; sourceTree = "<group>"; };
+		A1011059AABBCCDDEEFF0059 /* NetworkStatusBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkStatusBannerView.swift; sourceTree = "<group>"; };
 		A1011039AABBCCDDEEFF0039 /* GroupAlbumTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupAlbumTab.swift; sourceTree = "<group>"; };
 		A1011025AABBCCDDEEFF0025 /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
 		A1011026AABBCCDDEEFF0026 /* AccountSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsViewModel.swift; sourceTree = "<group>"; };
@@ -245,6 +249,8 @@
 			isa = PBXGroup;
 			children = (
 				A101100CAABBCCDDEEFF000C /* SGComponents.swift */,
+				A1011058AABBCCDDEEFF0058 /* NetworkStatusViewModel.swift */,
+				A1011059AABBCCDDEEFF0059 /* NetworkStatusBannerView.swift */,
 				A1011037AABBCCDDEEFF0037 /* SGVideoAttachment.swift */,
 			);
 			path = Components;
@@ -597,6 +603,8 @@
 				A1010038AABBCCDDEEFF0038 /* VideoPoster.swift in Sources */,
 				A1010056AABBCCDDEEFF0056 /* MediaCompressionQueue.swift in Sources */,
 				A1010057AABBCCDDEEFF0057 /* IosImageCompressor.swift in Sources */,
+				A1010058AABBCCDDEEFF0058 /* NetworkStatusViewModel.swift in Sources */,
+				A1010059AABBCCDDEEFF0059 /* NetworkStatusBannerView.swift in Sources */,
 				A101001CAABBCCDDEEFF001C /* MviViewModel.swift in Sources */,
 				A1010006AABBCCDDEEFF0006 /* SGTheme.swift in Sources */,
 				A101000BAABBCCDDEEFF000B /* SGComponents.swift in Sources */,

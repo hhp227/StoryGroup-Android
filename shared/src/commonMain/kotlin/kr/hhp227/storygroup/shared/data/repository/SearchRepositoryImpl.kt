@@ -1,14 +1,11 @@
 package kr.hhp227.storygroup.shared.data.repository
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
 import kr.hhp227.storygroup.shared.data.network.dto.FileSearchResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupSearchResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MessageSearchResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PostSearchResponse
 import kr.hhp227.storygroup.shared.data.network.dto.UnifiedSearchResponse
+import kr.hhp227.storygroup.shared.data.source.SearchRemoteDataSource
 import kr.hhp227.storygroup.shared.domain.model.FileSearchHit
 import kr.hhp227.storygroup.shared.domain.model.GroupSearchHit
 import kr.hhp227.storygroup.shared.domain.model.MessageSearchHit
@@ -17,12 +14,10 @@ import kr.hhp227.storygroup.shared.domain.model.SearchResults
 import kr.hhp227.storygroup.shared.domain.model.UserSearchResult
 import kr.hhp227.storygroup.shared.domain.repository.SearchRepository
 
-class SearchRepositoryImpl(private val client: HttpClient) : SearchRepository {
+class SearchRepositoryImpl(private val searchRemoteDataSource: SearchRemoteDataSource) : SearchRepository {
     override suspend fun search(query: String): Result<SearchResults> =
         runCatching {
-            client.get("/api/search") {
-                parameter("query", query)
-            }.body<UnifiedSearchResponse>().toDomain()
+            searchRemoteDataSource.search(query).toDomain()
         }
 }
 

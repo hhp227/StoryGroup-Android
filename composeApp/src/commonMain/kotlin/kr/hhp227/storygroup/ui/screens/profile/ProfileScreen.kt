@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.di.sessionViewModel
-import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
+import kr.hhp227.storygroup.shared.config.AppLinks
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
@@ -40,9 +40,9 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
 // 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 섹션 미러)
-private const val TERMS_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/terms"
+private const val TERMS_URL = AppLinks.TERMS_URL
 
-private const val PRIVACY_POLICY_URL = "${StoryGroupApi.DEFAULT_BASE_URL}/privacy"
+private const val PRIVACY_POLICY_URL = AppLinks.PRIVACY_URL
 
 /** 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴(웹 /settings 허브 대응). VM은 드로어 헤더와 공유하는 세션 스코프 */
 @Composable

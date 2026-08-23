@@ -17,14 +17,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kr.hhp227.storygroup.shared.config.AppLinks
 import kr.hhp227.storygroup.shared.data.network.dto.RefreshTokenRequest
 import kr.hhp227.storygroup.shared.data.network.dto.TokenResponse
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.model.AuthTokens
-
-object StoryGroupApi {
-    const val DEFAULT_BASE_URL = "https://storygroup-k4cgcgz2ya-du.a.run.app"
-}
 
 /**
  * Bearer 토큰 자동 첨부 + 401 시 /api/auth/refresh로 재발급하는 공용 HttpClient.
@@ -32,7 +29,7 @@ object StoryGroupApi {
  */
 fun createApiClient(
     tokenStorage: TokenStorage,
-    baseUrl: String = StoryGroupApi.DEFAULT_BASE_URL
+    baseUrl: String = AppLinks.BASE_URL
 ): HttpClient = HttpClient {
     expectSuccess = true
 

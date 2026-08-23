@@ -1,39 +1,24 @@
 package kr.hhp227.storygroup.shared.data.repository
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import kr.hhp227.storygroup.shared.data.network.dto.CreateEventRequest
 import kr.hhp227.storygroup.shared.data.network.dto.EventAttendeeResponse
-import kr.hhp227.storygroup.shared.data.network.dto.EventDetailResponse
 import kr.hhp227.storygroup.shared.data.network.dto.EventResponse
-import kr.hhp227.storygroup.shared.data.network.dto.RsvpRequest
+import kr.hhp227.storygroup.shared.data.source.EventRemoteDataSource
 import kr.hhp227.storygroup.shared.domain.model.EventAttendee
 import kr.hhp227.storygroup.shared.domain.model.GroupEvent
 import kr.hhp227.storygroup.shared.domain.model.GroupEventDetail
 import kr.hhp227.storygroup.shared.domain.model.RsvpStatus
 import kr.hhp227.storygroup.shared.domain.repository.EventRepository
 
-class EventRepositoryImpl(private val client: HttpClient) : EventRepository {
+class EventRepositoryImpl(private val eventRemoteDataSource: EventRemoteDataSource) : EventRepository {
 
     override suspend fun listEvents(groupId: Long, fromIso: String, toIso: String): Result<List<GroupEvent>> =
         runCatching {
-            client.get("/api/groups/$groupId/events") {
-                parameter("from", fromIso)
-                parameter("to", toIso)
-            }.body<List<EventResponse>>().map { it.toDomain() }
+            eventRemoteDataSource.listEvents(groupId, fromIso, toIso).map { it.toDomain() }
         }
 
     override suspend fun getEvent(groupId: Long, eventId: Long): Result<GroupEventDetail> =
         runCatching {
-            val response = client.get("/api/groups/$groupId/events/$eventId").body<EventDetailResponse>()
+            val response = eventRemoteDataSource.getEvent(groupId, eventId)
 
             GroupEventDetail(
                 event = response.event.toDomain(),
@@ -49,37 +34,29 @@ class EventRepositoryImpl(private val client: HttpClient) : EventRepository {
         startsAtIso: String,
         endsAtIso: String?
     ): Result<GroupEvent> = runCatching {
-        client.post("/api/groups/$groupId/events") {
-            contentType(ContentType.Application.Json)
-            setBody(
-                CreateEventRequest(
-                    title = title,
-                    description = description,
-                    location = location,
-                    startsAt = startsAtIso,
-                    endsAt = endsAtIso
-                )
-            )
-        }.body<EventResponse>().toDomain()
+        eventRemoteDataSource.createEvent(
+            groupId = groupId,
+            title = title,
+            description = description,
+            location = location,
+            startsAtIso = startsAtIso,
+            endsAtIso = endsAtIso
+        ).toDomain()
     }
 
     override suspend fun deleteEvent(groupId: Long, eventId: Long): Result<Unit> =
         runCatching {
-            client.delete("/api/groups/$groupId/events/$eventId")
-            Unit
+            eventRemoteDataSource.deleteEvent(groupId, eventId)
         }
 
     override suspend fun rsvp(groupId: Long, eventId: Long, status: RsvpStatus): Result<GroupEvent> =
         runCatching {
-            client.put("/api/groups/$groupId/events/$eventId/rsvp") {
-                contentType(ContentType.Application.Json)
-                setBody(RsvpRequest(status = status.name))
-            }.body<EventResponse>().toDomain()
+            eventRemoteDataSource.rsvp(groupId, eventId, status.name).toDomain()
         }
 
     override suspend fun cancelRsvp(groupId: Long, eventId: Long): Result<GroupEvent> =
         runCatching {
-            client.delete("/api/groups/$groupId/events/$eventId/rsvp").body<EventResponse>().toDomain()
+            eventRemoteDataSource.cancelRsvp(groupId, eventId).toDomain()
         }
 }
 

@@ -11,6 +11,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
 import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.data.source.JvmNetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.storage.FileTokenStorage
 import kr.hhp227.storygroup.shared.data.storage.FileKeyValueStorage
 import kr.hhp227.storygroup.ui.DesktopLaunchScreen
@@ -21,7 +22,8 @@ fun main() {
     val container = AppContainer(
         tokenStorage = FileTokenStorage(),
         settingsStorage = FileKeyValueStorage(),
-        imageCompressor = JvmImageCompressor()
+        imageCompressor = JvmImageCompressor(),
+        networkStatusDataSource = JvmNetworkStatusDataSource()
     )
 
     application {

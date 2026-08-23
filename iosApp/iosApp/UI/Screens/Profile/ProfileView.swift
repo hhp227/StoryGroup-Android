@@ -5,9 +5,9 @@ import Shared
 /// 프로필 — 내 정보(GET /api/users/me) 헤더 + 메뉴(웹 /settings 허브 대응) — Compose ProfileScreen 미러
 struct ProfileView: View {
     /// 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 섹션 미러)
-    private static let termsUrl = URL(string: "\(StoryGroupApi.shared.DEFAULT_BASE_URL)/terms")!
+    private static let termsUrl = URL(string: AppLinks.shared.TERMS_URL)!
 
-    private static let privacyPolicyUrl = URL(string: "\(StoryGroupApi.shared.DEFAULT_BASE_URL)/privacy")!
+    private static let privacyPolicyUrl = URL(string: AppLinks.shared.PRIVACY_URL)!
 
     @Environment(\.sgColors) private var colors
 

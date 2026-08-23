@@ -1,31 +1,17 @@
 package kr.hhp227.storygroup.shared.data.repository
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.serialization.json.Json
 import kr.hhp227.storygroup.shared.data.network.StompSessionEvent
-import kr.hhp227.storygroup.shared.data.network.StompSocket
-import kr.hhp227.storygroup.shared.data.network.StoryGroupApi
-import kr.hhp227.storygroup.shared.data.network.dto.ChatRoomResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChatSocketEventResponse
-import kr.hhp227.storygroup.shared.data.network.dto.CreateMessageRequest
 import kr.hhp227.storygroup.shared.data.network.dto.DirectRoomResponse
 import kr.hhp227.storygroup.shared.data.network.dto.GroupChatRoomResponse
-import kr.hhp227.storygroup.shared.data.network.dto.MarkChatReadRequest
 import kr.hhp227.storygroup.shared.data.network.dto.MessageAttachmentPayload
 import kr.hhp227.storygroup.shared.data.network.dto.MessageAttachmentResponse
 import kr.hhp227.storygroup.shared.data.network.dto.MessageResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ReadPositionResponse
-import kr.hhp227.storygroup.shared.data.storage.TokenStorage
+import kr.hhp227.storygroup.shared.data.source.ChatRemoteDataSource
 import kr.hhp227.storygroup.shared.domain.model.ChatAttachment
 import kr.hhp227.storygroup.shared.domain.model.ChatEvent
 import kr.hhp227.storygroup.shared.domain.model.ChatEventType
@@ -36,12 +22,8 @@ import kr.hhp227.storygroup.shared.domain.model.GroupChatRoom
 import kr.hhp227.storygroup.shared.domain.repository.ChatRepository
 
 class ChatRepositoryImpl(
-    private val client: HttpClient,
-    tokenStorage: TokenStorage,
-    baseUrl: String = StoryGroupApi.DEFAULT_BASE_URL
+    private val chatRemoteDataSource: ChatRemoteDataSource
 ) : ChatRepository {
-
-    private val socket = StompSocket(client, baseUrl, tokenStorage)
 
     // STOMP 프레임 본문 디코드용 — ApiClient의 ContentNegotiation 설정과 동일 정책
     private val json = Json {
@@ -51,12 +33,12 @@ class ChatRepositoryImpl(
 
     override suspend fun getGroupChatRooms(): Result<List<GroupChatRoom>> =
         runCatching {
-            client.get("/api/chat-rooms").body<List<GroupChatRoomResponse>>().map { it.toDomain() }
+            chatRemoteDataSource.getGroupChatRooms().map { it.toDomain() }
         }
 
     override suspend fun getDirectRooms(): Result<List<DirectRoom>> =
         runCatching {
-            client.get("/api/dm").body<List<DirectRoomResponse>>().map { it.toDomain() }
+            chatRemoteDataSource.getDirectRooms().map { it.toDomain() }
         }
 
     override suspend fun getMessages(
@@ -65,10 +47,7 @@ class ChatRepositoryImpl(
         page: Int,
         size: Int
     ): Result<List<ChatMessage>> = runCatching {
-        client.get("${roomPath(groupId, chatRoomId)}/messages") {
-            parameter("page", page)
-            parameter("size", size)
-        }.body<List<MessageResponse>>().map { it.toDomain() }
+        chatRemoteDataSource.getMessages(groupId, chatRoomId, page, size).map { it.toDomain() }
     }
 
     override suspend fun sendMessage(
@@ -77,10 +56,7 @@ class ChatRepositoryImpl(
         text: String,
         attachment: ChatAttachment?
     ): Result<ChatMessage> = runCatching {
-        client.post("${roomPath(groupId, chatRoomId)}/messages") {
-            contentType(ContentType.Application.Json)
-            setBody(CreateMessageRequest(text, attachment?.toPayload()))
-        }.body<MessageResponse>().toDomain()
+        chatRemoteDataSource.sendMessage(groupId, chatRoomId, text, attachment?.toPayload()).toDomain()
     }
 
     override suspend fun markRead(
@@ -88,38 +64,33 @@ class ChatRepositoryImpl(
         chatRoomId: Long,
         lastReadMessageId: Long
     ): Result<Unit> = runCatching {
-        client.put("${roomPath(groupId, chatRoomId)}/read") {
-            contentType(ContentType.Application.Json)
-            setBody(MarkChatReadRequest(lastReadMessageId))
-        }
-        Unit
+        chatRemoteDataSource.markRead(groupId, chatRoomId, lastReadMessageId)
     }
 
     override suspend fun getReadPositions(
         groupId: Long?,
         chatRoomId: Long
     ): Result<List<ChatReadPosition>> = runCatching {
-        client.get("${roomPath(groupId, chatRoomId)}/reads")
-            .body<List<ReadPositionResponse>>().map { it.toDomain() }
+        chatRemoteDataSource.getReadPositions(groupId, chatRoomId).map { it.toDomain() }
     }
 
     override suspend fun sendTyping(chatRoomId: Long) {
-        socket.trySend("/app/chat-rooms/$chatRoomId/typing")
+        chatRemoteDataSource.sendTyping(chatRoomId)
     }
 
     override suspend fun openDirectRoom(otherUserId: Long): Result<Long> =
         runCatching {
-            client.post("/api/dm/$otherUserId").body<ChatRoomResponse>().id
+            chatRemoteDataSource.openDirectRoom(otherUserId).id
         }
 
     override suspend fun getGroupDefaultChatRoom(groupId: Long): Result<Long?> =
         runCatching {
             // 서버가 생성순으로 돌려준다 — 첫 방이 그룹 생성 시 자동으로 만들어진 기본 방
-            client.get("/api/groups/$groupId/chat-rooms").body<List<ChatRoomResponse>>().firstOrNull()?.id
+            chatRemoteDataSource.getGroupDefaultChatRoom(groupId).firstOrNull()?.id
         }
 
     override fun observeRoomEvents(chatRoomId: Long): Flow<ChatEvent> =
-        socket.subscribe("/topic/chat-rooms/$chatRoomId").mapNotNull { event ->
+        chatRemoteDataSource.subscribeRoom(chatRoomId).mapNotNull { event ->
             when (event) {
                 StompSessionEvent.Connected -> ChatEvent(ChatEventType.CONNECTED, chatRoomId)
                 StompSessionEvent.Disconnected -> ChatEvent(ChatEventType.DISCONNECTED, chatRoomId)
@@ -128,10 +99,6 @@ class ChatRepositoryImpl(
                         .getOrNull()?.toDomain()
             }
         }
-
-    /** 그룹 방은 그룹 경로, DM은 /api/dm — 두 계열은 메시지/읽음 하위 경로 형태가 동일하다 */
-    private fun roomPath(groupId: Long?, chatRoomId: Long): String =
-        if (groupId != null) "/api/groups/$groupId/chat-rooms/$chatRoomId" else "/api/dm/$chatRoomId"
 }
 
 private fun GroupChatRoomResponse.toDomain() = GroupChatRoom(

@@ -19,7 +19,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
+import kr.hhp227.storygroup.shared.domain.storage.KeyValueStorage
 
 enum class Mood { WARM, VIBRANT }
 

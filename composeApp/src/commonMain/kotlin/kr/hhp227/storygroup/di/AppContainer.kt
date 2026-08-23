@@ -7,13 +7,26 @@ import kr.hhp227.storygroup.shared.data.repository.EventRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.FriendRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.GroupRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.NetworkStatusRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.SearchRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
+import kr.hhp227.storygroup.shared.data.source.AuthRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.ChatRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.EventRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.FriendRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.GroupRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.MediaRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.NetworkStatusDataSource
+import kr.hhp227.storygroup.shared.data.source.NotificationRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.PostRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.RtcRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.SearchRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.UserRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.storage.InMemoryKeyValueStorage
-import kr.hhp227.storygroup.shared.data.storage.KeyValueStorage
+import kr.hhp227.storygroup.shared.domain.storage.KeyValueStorage
 import kr.hhp227.storygroup.shared.data.storage.TokenStorage
 import kr.hhp227.storygroup.shared.domain.media.ImageCompressor
 import kr.hhp227.storygroup.shared.domain.repository.AuthRepository
@@ -22,6 +35,7 @@ import kr.hhp227.storygroup.shared.domain.repository.EventRepository
 import kr.hhp227.storygroup.shared.domain.repository.FriendRepository
 import kr.hhp227.storygroup.shared.domain.repository.GroupRepository
 import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
+import kr.hhp227.storygroup.shared.domain.repository.NetworkStatusRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
@@ -84,6 +98,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseC
 import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveChatRoomEventsUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.ObserveNetworkAlertStateUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostDeletionsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
@@ -121,20 +136,24 @@ class AppContainer(
     tokenStorage: TokenStorage,
     val settingsStorage: KeyValueStorage = InMemoryKeyValueStorage(),
     // 이미지 투명 압축 실행기(§4) — Android/Desktop 진입점이 주입, 프리뷰는 null(무압축)
-    imageCompressor: ImageCompressor? = null
+    imageCompressor: ImageCompressor? = null,
+    // 인터넷 연결 감지 — 플랫폼 진입점이 주입, 프리뷰는 null(항상 온라인 취급 — 배너 숨김)
+    networkStatusDataSource: NetworkStatusDataSource? = null
 ) {
     private val apiClient = createApiClient(tokenStorage)
-    private val authRepository: AuthRepository = AuthRepositoryImpl(apiClient, tokenStorage)
-    private val userRepository: UserRepository = UserRepositoryImpl(apiClient)
-    private val groupRepository: GroupRepository = GroupRepositoryImpl(apiClient)
-    private val postRepository: PostRepository = PostRepositoryImpl(apiClient, groupRepository)
-    private val mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient, imageCompressor)
-    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(apiClient, tokenStorage)
-    private val chatRepository: ChatRepository = ChatRepositoryImpl(apiClient, tokenStorage)
-    private val eventRepository: EventRepository = EventRepositoryImpl(apiClient)
-    private val friendRepository: FriendRepository = FriendRepositoryImpl(apiClient)
-    private val rtcRepository: RtcRepository = RtcRepositoryImpl(apiClient, tokenStorage)
-    private val searchRepository: SearchRepository = SearchRepositoryImpl(apiClient)
+    private val authRepository: AuthRepository = AuthRepositoryImpl(AuthRemoteDataSourceImpl(apiClient), tokenStorage)
+    private val userRepository: UserRepository = UserRepositoryImpl(UserRemoteDataSourceImpl(apiClient))
+    private val groupRemoteDataSource = GroupRemoteDataSourceImpl(apiClient)
+    private val groupRepository: GroupRepository = GroupRepositoryImpl(groupRemoteDataSource)
+    private val postRepository: PostRepository = PostRepositoryImpl(PostRemoteDataSourceImpl(apiClient), groupRemoteDataSource)
+    private val mediaRepository: MediaRepository = MediaRepositoryImpl(MediaRemoteDataSourceImpl(apiClient), imageCompressor)
+    private val notificationRepository: NotificationRepository = NotificationRepositoryImpl(NotificationRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val chatRepository: ChatRepository = ChatRepositoryImpl(ChatRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val eventRepository: EventRepository = EventRepositoryImpl(EventRemoteDataSourceImpl(apiClient))
+    private val friendRepository: FriendRepository = FriendRepositoryImpl(FriendRemoteDataSourceImpl(apiClient))
+    private val rtcRepository: RtcRepository = RtcRepositoryImpl(RtcRemoteDataSourceImpl(apiClient, tokenStorage))
+    private val searchRepository: SearchRepository = SearchRepositoryImpl(SearchRemoteDataSourceImpl(apiClient))
+    private val networkStatusRepository: NetworkStatusRepository = NetworkStatusRepositoryImpl(networkStatusDataSource)
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -232,4 +251,7 @@ class AppContainer(
     val searchUsersUseCase = SearchUsersUseCase(friendRepository)
     // 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
     val searchUseCase = SearchUseCase(searchRepository)
+
+    // 인터넷 연결 배너 — 앱 루트(App.kt)가 구독한다. iosApp AppContainer.swift 미러
+    val observeNetworkAlertStateUseCase = ObserveNetworkAlertStateUseCase(networkStatusRepository)
 }
