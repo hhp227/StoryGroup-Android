@@ -26,6 +26,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,11 +51,9 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kr.hhp227.storygroup.di.sessionViewModel
-import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.ui.components.SgBellAction
-import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
@@ -78,7 +77,7 @@ fun GroupsScreen(
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     viewModel: GroupsViewModel = sessionViewModel {
-        GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
+        GroupsViewModel(it.getMyGroupsPagingDataUseCase)
     }
 ) {
     GroupsContent(
@@ -87,6 +86,7 @@ fun GroupsScreen(
         onOpenNotifications = { onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS)) },
         onOpenCreateGroup = { onNavigationAction(NavigationAction.NavigateToCreateGroup) },
         onOpenDiscoverGroups = { onNavigationAction(NavigationAction.NavigateToDiscoverGroups) },
+        onOpenPendingGroups = { onNavigationAction(NavigationAction.NavigateToPendingGroups) },
         // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
         refreshRequested = NavResult.GroupsChanged in pendingResults,
         onRefreshHandled = { onNavigationAction(NavigationAction.ConsumeResult(NavResult.GroupsChanged)) },
@@ -102,6 +102,7 @@ private fun GroupsContent(
     onOpenNotifications: () -> Unit,
     onOpenCreateGroup: () -> Unit,
     onOpenDiscoverGroups: () -> Unit,
+    onOpenPendingGroups: () -> Unit,
     refreshRequested: Boolean,
     onRefreshHandled: () -> Unit,
     modifier: Modifier = Modifier,
@@ -112,8 +113,6 @@ private fun GroupsContent(
         viewModel.uiState.map { it.pagingData }.distinctUntilChanged()
     }
     val lazyPagingItems = pagingDataFlow.collectAsLazyPagingItems()
-    // 가입 신청중 섹션 등 페이징 외 상태 — 페이징 스트림(collectAsLazyPagingItems)과 별도로 구독한다
-    val uiState by viewModel.uiState.collectAsState()
     val sg = SgTheme.colors
     // 로딩/에러/빈 상태는 Paging3 LoadState로 그린다 — 다음 페이지 트리거는 prefetchDistance가 담당
     val refreshState = lazyPagingItems.loadState.refresh
@@ -148,8 +147,12 @@ private fun GroupsContent(
                 )
             }
         )
-        // 찾기/만들기 진입 스트립 — 상단바 아래 고정(레거시 GroupFragment 상단 BottomNavigationView 미러)
-        GroupActionsStrip(onOpenCreateGroup = onOpenCreateGroup, onOpenDiscoverGroups = onOpenDiscoverGroups)
+        // 찾기/신청중/만들기 진입 스트립 — 상단바 아래 고정(레거시 GroupFragment 상단 BottomNavigationView 미러)
+        GroupActionsStrip(
+            onOpenCreateGroup = onOpenCreateGroup,
+            onOpenDiscoverGroups = onOpenDiscoverGroups,
+            onOpenPendingGroups = onOpenPendingGroups
+        )
         // 당겨서 새로고침 — 그룹 생성/가입 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
         // 스피너는 데이터가 이미 있는 갱신에만 돈다 — 첫 로드는 목록 중앙 스피너가 담당(홈과 동일)
         SgPullRefreshBox(
@@ -166,17 +169,6 @@ private fun GroupsContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(iosApp pendingSection 미러)
-                if (uiState.pendingGroups.isNotEmpty()) {
-                    item(key = "pending-groups", span = { GridItemSpan(maxLineSpan) }) {
-                        PendingGroupsSection(
-                            groups = uiState.pendingGroups,
-                            cancelingGroupId = uiState.cancelingGroupId,
-                            error = uiState.pendingError,
-                            onCancel = { viewModel.onAction(GroupsViewModel.Action.CancelRequest(it)) }
-                        )
-                    }
-                }
                 val appendState = lazyPagingItems.loadState.append
 
                 when {
@@ -239,9 +231,14 @@ private fun GroupsContent(
     }
 }
 
-/** 찾기/만들기 진입 스트립 — linen 풀폭 바에 세로 헤어라인으로 균등 분할, 순서는 레거시 미러(그룹찾기 → 그룹 만들기) */
+/** 찾기/신청중/만들기 진입 스트립 — linen 풀폭 바에 세로 헤어라인으로 균등 분할, 순서는 레거시 미러(그룹찾기 → 가입신청중 그룹 → 그룹 만들기) */
 @Composable
-private fun GroupActionsStrip(onOpenCreateGroup: () -> Unit, onOpenDiscoverGroups: () -> Unit, modifier: Modifier = Modifier) {
+private fun GroupActionsStrip(
+    onOpenCreateGroup: () -> Unit,
+    onOpenDiscoverGroups: () -> Unit,
+    onOpenPendingGroups: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val sg = SgTheme.colors
 
     Column(modifier.fillMaxWidth().background(sg.linen)) {
@@ -250,6 +247,13 @@ private fun GroupActionsStrip(onOpenCreateGroup: () -> Unit, onOpenDiscoverGroup
                 icon = Icons.Default.Search,
                 label = "그룹 찾기",
                 onClick = onOpenDiscoverGroups,
+                modifier = Modifier.weight(1f)
+            )
+            Box(Modifier.width(1.dp).fillMaxHeight().background(sg.stoneBorder))
+            GroupActionSegment(
+                icon = Icons.Default.People,
+                label = "가입 신청중",
+                onClick = onOpenPendingGroups,
                 modifier = Modifier.weight(1f)
             )
             Box(Modifier.width(1.dp).fillMaxHeight().background(sg.stoneBorder))
@@ -281,109 +285,6 @@ private fun GroupActionSegment(
     ) {
         Icon(icon, contentDescription = null, tint = sg.accent, modifier = Modifier.size(24.dp))
         Text(label, style = SgTheme.typography.titleSmall, color = sg.ink, fontWeight = FontWeight.Bold, maxLines = 1)
-    }
-}
-
-/** 가입 신청중(PENDING) 그룹 섹션 — linen 카드에 건수 칩+승인 대기 목록+신청 취소. 비어 있으면 화면이 섹션을 숨긴다 */
-@Composable
-private fun PendingGroupsSection(
-    groups: List<DiscoverGroup>,
-    cancelingGroupId: Long?,
-    error: String?,
-    onCancel: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-
-    SgCard(modifier = modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("가입 신청중", style = SgTheme.typography.titleSmall, color = sg.ink, fontWeight = FontWeight.Bold)
-                Text(
-                    "${groups.size}",
-                    style = SgTheme.typography.labelSmall,
-                    color = sg.accent2,
-                    modifier = Modifier
-                        .background(sg.accent2Soft, SgTheme.shapes.button)
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
-                )
-            }
-            if (error != null) {
-                Text(error, style = SgTheme.typography.bodySmall, color = sg.rust)
-            }
-            groups.forEach { group ->
-                PendingGroupRow(
-                    group = group,
-                    isCanceling = cancelingGroupId == group.id,
-                    cancelEnabled = cancelingGroupId == null,
-                    onCancel = { onCancel(group.id) }
-                )
-            }
-        }
-    }
-}
-
-/** 신청중 그룹 한 줄 — 커버/이름/멤버·가입방식 + 신청 취소(동시에 하나만 처리). 상태는 섹션 헤더가 말하므로 행 배지는 없다 */
-@Composable
-private fun PendingGroupRow(
-    group: DiscoverGroup,
-    isCanceling: Boolean,
-    cancelEnabled: Boolean,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val sg = SgTheme.colors
-
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(SgTheme.shapes.button)
-                .let { if (group.image == null) it.background(groupCoverBrush(group.id, sg)) else it },
-            contentAlignment = Alignment.Center
-        ) {
-            if (group.image != null) {
-                AsyncImage(
-                    model = group.image,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Text(group.name.take(1), style = SgTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                group.name,
-                style = SgTheme.typography.titleSmall,
-                color = sg.ink,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            // 그룹 찾기 목록 행과 동일한 요약 정보 미러(DiscoverGroupsScreen)
-            Text(
-                "멤버 ${group.memberCount}명 · ${joinTypeLabel(group.joinType)}",
-                style = SgTheme.typography.bodySmall,
-                color = sg.inkSoft,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        if (isCanceling) {
-            CircularProgressIndicator(
-                color = sg.accent,
-                strokeWidth = 2.dp,
-                modifier = Modifier.padding(horizontal = 12.dp).size(16.dp)
-            )
-        } else {
-            TextButton(onClick = onCancel, enabled = cancelEnabled) {
-                Text("신청 취소", color = sg.rust)
-            }
-        }
     }
 }
 

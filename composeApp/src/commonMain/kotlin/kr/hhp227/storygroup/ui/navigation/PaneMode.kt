@@ -32,5 +32,6 @@ fun paneModeFor(route: Route): PaneMode = when (route) {
     Route.BlockedUsers,
     Route.CreateGroup,
     Route.DiscoverGroups,
+    Route.PendingGroups,
     Route.Search -> PaneMode.FULL_SCREEN
 }

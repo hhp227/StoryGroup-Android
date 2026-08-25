@@ -99,14 +99,13 @@ fun DiscoverGroupsScreen(
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     viewModel: DiscoverGroupsViewModel = discoverGroupsViewModel(),
     groupsViewModel: GroupsViewModel = sessionViewModel {
-        GroupsViewModel(it.getMyGroupsPagingDataUseCase, it.getMyJoinRequestedGroupsUseCase, it.cancelJoinRequestUseCase)
+        GroupsViewModel(it.getMyGroupsPagingDataUseCase)
     }
 ) {
     DiscoverGroupsContent(
         viewModel = viewModel,
         onBack = { onNavigationAction(NavigationAction.NavigateBack) },
         onJoined = { groupsViewModel.onAction(GroupsViewModel.Action.Refresh) },
-        onMembershipChanged = { groupsViewModel.onAction(GroupsViewModel.Action.RefreshPending) },
         modifier = modifier
     )
 }
@@ -116,7 +115,6 @@ private fun DiscoverGroupsContent(
     viewModel: DiscoverGroupsViewModel,
     onBack: () -> Unit,
     onJoined: () -> Unit,
-    onMembershipChanged: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -139,7 +137,6 @@ private fun DiscoverGroupsContent(
                     showJoinByCode = false
                     onJoined()
                 }
-                DiscoverGroupsViewModel.Event.MembershipChanged -> onMembershipChanged()
             }
         }
     }

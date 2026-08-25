@@ -67,6 +67,8 @@
 		A1010029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */; };
 		A101002AAABBCCDDEEFF002A /* DiscoverGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */; };
 		A101002BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */; };
+		A1010060AABBCCDDEEFF0060 /* PendingGroupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011060AABBCCDDEEFF0060 /* PendingGroupsView.swift */; };
+		A1010061AABBCCDDEEFF0061 /* PendingGroupsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011061AABBCCDDEEFF0061 /* PendingGroupsViewModel.swift */; };
 		A101002CAABBCCDDEEFF002C /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102CAABBCCDDEEFF002C /* NotificationsViewModel.swift */; };
 		A101002DAABBCCDDEEFF002D /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102DAABBCCDDEEFF002D /* ChatViewModel.swift */; };
 		A101002EAABBCCDDEEFF002E /* ChatRoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A101102EAABBCCDDEEFF002E /* ChatRoomView.swift */; };
@@ -153,6 +155,8 @@
 		A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupViewModel.swift; sourceTree = "<group>"; };
 		A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverGroupsView.swift; sourceTree = "<group>"; };
 		A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverGroupsViewModel.swift; sourceTree = "<group>"; };
+		A1011060AABBCCDDEEFF0060 /* PendingGroupsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingGroupsView.swift; sourceTree = "<group>"; };
+		A1011061AABBCCDDEEFF0061 /* PendingGroupsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingGroupsViewModel.swift; sourceTree = "<group>"; };
 		A101102CAABBCCDDEEFF002C /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		A101102DAABBCCDDEEFF002D /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		A101102EAABBCCDDEEFF002E /* ChatRoomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRoomView.swift; sourceTree = "<group>"; };
@@ -327,6 +331,8 @@
 				A1011029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift */,
 				A101102AAABBCCDDEEFF002A /* DiscoverGroupsView.swift */,
 				A101102BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift */,
+				A1011060AABBCCDDEEFF0060 /* PendingGroupsView.swift */,
+				A1011061AABBCCDDEEFF0061 /* PendingGroupsViewModel.swift */,
 				A101104AAABBCCDDEEFF004A /* GroupReportsView.swift */,
 				A101104BAABBCCDDEEFF004B /* GroupReportsViewModel.swift */,
 			);
@@ -642,6 +648,8 @@
 				A1010029AABBCCDDEEFF0029 /* CreateGroupViewModel.swift in Sources */,
 				A101002AAABBCCDDEEFF002A /* DiscoverGroupsView.swift in Sources */,
 				A101002BAABBCCDDEEFF002B /* DiscoverGroupsViewModel.swift in Sources */,
+				A1010060AABBCCDDEEFF0060 /* PendingGroupsView.swift in Sources */,
+				A1010061AABBCCDDEEFF0061 /* PendingGroupsViewModel.swift in Sources */,
 				A1010013AABBCCDDEEFF0013 /* FriendsView.swift in Sources */,
 				A1010014AABBCCDDEEFF0014 /* ChatView.swift in Sources */,
 				A101002DAABBCCDDEEFF002D /* ChatViewModel.swift in Sources */,

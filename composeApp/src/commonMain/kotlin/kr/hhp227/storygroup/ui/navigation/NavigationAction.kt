@@ -44,6 +44,8 @@ sealed interface NavigationAction {
 
     data object NavigateToDiscoverGroups : NavigationAction
 
+    data object NavigateToPendingGroups : NavigationAction
+
     data object NavigateToSearch : NavigationAction
 
     data object NavigateBack : NavigationAction

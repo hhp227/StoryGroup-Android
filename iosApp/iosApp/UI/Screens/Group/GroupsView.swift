@@ -4,7 +4,7 @@ import Shared
 // SwiftUI.Group(뷰)과 도메인 모델 Group의 동명 충돌 — 이 파일의 Group은 도메인 모델로 고정
 import class Shared.Group
 
-/// 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups·Compose GroupsScreen 미러(라운지 제외, 페이징).
+/// 가입중인 그룹 목록 + 만들기/찾기/신청중 진입 — 웹 /groups·Compose GroupsScreen 미러(라운지 제외, 페이징).
 /// 상세는 루트 NavigationStack 풀스크린 push(onOpenGroup) — Compose NavHost(GroupDetailRoute) 미러.
 /// 계층은 Compose GroupsScreen과 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct GroupsView: View {
@@ -37,9 +37,7 @@ struct GroupsView: View {
         onRefreshHandled: @escaping () -> Void
     ) {
         _viewModel = StateObject(wrappedValue: GroupsViewModel(
-            getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase,
-            getMyJoinRequestedGroupsUseCase: container.getMyJoinRequestedGroupsUseCase,
-            cancelJoinRequestUseCase: container.cancelJoinRequestUseCase
+            getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase
         ))
         self.container = container
         self.onOpenGroup = onOpenGroup
@@ -65,18 +63,21 @@ private struct GroupsContent: View {
 
     @Environment(\.sgColors) private var colors
 
-    /// 그룹 만들기/찾기 풀스크린 push — Compose NavHost(CreateGroupRoute·DiscoverGroupsRoute) 미러.
+    /// 그룹 만들기/찾기/신청중 풀스크린 push — Compose NavHost(CreateGroupRoute·DiscoverGroupsRoute·PendingGroupsRoute) 미러.
     /// 진입점(GroupsView)이 상태를 소유하는 건 종전 시트와 동일 — 표시 방식만 플랫폼 간 통일
     @State private var showCreateGroup = false
 
     @State private var showDiscoverGroups = false
 
-    /// 만들기/찾기를 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
+    @State private var showPendingGroups = false
+
+    /// 만들기/찾기/신청중을 화면 안에서 push — NavigationStack은 iOS 16+라 iOS 15는 숨김 NavigationLink 폴백(그룹 상세 미러)
     var body: some View {
         if #available(iOS 16.0, *) {
             core
                 .navigationDestination(isPresented: $showCreateGroup) { createGroupDestination }
                 .navigationDestination(isPresented: $showDiscoverGroups) { discoverGroupsDestination }
+                .navigationDestination(isPresented: $showPendingGroups) { pendingGroupsDestination }
         } else {
             core
                 .background(
@@ -95,19 +96,23 @@ private struct GroupsContent: View {
                     }
                     .hidden()
                 )
+                .background(
+                    NavigationLink(isActive: $showPendingGroups) {
+                        pendingGroupsDestination
+                    } label: {
+                        EmptyView()
+                    }
+                    .hidden()
+                )
         }
     }
 
     private var core: some View {
         VStack(spacing: 0) {
-            // 찾기/만들기 진입 스트립 — 상단바 아래 고정(레거시 GroupFragment 상단 BottomNavigationView 미러)
+            // 찾기/신청중/만들기 진입 스트립 — 상단바 아래 고정(레거시 GroupFragment 상단 BottomNavigationView 미러)
             actionsStrip
             ScrollView {
                 VStack(spacing: 12) {
-                    // 가입 신청중 섹션 — 승인 대기 그룹이 있을 때만 노출(Compose PendingGroupsSection 미러)
-                    if !viewModel.uiState.pendingGroups.isEmpty {
-                        pendingGroupsSection
-                    }
                     content
                 }
                 .padding(16)
@@ -138,6 +143,10 @@ private struct GroupsContent: View {
 
     private var discoverGroupsDestination: some View {
         DiscoverGroupsView(container: container, groupsViewModel: viewModel)
+    }
+
+    private var pendingGroupsDestination: some View {
+        PendingGroupsView(container: container)
     }
 
     /// 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose GroupsContent 미러).
@@ -182,84 +191,14 @@ private struct GroupsContent: View {
         }
     }
 
-    /// 가입 신청중(PENDING) 그룹 섹션 — linen 카드에 건수 칩+승인 대기 목록+신청 취소(Compose PendingGroupsSection 미러)
-    private var pendingGroupsSection: some View {
-        SGCard {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Text("가입 신청중")
-                        .font(.subheadline.bold())
-                        .foregroundColor(colors.ink)
-                    Text("\(viewModel.uiState.pendingGroups.count)")
-                        .font(.caption2.weight(.medium))
-                        .foregroundColor(colors.accent2)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(colors.accent2Soft)
-                        .cornerRadius(colors.radiusButton ?? 12)
-                }
-                if let error = viewModel.uiState.pendingError {
-                    Text(error).font(.caption).foregroundColor(colors.rust)
-                }
-                ForEach(viewModel.uiState.pendingGroups, id: \.id) { group in
-                    pendingGroupRow(group)
-                }
-            }
-            .padding(14)
-        }
-    }
-
-    /// 신청중 그룹 한 줄 — 커버/이름/멤버·가입방식 + 신청 취소(동시에 하나만 처리).
-    /// 상태는 섹션 헤더가 말하므로 행 배지는 없다(Compose PendingGroupRow 미러)
-    private func pendingGroupRow(_ group: DiscoverGroup) -> some View {
-        HStack(spacing: 10) {
-            ZStack {
-                if let imageUrlString = group.image, let url = URL(string: imageUrlString) {
-                    AsyncImage(url: url) { phase in
-                        if case .success(let image) = phase {
-                            image.resizable().scaledToFill()
-                        } else {
-                            groupCoverGradient(groupId: group.id, colors: colors)
-                        }
-                    }
-                } else {
-                    groupCoverGradient(groupId: group.id, colors: colors)
-                    Text(String(group.name.prefix(1)))
-                        .font(.subheadline.bold())
-                        .foregroundColor(.white)
-                }
-            }
-            .frame(width: 40, height: 40)
-            .clipShape(RoundedRectangle(cornerRadius: colors.radiusButton ?? 12, style: .continuous))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(group.name)
-                    .font(.subheadline.bold())
-                    .foregroundColor(colors.ink)
-                    .lineLimit(1)
-                // 그룹 찾기 목록 행과 동일한 요약 정보 미러(DiscoverGroupsView)
-                Text("멤버 \(group.memberCount)명 · \(joinTypeLabel(group.joinType))")
-                    .font(.caption)
-                    .foregroundColor(colors.inkSoft)
-                    .lineLimit(1)
-            }
-            Spacer()
-            if viewModel.uiState.cancelingGroupId == group.id {
-                ProgressView().padding(.horizontal, 12)
-            } else {
-                Button("신청 취소") { viewModel.onAction(.cancelRequest(groupId: group.id)) }
-                    .font(.subheadline)
-                    .foregroundColor(colors.rust)
-                    .disabled(viewModel.uiState.cancelingGroupId != nil)
-            }
-        }
-    }
-
-    /// 찾기/만들기 진입 스트립 — linen 풀폭 바에 세로 헤어라인으로 균등 분할, 순서는 레거시 미러(그룹찾기 → 그룹 만들기).
-    /// Compose GroupActionsStrip 미러
+    /// 찾기/신청중/만들기 진입 스트립 — linen 풀폭 바에 세로 헤어라인으로 균등 분할,
+    /// 순서는 레거시 미러(그룹찾기 → 가입신청중 그룹 → 그룹 만들기). Compose GroupActionsStrip 미러
     private var actionsStrip: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 actionSegment("그룹 찾기", systemImage: "magnifyingglass") { showDiscoverGroups = true }
+                Divider().background(colors.stoneBorder)
+                actionSegment("가입 신청중", systemImage: "person.2") { showPendingGroups = true }
                 Divider().background(colors.stoneBorder)
                 actionSegment("그룹 만들기", systemImage: "plus") { showCreateGroup = true }
             }

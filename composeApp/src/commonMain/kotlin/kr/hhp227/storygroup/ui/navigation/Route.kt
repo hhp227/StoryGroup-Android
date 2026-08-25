@@ -76,5 +76,8 @@ sealed interface Route {
     data object DiscoverGroups : Route
 
     @Serializable
+    data object PendingGroups : Route
+
+    @Serializable
     data object Search : Route
 }

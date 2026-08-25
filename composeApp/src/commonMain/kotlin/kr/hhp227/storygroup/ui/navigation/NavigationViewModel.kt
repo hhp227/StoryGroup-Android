@@ -82,6 +82,7 @@ class NavigationViewModel : ViewModel(),
             NavigationAction.NavigateToBlockedUsers -> emit(navigateTo(Route.BlockedUsers))
             NavigationAction.NavigateToCreateGroup -> emit(navigateTo(Route.CreateGroup))
             NavigationAction.NavigateToDiscoverGroups -> emit(navigateTo(Route.DiscoverGroups))
+            NavigationAction.NavigateToPendingGroups -> emit(navigateTo(Route.PendingGroups))
             NavigationAction.NavigateToSearch -> emit(navigateTo(Route.Search))
         }
     }

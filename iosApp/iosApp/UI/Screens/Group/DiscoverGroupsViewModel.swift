@@ -46,8 +46,8 @@ final class DiscoverGroupsViewModel: MviViewModel {
                 let status: GroupMembershipStatus = result.status == .joined ? .member : .pending
                 uiState.joiningGroupId = nil
                 uiState.localOverrides[groupId] = status
-                // 즉시 가입은 내 그룹 목록까지, 승인제 신청은 신청중 섹션만 갱신하면 된다
-                event.send(result.status == .joined ? .joined : .membershipChanged)
+                // 즉시 가입만 내 그룹 목록 갱신 신호 — 승인제 신청은 신청중 화면이 진입 시 스스로 로드한다
+                if result.status == .joined { event.send(.joined) }
             } catch {
                 uiState.joiningGroupId = nil
                 uiState.error = error.kotlinMessage(fallback: "가입에 실패했습니다.")
@@ -86,7 +86,6 @@ final class DiscoverGroupsViewModel: MviViewModel {
                 try await cancelJoinRequestUseCase.invoke(groupId: groupId)
                 uiState.joiningGroupId = nil
                 uiState.localOverrides[groupId] = .none
-                event.send(.membershipChanged)
             } catch {
                 uiState.joiningGroupId = nil
                 uiState.error = error.kotlinMessage(fallback: "신청 취소에 실패했습니다.")
@@ -147,8 +146,5 @@ final class DiscoverGroupsViewModel: MviViewModel {
 
         /// 초대코드로 가입 완료 — 화면이 다이얼로그를 닫고 세션 GroupsViewModel을 갱신한다
         case joinedByCode
-
-        /// 승인제 신청/신청 취소 — 화면이 세션 GroupsViewModel의 가입 신청중 섹션만 갱신한다
-        case membershipChanged
     }
 }

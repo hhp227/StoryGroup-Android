@@ -23,6 +23,7 @@ import kr.hhp227.storygroup.ui.screens.group.DiscoverGroupsScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupDetailScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupEditScreen
 import kr.hhp227.storygroup.ui.screens.group.GroupReportsScreen
+import kr.hhp227.storygroup.ui.screens.group.PendingGroupsScreen
 import kr.hhp227.storygroup.ui.screens.post.CreatePostScreen
 import kr.hhp227.storygroup.ui.screens.post.PostDetailScreen
 import kr.hhp227.storygroup.ui.screens.search.SearchScreen
@@ -155,6 +156,11 @@ fun AppNavHost(
         composable<Route.DiscoverGroups> {
             DestinationSurface {
                 DiscoverGroupsScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+            }
+        }
+        composable<Route.PendingGroups> {
+            DestinationSurface {
+                PendingGroupsScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
             }
         }
         composable<Route.Search> {

@@ -79,8 +79,8 @@ class DiscoverGroupsViewModel(
                     _uiState.update {
                         it.copy(joiningGroupId = null, localOverrides = it.localOverrides + (groupId to status))
                     }
-                    // 즉시 가입은 내 그룹 목록까지, 승인제 신청은 신청중 섹션만 갱신하면 된다
-                    _event.tryEmit(if (result.status == JoinResult.JOINED) Event.Joined else Event.MembershipChanged)
+                    // 즉시 가입만 내 그룹 목록 갱신 신호 — 승인제 신청은 신청중 화면이 진입 시 스스로 로드한다
+                    if (result.status == JoinResult.JOINED) _event.tryEmit(Event.Joined)
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: "가입에 실패했습니다.") }
@@ -127,7 +127,6 @@ class DiscoverGroupsViewModel(
                             localOverrides = it.localOverrides + (groupId to GroupMembershipStatus.NONE)
                         )
                     }
-                    _event.tryEmit(Event.MembershipChanged)
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: "신청 취소에 실패했습니다.") }
@@ -176,8 +175,5 @@ class DiscoverGroupsViewModel(
 
         /** 초대코드로 가입 완료 — 화면이 다이얼로그를 닫고 세션 GroupsViewModel을 갱신한다 */
         data object JoinedByCode : Event
-
-        /** 승인제 신청/신청 취소 — 화면이 세션 GroupsViewModel의 가입 신청중 섹션만 갱신한다 */
-        data object MembershipChanged : Event
     }
 }
