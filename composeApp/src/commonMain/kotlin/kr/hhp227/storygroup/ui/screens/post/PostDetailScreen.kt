@@ -514,9 +514,14 @@ private fun CommentRow(
             }
             Text(comment.text, style = SgTheme.typography.bodySmall, color = sg.ink)
             if (onReply != null) {
-                TextButton(onClick = onReply, contentPadding = PaddingValues(0.dp)) {
-                    Text("답글", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
-                }
+                // TextButton은 최소 64×36dp를 강제해 iOS(caption2 텍스트 그대로)보다 크게 벌어진다 —
+                // 클릭 영역이 텍스트 크기로 줄지만 iOS와 같은 크기라 정합. top 2dp = iOS VStack spacing 미러
+                Text(
+                    "답글",
+                    style = SgTheme.typography.labelSmall,
+                    color = sg.inkFaint,
+                    modifier = Modifier.padding(top = 2.dp).clickable(onClick = onReply)
+                )
             }
         }
         // 게시글 상단바와 같은 규칙 — 더보기는 항상 노출하고 내 댓글이면 삭제, 남의 댓글이면 신고·차단.
