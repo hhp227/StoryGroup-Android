@@ -3,6 +3,7 @@ package kr.hhp227.storygroup.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
 import androidx.compose.material.Icon
@@ -25,10 +24,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -36,11 +35,12 @@ import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
-/** 피드 카드 첨부 썸네일 한 칸의 크기 — 이미지와 동영상이 같은 줄에 서므로 값을 공유한다 */
-private val THUMBNAIL_SIZE = 120.dp
+/** 미디어 그리드에 보여줄 최대 장수 — 넘치면 마지막 타일에 "+N"(전체는 상세에서) */
+private const val MEDIA_GRID_MAX = 6
 
 /**
- * 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 첨부는 가로 스크롤 썸네일이고
+ * 게시글 피드 카드 — 웹 피드 카드 미러(홈 라운지/그룹 상세 공유). 미디어는 카드 전폭 풀블리드 —
+ * 1개면 원본 비율 한 장(레거시 iv_post 미러), 2개 이상이면 2열 스태거드 그리드.
  * 동영상은 ▶ 자리로 표시한다(재생은 상세에서).
  * onClick을 주지 않으면 카드는 눌러도 아무 일이 없다 — 상세로 갈 수 없는 자리(미리보기 등)를 위해 기본값을 둔다.
  */
@@ -89,25 +89,10 @@ fun SgPostCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
-                // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
-                if (post.imageUrls.isNotEmpty() || post.videoUrls.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(post.imageUrls) { url ->
-                            AsyncImage(
-                                model = url,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(THUMBNAIL_SIZE).clip(SgTheme.shapes.field)
-                            )
-                        }
-                        items(post.videoUrls) { url ->
-                            SgVideoThumbnail(url = url, size = THUMBNAIL_SIZE)
-                        }
-                    }
-                }
             }
+            // 미디어는 패딩 밖 카드 전폭 — 레거시 iv_post(match_parent+adjustViewBounds) 풀블리드 미러.
+            // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
+            PostCardMediaBlock(imageUrls = post.imageUrls, videoUrls = post.videoUrls)
             // 레거시 item_post.xml 미러 — 전폭 구분선 + 등분 3버튼(좋아요/댓글/공유)
             Divider(color = sg.stoneBorder)
             Row {
@@ -135,6 +120,68 @@ fun SgPostCard(
                     onClick = onShare,
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+    }
+}
+
+private data class PostCardMedia(val url: String, val isVideo: Boolean)
+
+/**
+ * 카드 전폭 미디어 블록 — 이미지들 뒤에 동영상들(합산 기준). 1개=풀블리드 원본 비율,
+ * 2~[MEDIA_GRID_MAX]개=2열 스태거드(타일 간 2dp). 서버에 크기 메타데이터가 없어
+ * 열 배분은 인덱스 교대(0·2·4→왼쪽) — 결정적이라 웹·iOS와 항상 같은 모양이다.
+ */
+@Composable
+private fun PostCardMediaBlock(imageUrls: List<String>, videoUrls: List<String>, modifier: Modifier = Modifier) {
+    val media = imageUrls.map { PostCardMedia(it, isVideo = false) } + videoUrls.map { PostCardMedia(it, isVideo = true) }
+
+    when {
+        media.isEmpty() -> Unit
+        media.size == 1 -> PostCardMediaTile(media[0], overflowCount = 0, modifier = modifier.fillMaxWidth())
+        else -> {
+            val visible = media.take(MEDIA_GRID_MAX)
+            val overflow = media.size - visible.size
+
+            Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                for (column in 0..1) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        visible.forEachIndexed { index, item ->
+                            if (index % 2 == column) {
+                                PostCardMediaTile(
+                                    media = item,
+                                    overflowCount = if (index == visible.lastIndex) overflow else 0,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 미디어 한 타일 — 폭 맞춤+원본 비율(동영상은 프레임 비율, 없으면 16:9). [overflowCount]>0이면 "+N" 오버레이 */
+@Composable
+private fun PostCardMediaTile(media: PostCardMedia, overflowCount: Int, modifier: Modifier = Modifier) {
+    Box(modifier) {
+        if (media.isVideo) {
+            SgVideoTile(media.url, modifier = Modifier.fillMaxWidth())
+        } else {
+            AsyncImage(
+                model = media.url,
+                contentDescription = null,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (overflowCount > 0) {
+            Box(
+                Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("+$overflowCount", style = SgTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }

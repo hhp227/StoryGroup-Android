@@ -110,6 +110,35 @@ struct SGVideoPoster: View {
     }
 }
 
+/// 피드 카드 미디어 그리드용 동영상 타일 — 풀폭·실비율(프레임 없으면 16:9), 풀블리드 칸이라 모서리를 깎지 않는다.
+/// 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다). Compose SgVideoTile 미러
+struct SGVideoTile: View {
+    let urlString: String
+
+    @State private var poster: UIImage?
+
+    private var aspectRatio: CGFloat {
+        guard let size = poster?.size, size.height > 0 else { return fallbackVideoAspectRatio }
+        return size.width / size.height
+    }
+
+    var body: some View {
+        VideoPoster(image: poster, badgeSize: 36)
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .task(id: urlString) {
+                if poster == nil {
+                    poster = await VideoPosterLoader.load(urlString)
+                }
+            }
+    }
+
+    init(urlString: String) {
+        self.urlString = urlString
+        _poster = State(initialValue: VideoPosterLoader.cached(urlString))
+    }
+}
+
 /// 피드 카드·작성 폼용 동영상 썸네일 — 이미지 썸네일과 같은 정사각 칸에 첫 프레임과 ▶를 얹는다.
 /// 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다).
 struct SGVideoThumbnail: View {

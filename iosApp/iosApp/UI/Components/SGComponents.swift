@@ -285,8 +285,12 @@ struct SGUnreadBadge: View {
     }
 }
 
+/// 미디어 그리드에 보여줄 최대 장수 — 넘치면 마지막 타일에 "+N"(전체는 상세에서). Compose MEDIA_GRID_MAX 미러
+private let postCardMediaGridMax = 6
+
 /// 게시글 피드 카드 — 웹 피드 카드·Compose SgPostCard 미러(홈 라운지/그룹 상세 공유).
-/// 첨부는 가로 스크롤 썸네일이고 동영상은 ▶ 자리로 표시한다(재생은 상세에서)
+/// 미디어는 카드 전폭 풀블리드 — 1개면 원본 비율 한 장(레거시 iv_post 미러), 2개 이상이면 2열 스태거드 그리드.
+/// 동영상은 ▶ 자리로 표시한다(재생은 상세에서)
 struct SGPostCard: View {
     let post: Post
 
@@ -324,32 +328,11 @@ struct SGPostCard: View {
                             .lineLimit(6)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    // 이미지와 동영상을 한 줄에 이어 붙인다 — 첨부가 섞인 글도 스크롤 한 번으로 훑을 수 있다.
-                    // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
-                    if !post.imageUrls.isEmpty || !post.videoUrls.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(post.imageUrls, id: \.self) { urlString in
-                                    if let url = URL(string: urlString) {
-                                        AsyncImage(url: url) { phase in
-                                            if case .success(let image) = phase {
-                                                image.resizable().scaledToFill()
-                                            } else {
-                                                colors.linen
-                                            }
-                                        }
-                                        .frame(width: 120, height: 120)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                }
-                                ForEach(post.videoUrls, id: \.self) { urlString in
-                                    SGVideoThumbnail(urlString: urlString, size: 120)
-                                }
-                            }
-                        }
-                    }
                 }
                 .padding(16)
+                // 미디어는 패딩 밖 카드 전폭 — 레거시 iv_post(match_parent+adjustViewBounds) 풀블리드 미러.
+                // 카드 안에서는 재생하지 않는다(카드 전체가 상세로 가는 링크라 탭이 겹친다).
+                postMedia
                 Divider().background(colors.stoneBorder)
                 HStack(spacing: 0) {
                     // 레거시 item_post.xml 미러 — 등분 3버튼. NavigationLink 안이라 borderless로 탭을 분리한다
@@ -383,6 +366,61 @@ struct SGPostCard: View {
                 }
             }
         }
+    }
+
+    /// 미디어(이미지 먼저+동영상 뒤) — Compose PostCardMedia 미러
+    private var mediaItems: [(url: String, isVideo: Bool)] {
+        post.imageUrls.map { ($0, false) } + post.videoUrls.map { ($0, true) }
+    }
+
+    /// 카드 전폭 미디어 블록 — 1개=풀블리드 원본 비율, 2~6개=2열 스태거드(타일 간 2).
+    /// 크기 메타데이터가 없어 열 배분은 인덱스 교대(0·2·4→왼쪽) — Compose PostCardMediaBlock 미러
+    @ViewBuilder private var postMedia: some View {
+        let media = mediaItems
+
+        if media.count == 1 {
+            mediaTile(media[0], overflowCount: 0)
+        } else if media.count >= 2 {
+            let visible = Array(media.prefix(postCardMediaGridMax))
+            let overflow = media.count - visible.count
+
+            HStack(alignment: .top, spacing: 2) {
+                ForEach(0..<2, id: \.self) { column in
+                    VStack(spacing: 2) {
+                        ForEach(Array(visible.enumerated()), id: \.offset) { pair in
+                            if pair.offset % 2 == column {
+                                mediaTile(pair.element, overflowCount: pair.offset == visible.count - 1 ? overflow : 0)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 미디어 한 타일 — 폭 맞춤+원본 비율(동영상은 프레임 비율, 없으면 16:9). overflowCount>0이면 "+N" 오버레이
+    @ViewBuilder private func mediaTile(_ item: (url: String, isVideo: Bool), overflowCount: Int) -> some View {
+        ZStack {
+            if item.isVideo {
+                SGVideoTile(urlString: item.url)
+            } else if let url = URL(string: item.url) {
+                AsyncImage(url: url) { phase in
+                    if case .success(let image) = phase {
+                        image.resizable().scaledToFit()
+                    } else {
+                        // 로드 전 자리 표시 — Color는 고유 크기가 없어 비율을 강제한다
+                        colors.linen.aspectRatio(4 / 3, contentMode: .fit)
+                    }
+                }
+            }
+            if overflowCount > 0 {
+                Color.black.opacity(0.45)
+                Text("+\(overflowCount)")
+                    .font(.title3.bold())
+                    .foregroundColor(.white)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

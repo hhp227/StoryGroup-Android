@@ -74,6 +74,22 @@ fun SgVideoPoster(url: String, modifier: Modifier = Modifier) {
 }
 
 /**
+ * 피드 카드 미디어 그리드용 동영상 타일 — 풀폭·실비율(프레임 없으면 16:9), 풀블리드 칸이라 모서리를 깎지 않는다.
+ * 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다).
+ */
+@Composable
+fun SgVideoTile(url: String, modifier: Modifier = Modifier) {
+    val frame = rememberVideoFrame(url)
+    val aspectRatio = frame?.let { it.width.toFloat() / it.height } ?: FALLBACK_VIDEO_ASPECT_RATIO
+
+    VideoPoster(
+        frame = frame,
+        badgeSize = 36.dp,
+        modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio)
+    )
+}
+
+/**
  * 피드 카드·작성 폼용 동영상 썸네일 — 이미지 썸네일과 같은 정사각 칸에 첫 프레임과 ▶를 얹는다.
  * 여기서는 재생하지 않는다(피드 카드는 전체가 상세로 가는 링크라 탭이 겹친다).
  */
