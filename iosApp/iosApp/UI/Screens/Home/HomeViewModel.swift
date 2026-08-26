@@ -65,11 +65,11 @@ final class HomeViewModel: MviViewModel {
     }
 
     init(
-        getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase,
-        observePostUpdatesUseCase: ObservePostUpdatesUseCase,
-        observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-        observePostDeletionsUseCase: ObservePostDeletionsUseCase,
-        togglePostLikeUseCase: TogglePostLikeUseCase
+        getLoungePostsPagingDataUseCase: GetLoungePostsPagingDataUseCase = AppContainer.shared.getLoungePostsPagingDataUseCase,
+        observePostUpdatesUseCase: ObservePostUpdatesUseCase = AppContainer.shared.observePostUpdatesUseCase,
+        observeUserBlocksUseCase: ObserveUserBlocksUseCase = AppContainer.shared.observeUserBlocksUseCase,
+        observePostDeletionsUseCase: ObservePostDeletionsUseCase = AppContainer.shared.observePostDeletionsUseCase,
+        togglePostLikeUseCase: TogglePostLikeUseCase = AppContainer.shared.togglePostLikeUseCase
     ) {
         self.togglePostLikeUseCase = togglePostLikeUseCase
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다

@@ -305,12 +305,12 @@ final class CallViewModel: MviViewModel {
         chatRoomId: Int64,
         ring: Bool,
         video: Bool,
-        observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase,
-        observeRtcSignalsUseCase: ObserveRtcSignalsUseCase,
-        sendRtcSignalUseCase: SendRtcSignalUseCase,
-        sendCallInviteUseCase: SendCallInviteUseCase,
-        getIceServersUseCase: GetIceServersUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        observeRtcCallEventsUseCase: ObserveRtcCallEventsUseCase = AppContainer.shared.observeRtcCallEventsUseCase,
+        observeRtcSignalsUseCase: ObserveRtcSignalsUseCase = AppContainer.shared.observeRtcSignalsUseCase,
+        sendRtcSignalUseCase: SendRtcSignalUseCase = AppContainer.shared.sendRtcSignalUseCase,
+        sendCallInviteUseCase: SendCallInviteUseCase = AppContainer.shared.sendCallInviteUseCase,
+        getIceServersUseCase: GetIceServersUseCase = AppContainer.shared.getIceServersUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.chatRoomId = chatRoomId
         self.ring = ring

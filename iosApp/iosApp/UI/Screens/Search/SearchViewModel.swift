@@ -100,10 +100,10 @@ final class SearchViewModel: MviViewModel {
     }
 
     init(
-        searchUseCase: SearchUseCase,
-        getFriendsUseCase: GetFriendsUseCase,
-        addFriendUseCase: AddFriendUseCase,
-        removeFriendUseCase: RemoveFriendUseCase
+        searchUseCase: SearchUseCase = AppContainer.shared.searchUseCase,
+        getFriendsUseCase: GetFriendsUseCase = AppContainer.shared.getFriendsUseCase,
+        addFriendUseCase: AddFriendUseCase = AppContainer.shared.addFriendUseCase,
+        removeFriendUseCase: RemoveFriendUseCase = AppContainer.shared.removeFriendUseCase
     ) {
         self.searchUseCase = searchUseCase
         self.getFriendsUseCase = getFriendsUseCase

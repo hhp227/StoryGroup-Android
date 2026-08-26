@@ -54,11 +54,11 @@ final class GroupFeedViewModel: MviViewModel {
 
     init(
         groupId: Int64,
-        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase,
-        observePostUpdatesUseCase: ObservePostUpdatesUseCase,
-        observeUserBlocksUseCase: ObserveUserBlocksUseCase,
-        observePostDeletionsUseCase: ObservePostDeletionsUseCase,
-        togglePostLikeUseCase: TogglePostLikeUseCase
+        getGroupPostsPagingDataUseCase: GetGroupPostsPagingDataUseCase = AppContainer.shared.getGroupPostsPagingDataUseCase,
+        observePostUpdatesUseCase: ObservePostUpdatesUseCase = AppContainer.shared.observePostUpdatesUseCase,
+        observeUserBlocksUseCase: ObserveUserBlocksUseCase = AppContainer.shared.observeUserBlocksUseCase,
+        observePostDeletionsUseCase: ObservePostDeletionsUseCase = AppContainer.shared.observePostDeletionsUseCase,
+        togglePostLikeUseCase: TogglePostLikeUseCase = AppContainer.shared.togglePostLikeUseCase
     ) {
         self.groupId = groupId
         self.togglePostLikeUseCase = togglePostLikeUseCase

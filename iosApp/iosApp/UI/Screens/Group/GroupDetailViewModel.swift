@@ -42,7 +42,7 @@ final class GroupDetailViewModel: MviViewModel {
         }
     }
 
-    init(groupId: Int64, getGroupUseCase: GetGroupUseCase, getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase) {
+    init(groupId: Int64, getGroupUseCase: GetGroupUseCase = AppContainer.shared.getGroupUseCase, getGroupDefaultChatRoomUseCase: GetGroupDefaultChatRoomUseCase = AppContainer.shared.getGroupDefaultChatRoomUseCase) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase
         self.getGroupDefaultChatRoomUseCase = getGroupDefaultChatRoomUseCase

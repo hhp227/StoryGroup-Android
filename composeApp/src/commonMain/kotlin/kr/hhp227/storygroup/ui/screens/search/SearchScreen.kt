@@ -47,8 +47,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.FileSearchHit
 import kr.hhp227.storygroup.shared.domain.model.GroupSearchHit
 import kr.hhp227.storygroup.shared.domain.model.MessageSearchHit
@@ -65,21 +64,6 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 
-/** 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴) */
-@Composable
-private fun searchViewModel(): SearchViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        SearchViewModel(
-            searchUseCase = container.searchUseCase,
-            getFriendsUseCase = container.getFriendsUseCase,
-            addFriendUseCase = container.addFriendUseCase,
-            removeFriendUseCase = container.removeFriendUseCase
-        )
-    }
-}
-
 /**
  * 홈 통합검색 — 웹 /search 미러(5섹션 원페이지, 제출 기반).
  * 검색 전=빈 상태 안내(웹의 친구 목록은 친구 탭 몫이라 미러하지 않는다 — 스펙 확정).
@@ -90,7 +74,15 @@ private fun searchViewModel(): SearchViewModel {
 fun SearchScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: SearchViewModel = searchViewModel()
+    // 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴)
+    viewModel: SearchViewModel = screenViewModel {
+        SearchViewModel(
+            searchUseCase = it.searchUseCase,
+            getFriendsUseCase = it.getFriendsUseCase,
+            addFriendUseCase = it.addFriendUseCase,
+            removeFriendUseCase = it.removeFriendUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

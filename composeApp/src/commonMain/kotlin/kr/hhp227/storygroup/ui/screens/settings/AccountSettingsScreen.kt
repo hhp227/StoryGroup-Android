@@ -38,8 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
@@ -52,20 +51,6 @@ import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
-@Composable
-private fun accountSettingsViewModel(): AccountSettingsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        AccountSettingsViewModel(
-            getMyProfileUseCase = container.getMyProfileUseCase,
-            updateMyProfileUseCase = container.updateMyProfileUseCase,
-            changePasswordUseCase = container.changePasswordUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
-        )
-    }
-}
-
 /**
  * 계정 설정 — 프로필 수정+비밀번호 변경(웹 /settings/profile·password 두 페이지를 한 화면 두 카드로).
  * NavHost 풀스크린 목적지라 상단바는 화면이 소유한다. 폼 필드는 화면 소유(CreatePost 패턴),
@@ -76,7 +61,14 @@ private fun accountSettingsViewModel(): AccountSettingsViewModel {
 fun AccountSettingsScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: AccountSettingsViewModel = accountSettingsViewModel(),
+    viewModel: AccountSettingsViewModel = screenViewModel {
+        AccountSettingsViewModel(
+            getMyProfileUseCase = it.getMyProfileUseCase,
+            updateMyProfileUseCase = it.updateMyProfileUseCase,
+            changePasswordUseCase = it.changePasswordUseCase,
+            uploadImageUseCase = it.uploadImageUseCase
+        )
+    },
     // 저장 성공 반영용 — 프로필 탭/드로어 헤더와 같은 세션 스코프 인스턴스
     profileViewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
 ) {

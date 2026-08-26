@@ -56,7 +56,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
 import app.cash.paging.compose.LazyPagingItems
@@ -65,7 +64,7 @@ import app.cash.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.GroupInvite
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinRequest
@@ -89,97 +88,6 @@ import kr.hhp227.storygroup.ui.util.formatRelativeTime
 import kr.hhp227.storygroup.ui.util.postShareText
 import kr.hhp227.storygroup.ui.util.rememberShareLauncher
 
-@Composable
-private fun groupDetailViewModel(groupId: Long): GroupDetailViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-detail-$groupId") {
-        GroupDetailViewModel(
-            groupId = groupId,
-            getGroupUseCase = container.getGroupUseCase,
-            getGroupDefaultChatRoomUseCase = container.getGroupDefaultChatRoomUseCase
-        )
-    }
-}
-
-@Composable
-private fun groupFeedViewModel(groupId: Long): GroupFeedViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-feed-$groupId") {
-        GroupFeedViewModel(
-            groupId = groupId,
-            getGroupPostsPagingDataUseCase = container.getGroupPostsPagingDataUseCase,
-            observePostUpdatesUseCase = container.observePostUpdatesUseCase,
-            observeUserBlocksUseCase = container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase = container.observePostDeletionsUseCase,
-            togglePostLikeUseCase = container.togglePostLikeUseCase
-        )
-    }
-}
-
-@Composable
-private fun groupAlbumViewModel(groupId: Long): GroupAlbumViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-album-$groupId") {
-        GroupAlbumViewModel(
-            groupId = groupId,
-            getGroupPhotosPagingDataUseCase = container.getGroupPhotosPagingDataUseCase
-        )
-    }
-}
-
-@Composable
-private fun groupMembersViewModel(groupId: Long): GroupMembersViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-members-$groupId") {
-        GroupMembersViewModel(
-            groupId = groupId,
-            getGroupMembersUseCase = container.getGroupMembersUseCase,
-            getJoinRequestsUseCase = container.getJoinRequestsUseCase,
-            approveJoinRequestUseCase = container.approveJoinRequestUseCase,
-            rejectJoinRequestUseCase = container.rejectJoinRequestUseCase,
-            createGroupInviteUseCase = container.createGroupInviteUseCase,
-            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
-        )
-    }
-}
-
-@Composable
-private fun groupEventsViewModel(groupId: Long): GroupEventsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-events-$groupId") {
-        GroupEventsViewModel(
-            groupId = groupId,
-            getGroupEventsUseCase = container.getGroupEventsUseCase,
-            getEventDetailUseCase = container.getEventDetailUseCase,
-            createEventUseCase = container.createEventUseCase,
-            deleteEventUseCase = container.deleteEventUseCase,
-            rsvpEventUseCase = container.rsvpEventUseCase,
-            cancelEventRsvpUseCase = container.cancelEventRsvpUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
-        )
-    }
-}
-
-@Composable
-private fun groupSettingsViewModel(groupId: Long): GroupSettingsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-settings-$groupId") {
-        GroupSettingsViewModel(
-            groupId = groupId,
-            getGroupUseCase = container.getGroupUseCase,
-            deleteGroupUseCase = container.deleteGroupUseCase,
-            leaveGroupUseCase = container.leaveGroupUseCase
-        )
-    }
-}
-
 /**
  * 그룹 상세 — 웹 /groups/[id] 미러: 커버 배너(그라데이션 폴백+이름/설명/역할 칩)+5탭
  * (소식/앨범/일정/멤버/설정). 커버는 레거시 fragment_group_detail.xml처럼 콜랩싱
@@ -194,12 +102,61 @@ fun GroupDetailScreen(
     pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
     // 라우트(백스택 엔트리) 스코프 — pop되면 함께 정리된다(ConCafe CafeScreen 패턴).
     // 탭 상태는 레거시(탭 Fragment마다 VM)처럼 탭별 VM이 각자 소유한다
-    viewModel: GroupDetailViewModel = groupDetailViewModel(groupId),
-    feedViewModel: GroupFeedViewModel = groupFeedViewModel(groupId),
-    albumViewModel: GroupAlbumViewModel = groupAlbumViewModel(groupId),
-    membersViewModel: GroupMembersViewModel = groupMembersViewModel(groupId),
-    eventsViewModel: GroupEventsViewModel = groupEventsViewModel(groupId),
-    settingsViewModel: GroupSettingsViewModel = groupSettingsViewModel(groupId),
+    viewModel: GroupDetailViewModel = screenViewModel(key = "group-detail-$groupId") {
+        GroupDetailViewModel(
+            groupId = groupId,
+            getGroupUseCase = it.getGroupUseCase,
+            getGroupDefaultChatRoomUseCase = it.getGroupDefaultChatRoomUseCase
+        )
+    },
+    feedViewModel: GroupFeedViewModel = screenViewModel(key = "group-feed-$groupId") {
+        GroupFeedViewModel(
+            groupId = groupId,
+            getGroupPostsPagingDataUseCase = it.getGroupPostsPagingDataUseCase,
+            observePostUpdatesUseCase = it.observePostUpdatesUseCase,
+            observeUserBlocksUseCase = it.observeUserBlocksUseCase,
+            observePostDeletionsUseCase = it.observePostDeletionsUseCase,
+            togglePostLikeUseCase = it.togglePostLikeUseCase
+        )
+    },
+    albumViewModel: GroupAlbumViewModel = screenViewModel(key = "group-album-$groupId") {
+        GroupAlbumViewModel(
+            groupId = groupId,
+            getGroupPhotosPagingDataUseCase = it.getGroupPhotosPagingDataUseCase
+        )
+    },
+    membersViewModel: GroupMembersViewModel = screenViewModel(key = "group-members-$groupId") {
+        GroupMembersViewModel(
+            groupId = groupId,
+            getGroupMembersUseCase = it.getGroupMembersUseCase,
+            getJoinRequestsUseCase = it.getJoinRequestsUseCase,
+            approveJoinRequestUseCase = it.approveJoinRequestUseCase,
+            rejectJoinRequestUseCase = it.rejectJoinRequestUseCase,
+            createGroupInviteUseCase = it.createGroupInviteUseCase,
+            getBlockedUsersUseCase = it.getBlockedUsersUseCase,
+            getCurrentUserIdUseCase = it.getCurrentUserIdUseCase
+        )
+    },
+    eventsViewModel: GroupEventsViewModel = screenViewModel(key = "group-events-$groupId") {
+        GroupEventsViewModel(
+            groupId = groupId,
+            getGroupEventsUseCase = it.getGroupEventsUseCase,
+            getEventDetailUseCase = it.getEventDetailUseCase,
+            createEventUseCase = it.createEventUseCase,
+            deleteEventUseCase = it.deleteEventUseCase,
+            rsvpEventUseCase = it.rsvpEventUseCase,
+            cancelEventRsvpUseCase = it.cancelEventRsvpUseCase,
+            getCurrentUserIdUseCase = it.getCurrentUserIdUseCase
+        )
+    },
+    settingsViewModel: GroupSettingsViewModel = screenViewModel(key = "group-settings-$groupId") {
+        GroupSettingsViewModel(
+            groupId = groupId,
+            getGroupUseCase = it.getGroupUseCase,
+            deleteGroupUseCase = it.deleteGroupUseCase,
+            leaveGroupUseCase = it.leaveGroupUseCase
+        )
+    },
     // 유저 설정 행(설정 탭) — 프로필 탭/드로어 헤더와 같은 세션 스코프 인스턴스
     profileViewModel: ProfileViewModel = sessionViewModel { ProfileViewModel(it.getMyProfileUseCase) }
 ) {

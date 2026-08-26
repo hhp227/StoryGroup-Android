@@ -38,9 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
@@ -53,18 +52,6 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
-@Composable
-private fun createGroupViewModel(): CreateGroupViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "create-group") {
-        CreateGroupViewModel(
-            createGroupUseCase = container.createGroupUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
-        )
-    }
-}
-
 /**
  * 그룹 만들기 — 이름/소개/커버 이미지+가입 방식(자동 승인/승인제). NavHost 풀스크린 목적지.
  * 성공 시 세션 GroupsViewModel(그룹 탭과 동일 인스턴스 — AccountSettingsScreen이 ProfileViewModel을
@@ -75,7 +62,12 @@ private fun createGroupViewModel(): CreateGroupViewModel {
 fun CreateGroupScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: CreateGroupViewModel = createGroupViewModel(),
+    viewModel: CreateGroupViewModel = screenViewModel(key = "create-group") {
+        CreateGroupViewModel(
+            createGroupUseCase = it.createGroupUseCase,
+            uploadImageUseCase = it.uploadImageUseCase
+        )
+    },
     groupsViewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase)
     }

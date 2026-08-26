@@ -1,7 +1,7 @@
 package kr.hhp227.storygroup
 
 import android.app.Application
-import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.shared.data.source.AndroidNetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.storage.SharedPreferencesTokenStorage
 import kr.hhp227.storygroup.shared.data.storage.SharedPreferencesKeyValueStorage

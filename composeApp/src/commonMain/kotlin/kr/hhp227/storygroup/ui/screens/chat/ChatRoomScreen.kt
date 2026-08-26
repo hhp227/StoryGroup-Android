@@ -83,11 +83,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
@@ -120,7 +119,27 @@ fun ChatRoomScreen(
     title: String,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
+    /** 채팅방 VM — 백스택 엔트리 스코프(그룹 상세 패턴), 화면을 떠나면 소켓 구독도 함께 정리된다.
+     *  viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다 */
+    viewModel: ChatRoomViewModel = rememberVideoCompressor().let { videoCompressor ->
+        screenViewModel(key = "chat-room-$chatRoomId") {
+            ChatRoomViewModel(
+                groupId = groupId,
+                chatRoomId = chatRoomId,
+                getChatMessagesUseCase = it.getChatMessagesUseCase,
+                sendChatMessageUseCase = it.sendChatMessageUseCase,
+                markChatMessagesReadUseCase = it.markChatMessagesReadUseCase,
+                uploadChatFileUseCase = it.uploadChatFileUseCase,
+                sendChatTypingUseCase = it.sendChatTypingUseCase,
+                getChatReadPositionsUseCase = it.getChatReadPositionsUseCase,
+                getCallRosterUseCase = it.getCallRosterUseCase,
+                getGroupMembersUseCase = it.getGroupMembersUseCase,
+                observeChatRoomEventsUseCase = it.observeChatRoomEventsUseCase,
+                getCurrentUserIdUseCase = it.getCurrentUserIdUseCase,
+                videoCompressor = videoCompressor
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -730,32 +749,6 @@ private fun DrawerCallButton(icon: ImageVector, label: String, modifier: Modifie
         Icon(icon, contentDescription = label, tint = sg.accent)
         Spacer(Modifier.height(4.dp))
         Text(label, style = SgTheme.typography.labelSmall, color = sg.inkSoft)
-    }
-}
-
-/** 채팅방 VM — 백스택 엔트리 스코프(그룹 상세 패턴), 화면을 떠나면 소켓 구독도 함께 정리된다 */
-@Composable
-private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewModel {
-    val container = LocalAppContainer.current
-    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
-    val videoCompressor = rememberVideoCompressor()
-
-    return viewModel(key = "chat-room-$chatRoomId") {
-        ChatRoomViewModel(
-            groupId = groupId,
-            chatRoomId = chatRoomId,
-            getChatMessagesUseCase = container.getChatMessagesUseCase,
-            sendChatMessageUseCase = container.sendChatMessageUseCase,
-            markChatMessagesReadUseCase = container.markChatMessagesReadUseCase,
-            uploadChatFileUseCase = container.uploadChatFileUseCase,
-            sendChatTypingUseCase = container.sendChatTypingUseCase,
-            getChatReadPositionsUseCase = container.getChatReadPositionsUseCase,
-            getCallRosterUseCase = container.getCallRosterUseCase,
-            getGroupMembersUseCase = container.getGroupMembersUseCase,
-            observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
-            videoCompressor = videoCompressor
-        )
     }
 }
 

@@ -126,13 +126,13 @@ final class GroupMembersViewModel: MviViewModel {
 
     init(
         groupId: Int64,
-        getGroupMembersUseCase: GetGroupMembersUseCase,
-        getJoinRequestsUseCase: GetJoinRequestsUseCase,
-        approveJoinRequestUseCase: ApproveJoinRequestUseCase,
-        rejectJoinRequestUseCase: RejectJoinRequestUseCase,
-        createGroupInviteUseCase: CreateGroupInviteUseCase,
-        getBlockedUsersUseCase: GetBlockedUsersUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        getGroupMembersUseCase: GetGroupMembersUseCase = AppContainer.shared.getGroupMembersUseCase,
+        getJoinRequestsUseCase: GetJoinRequestsUseCase = AppContainer.shared.getJoinRequestsUseCase,
+        approveJoinRequestUseCase: ApproveJoinRequestUseCase = AppContainer.shared.approveJoinRequestUseCase,
+        rejectJoinRequestUseCase: RejectJoinRequestUseCase = AppContainer.shared.rejectJoinRequestUseCase,
+        createGroupInviteUseCase: CreateGroupInviteUseCase = AppContainer.shared.createGroupInviteUseCase,
+        getBlockedUsersUseCase: GetBlockedUsersUseCase = AppContainer.shared.getBlockedUsersUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.groupId = groupId
         self.getGroupMembersUseCase = getGroupMembersUseCase

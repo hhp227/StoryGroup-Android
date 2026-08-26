@@ -1,4 +1,4 @@
-package kr.hhp227.storygroup.di
+package kr.hhp227.storygroup.shared.di
 
 import kr.hhp227.storygroup.shared.data.network.createApiClient
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
@@ -130,7 +130,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
 /**
  * 수동 DI 컨테이너 — 플랫폼 진입점에서 저장소 2종만 주입하면 나머지 의존성이 구성된다.
  * (Android=SharedPreferences, Desktop=파일, Preview=InMemory)
- * ViewModel에는 유스케이스만 내려준다 — iosApp AppContainer.swift 미러.
+ * ViewModel에는 유스케이스만 내려준다 — iosApp도 이 클래스를 XCFramework로 직접 사용한다.
  */
 class AppContainer(
     tokenStorage: TokenStorage,
@@ -252,6 +252,6 @@ class AppContainer(
     // 홈 통합검색 — 5섹션 전부(친구 탭 searchUsersUseCase는 users 섹션만)
     val searchUseCase = SearchUseCase(searchRepository)
 
-    // 인터넷 연결 배너 — 앱 루트(App.kt)가 구독한다. iosApp AppContainer.swift 미러
+    // 인터넷 연결 배너 — 앱 루트(App.kt)가 구독한다. iosApp 공용
     val observeNetworkAlertStateUseCase = ObserveNetworkAlertStateUseCase(networkStatusRepository)
 }

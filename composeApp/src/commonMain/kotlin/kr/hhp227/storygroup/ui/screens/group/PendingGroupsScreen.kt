@@ -33,9 +33,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
@@ -43,18 +42,6 @@ import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun pendingGroupsViewModel(): PendingGroupsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "pending-groups") {
-        PendingGroupsViewModel(
-            getMyJoinRequestedGroupsUseCase = container.getMyJoinRequestedGroupsUseCase,
-            cancelJoinRequestUseCase = container.cancelJoinRequestUseCase
-        )
-    }
-}
 
 /**
  * 가입 신청중 — 레거시 JoinRequestGroupFragment 미러(진입 스트립 가운데 칸에서 진입).
@@ -66,7 +53,12 @@ private fun pendingGroupsViewModel(): PendingGroupsViewModel {
 fun PendingGroupsScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: PendingGroupsViewModel = pendingGroupsViewModel()
+    viewModel: PendingGroupsViewModel = screenViewModel(key = "pending-groups") {
+        PendingGroupsViewModel(
+            getMyJoinRequestedGroupsUseCase = it.getMyJoinRequestedGroupsUseCase,
+            cancelJoinRequestUseCase = it.cancelJoinRequestUseCase
+        )
+    }
 ) {
     PendingGroupsContent(
         viewModel = viewModel,

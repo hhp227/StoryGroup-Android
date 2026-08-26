@@ -34,8 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.PostReport
 import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.ui.components.SgCard
@@ -45,20 +44,6 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
-
-/** 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴) */
-@Composable
-private fun groupReportsViewModel(groupId: Long): GroupReportsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-reports-$groupId") {
-        GroupReportsViewModel(
-            groupId = groupId,
-            getGroupReportsUseCase = container.getGroupReportsUseCase,
-            processGroupReportUseCase = container.processGroupReportUseCase
-        )
-    }
-}
 
 /**
  * 그룹 신고함(모더레이터 전용) — 웹 /groups/[id]/reports 미러. 진입점은 그룹 설정 탭
@@ -70,7 +55,14 @@ fun GroupReportsScreen(
     groupId: Long,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: GroupReportsViewModel = groupReportsViewModel(groupId)
+    // 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴)
+    viewModel: GroupReportsViewModel = screenViewModel(key = "group-reports-$groupId") {
+        GroupReportsViewModel(
+            groupId = groupId,
+            getGroupReportsUseCase = it.getGroupReportsUseCase,
+            processGroupReportUseCase = it.processGroupReportUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

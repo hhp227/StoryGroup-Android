@@ -6,7 +6,7 @@ import Shared
 /// 폼 필드는 화면 소유(CreatePost 패턴), 저장 성공 시 셸 소유 세션 ProfileViewModel을 갱신해
 /// 프로필 탭/드로어 헤더에 반영한다.
 struct AccountSettingsView: View {
-    @StateObject private var accountSettingsViewModel: AccountSettingsViewModel
+    @StateObject private var accountSettingsViewModel = AccountSettingsViewModel()
 
     /// 저장 성공 반영용 — 프로필 탭/드로어 헤더와 같은 세션 인스턴스(셸 소유).
     /// onAction 호출만 하므로 관찰(@ObservedObject)은 불필요
@@ -199,13 +199,7 @@ struct AccountSettingsView: View {
         }
     }
 
-    init(container: AppContainer, profileViewModel: ProfileViewModel) {
-        _accountSettingsViewModel = StateObject(wrappedValue: AccountSettingsViewModel(
-            getMyProfileUseCase: container.getMyProfileUseCase,
-            updateMyProfileUseCase: container.updateMyProfileUseCase,
-            changePasswordUseCase: container.changePasswordUseCase,
-            uploadImageUseCase: container.uploadImageUseCase
-        ))
+    init(profileViewModel: ProfileViewModel) {
         self.profileViewModel = profileViewModel
     }
 }

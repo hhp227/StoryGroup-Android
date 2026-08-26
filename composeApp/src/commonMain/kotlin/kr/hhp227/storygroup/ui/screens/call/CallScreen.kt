@@ -32,8 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
@@ -43,28 +42,6 @@ import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
 import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
 import kr.hhp227.storygroup.ui.rtc.rememberRtcScreenCaptureRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun callViewModel(chatRoomId: Long, ring: Boolean, video: Boolean): CallViewModel {
-    val container = LocalAppContainer.current
-    // 플랫폼 미디어 팩토리 — Android는 applicationContext 캡처라 VM 보관이 안전, Desktop은 null 생성
-    val rtcMediaSessionFactory = rememberRtcMediaSessionFactory()
-
-    return viewModel(key = "call-$chatRoomId") {
-        CallViewModel(
-            chatRoomId = chatRoomId,
-            ring = ring,
-            video = video,
-            observeRtcCallEventsUseCase = container.observeRtcCallEventsUseCase,
-            observeRtcSignalsUseCase = container.observeRtcSignalsUseCase,
-            sendRtcSignalUseCase = container.sendRtcSignalUseCase,
-            getIceServersUseCase = container.getIceServersUseCase,
-            sendCallInviteUseCase = container.sendCallInviteUseCase,
-            rtcMediaSessionFactory = rtcMediaSessionFactory,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
-        )
-    }
-}
 
 /**
  * 방 통화 — DM 1:1과 그룹 방 공용(페이스톡 미러). 진입 즉시 권한을 물어 통화에 입장한다
@@ -81,7 +58,23 @@ fun CallScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     // 라우트(백스택 엔트리) 스코프 — pop되면 구독(=통화)도 함께 정리된다
-    viewModel: CallViewModel = callViewModel(chatRoomId, ring, video)
+    // 플랫폼 미디어 팩토리 — Android는 applicationContext 캡처라 VM 보관이 안전, Desktop은 null 생성
+    viewModel: CallViewModel = rememberRtcMediaSessionFactory().let { rtcMediaSessionFactory ->
+        screenViewModel(key = "call-$chatRoomId") {
+            CallViewModel(
+                chatRoomId = chatRoomId,
+                ring = ring,
+                video = video,
+                observeRtcCallEventsUseCase = it.observeRtcCallEventsUseCase,
+                observeRtcSignalsUseCase = it.observeRtcSignalsUseCase,
+                sendRtcSignalUseCase = it.sendRtcSignalUseCase,
+                getIceServersUseCase = it.getIceServersUseCase,
+                sendCallInviteUseCase = it.sendCallInviteUseCase,
+                rtcMediaSessionFactory = rtcMediaSessionFactory,
+                getCurrentUserIdUseCase = it.getCurrentUserIdUseCase
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

@@ -35,7 +35,7 @@ final class RegisterViewModel: MviViewModel {
         }
     }
 
-    init(registerUseCase: RegisterUseCase) {
+    init(registerUseCase: RegisterUseCase = AppContainer.shared.registerUseCase) {
         self.registerUseCase = registerUseCase
     }
 

@@ -34,9 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
@@ -48,20 +47,6 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 
-@Composable
-private fun groupEditViewModel(groupId: Long): GroupEditViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        GroupEditViewModel(
-            groupId = groupId,
-            getGroupUseCase = container.getGroupUseCase,
-            updateGroupUseCase = container.updateGroupUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
-        )
-    }
-}
-
 /**
  * 그룹 정보 수정 — 설정 탭 "그룹 정보 수정" 행에서 진입하는 풀스크린(계정 설정 패턴,
  * 상단바는 화면 소유). 저장 성공 시 화면이 스스로 GroupUpdated·GroupsChanged를 publish하고 pop한다.
@@ -72,7 +57,14 @@ fun GroupEditScreen(
     groupId: Long,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: GroupEditViewModel = groupEditViewModel(groupId)
+    viewModel: GroupEditViewModel = screenViewModel {
+        GroupEditViewModel(
+            groupId = groupId,
+            getGroupUseCase = it.getGroupUseCase,
+            updateGroupUseCase = it.updateGroupUseCase,
+            uploadImageUseCase = it.uploadImageUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

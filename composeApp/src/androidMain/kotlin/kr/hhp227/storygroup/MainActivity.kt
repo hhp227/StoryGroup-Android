@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.shared.data.storage.InMemoryTokenStorage
 
 class MainActivity : ComponentActivity() {

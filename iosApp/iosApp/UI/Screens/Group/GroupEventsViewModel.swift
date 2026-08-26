@@ -273,13 +273,13 @@ final class GroupEventsViewModel: MviViewModel {
 
     init(
         groupId: Int64,
-        getGroupEventsUseCase: GetGroupEventsUseCase,
-        getEventDetailUseCase: GetEventDetailUseCase,
-        createEventUseCase: CreateEventUseCase,
-        deleteEventUseCase: DeleteEventUseCase,
-        rsvpEventUseCase: RsvpEventUseCase,
-        cancelEventRsvpUseCase: CancelEventRsvpUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        getGroupEventsUseCase: GetGroupEventsUseCase = AppContainer.shared.getGroupEventsUseCase,
+        getEventDetailUseCase: GetEventDetailUseCase = AppContainer.shared.getEventDetailUseCase,
+        createEventUseCase: CreateEventUseCase = AppContainer.shared.createEventUseCase,
+        deleteEventUseCase: DeleteEventUseCase = AppContainer.shared.deleteEventUseCase,
+        rsvpEventUseCase: RsvpEventUseCase = AppContainer.shared.rsvpEventUseCase,
+        cancelEventRsvpUseCase: CancelEventRsvpUseCase = AppContainer.shared.cancelEventRsvpUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.groupId = groupId
         self.getGroupEventsUseCase = getGroupEventsUseCase

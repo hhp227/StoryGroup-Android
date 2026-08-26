@@ -10,7 +10,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
-import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.shared.data.source.JvmNetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.storage.FileTokenStorage
 import kr.hhp227.storygroup.shared.data.storage.FileKeyValueStorage

@@ -29,7 +29,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import kr.hhp227.storygroup.di.AppContainer
+import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.di.LocalAppContainer
 import kr.hhp227.storygroup.di.LocalSessionViewModelStoreOwner
 import kr.hhp227.storygroup.di.sessionViewModel

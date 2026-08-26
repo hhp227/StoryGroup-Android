@@ -5,7 +5,7 @@ import Shared
 /// GroupsView가 풀스크린 push로 표시 — 내비바는 루트 스택 몫, VM은 방문마다 새로 생성(진입 시 로드).
 /// 행에 바로 신청 취소를 두고 행 클릭은 없다 — 미가입 그룹이라 이동할 상세가 없다.
 struct PendingGroupsView: View {
-    @StateObject private var viewModel: PendingGroupsViewModel
+    @StateObject private var viewModel = PendingGroupsViewModel()
 
     var body: some View {
         PendingGroupsContent(viewModel: viewModel)
@@ -13,13 +13,6 @@ struct PendingGroupsView: View {
             .navigationBarTitleDisplayMode(.inline)
             // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
             .navigationBarScrim(visible: true)
-    }
-
-    init(container: AppContainer) {
-        _viewModel = StateObject(wrappedValue: PendingGroupsViewModel(
-            getMyJoinRequestedGroupsUseCase: container.getMyJoinRequestedGroupsUseCase,
-            cancelJoinRequestUseCase: container.cancelJoinRequestUseCase
-        ))
     }
 }
 

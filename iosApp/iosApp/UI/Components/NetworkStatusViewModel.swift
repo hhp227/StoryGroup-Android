@@ -15,7 +15,7 @@ final class NetworkStatusViewModel: MviViewModel {
 
     func onAction(_ action: Never) {}
 
-    init(observeNetworkAlertStateUseCase: ObserveNetworkAlertStateUseCase) {
+    init(observeNetworkAlertStateUseCase: ObserveNetworkAlertStateUseCase = AppContainer.shared.observeNetworkAlertStateUseCase) {
         // 구독 수명 = 루트 VM 수명 — 앱이 살아 있는 동안 감지가 유지된다
         KotlinFlowPublisher<NetworkAlertState> { onEach in
             observeNetworkAlertStateUseCase.statesFlow().subscribe(onEach: onEach)

@@ -48,7 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.cash.paging.LoadStateError
 import app.cash.paging.LoadStateLoading
 import app.cash.paging.compose.collectAsLazyPagingItems
@@ -56,7 +55,7 @@ import app.cash.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.model.DiscoverSort
@@ -72,20 +71,6 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 
-@Composable
-private fun discoverGroupsViewModel(): DiscoverGroupsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "discover-groups") {
-        DiscoverGroupsViewModel(
-            getDiscoverGroupsPagingDataUseCase = container.getDiscoverGroupsPagingDataUseCase,
-            joinGroupUseCase = container.joinGroupUseCase,
-            joinGroupByCodeUseCase = container.joinGroupByCodeUseCase,
-            cancelJoinRequestUseCase = container.cancelJoinRequestUseCase
-        )
-    }
-}
-
 /**
  * 그룹 찾기 — 검색+정렬(최신/인기), 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 GroupDetailDialog 미러).
  * 검색 입력폼은 상단바 제목 자리에 둔다 — iOS .searchable(내비바 검색 필드)과 표시 위치 통일.
@@ -97,7 +82,14 @@ private fun discoverGroupsViewModel(): DiscoverGroupsViewModel {
 fun DiscoverGroupsScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: DiscoverGroupsViewModel = discoverGroupsViewModel(),
+    viewModel: DiscoverGroupsViewModel = screenViewModel(key = "discover-groups") {
+        DiscoverGroupsViewModel(
+            getDiscoverGroupsPagingDataUseCase = it.getDiscoverGroupsPagingDataUseCase,
+            joinGroupUseCase = it.joinGroupUseCase,
+            joinGroupByCodeUseCase = it.joinGroupByCodeUseCase,
+            cancelJoinRequestUseCase = it.cancelJoinRequestUseCase
+        )
+    },
     groupsViewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase)
     }

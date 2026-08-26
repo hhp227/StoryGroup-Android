@@ -18,9 +18,6 @@ struct TabShellView: View {
     /// NavigationViewModel에서 직접 읽지만, iOS엔 세션 VM 저장소가 없어 셸이 드릴링한다)
     let pendingResults: Set<NavResult>
 
-    /// 화면이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
-    let container: AppContainer
-
     let profile: Profile?
 
     /// 셸 뱃지 — MainShellView 소유 세션 VM(Compose sessionNotificationsViewModel/sessionChatViewModel 미러)
@@ -45,7 +42,6 @@ struct TabShellView: View {
                 ForEach(SGDestination.allCases) { destination in
                     DestinationView(
                         destination: destination,
-                        container: container,
                         profile: profile,
                         profileViewModel: profileViewModel,
                         notificationsViewModel: notificationsViewModel,

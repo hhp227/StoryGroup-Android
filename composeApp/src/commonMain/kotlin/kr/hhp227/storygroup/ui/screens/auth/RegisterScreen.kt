@@ -28,18 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun registerViewModel(): RegisterViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel { RegisterViewModel(container.registerUseCase) }
-}
 
 /**
  * 가입 — 웹 /register 미러. VM은 화면이 default parameter로 선언하고
@@ -49,7 +41,7 @@ private fun registerViewModel(): RegisterViewModel {
 fun RegisterScreen(
     onRegistered: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: RegisterViewModel = registerViewModel()
+    viewModel: RegisterViewModel = screenViewModel { RegisterViewModel(it.registerUseCase) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

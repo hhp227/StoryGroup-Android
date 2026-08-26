@@ -12,9 +12,6 @@ struct GroupAlbumTab: View {
 
     let groupId: Int64
 
-    /// 게시글 상세 push의 VM 생성에 쓰인다
-    let container: AppContainer
-
     /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 화면은 전달만
     let chatViewModel: ChatViewModel
 
@@ -91,7 +88,6 @@ struct GroupAlbumTab: View {
         return NavigationLink {
             if let photo {
                 PostDetailView(
-                    container: container,
                     groupId: groupId,
                     postId: photo.postId,
                     chatViewModel: chatViewModel,

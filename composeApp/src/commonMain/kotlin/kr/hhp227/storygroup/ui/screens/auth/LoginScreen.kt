@@ -27,28 +27,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun loginViewModel(): LoginViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        LoginViewModel(container.isLoggedInUseCase, container.loginUseCase, container.logoutUseCase)
-    }
-}
 
 /** 로그인 — 웹 /login 미러. VM은 세션 게이트라 App 루트와 같은 인스턴스를 default parameter로 선언한다 */
 @Composable
 fun LoginScreen(
     justRegistered: Boolean,
     onNavigateToRegister: () -> Unit,
-    viewModel: LoginViewModel = loginViewModel()
+    viewModel: LoginViewModel = screenViewModel {
+        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.logoutUseCase)
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

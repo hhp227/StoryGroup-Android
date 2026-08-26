@@ -199,12 +199,12 @@ final class CreatePostViewModel: MviViewModel {
     init(
         groupId: Int64?,
         postId: Int64? = nil,
-        createPostUseCase: CreatePostUseCase,
-        createLoungePostUseCase: CreateLoungePostUseCase,
-        uploadImageUseCase: UploadImageUseCase,
-        uploadVideoUseCase: UploadVideoUseCase,
-        getPostUseCase: GetPostUseCase,
-        updatePostUseCase: UpdatePostUseCase
+        createPostUseCase: CreatePostUseCase = AppContainer.shared.createPostUseCase,
+        createLoungePostUseCase: CreateLoungePostUseCase = AppContainer.shared.createLoungePostUseCase,
+        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase,
+        uploadVideoUseCase: UploadVideoUseCase = AppContainer.shared.uploadVideoUseCase,
+        getPostUseCase: GetPostUseCase = AppContainer.shared.getPostUseCase,
+        updatePostUseCase: UpdatePostUseCase = AppContainer.shared.updatePostUseCase
     ) {
         self.groupId = groupId
         self.postId = postId

@@ -29,8 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgEmptyState
@@ -40,19 +39,6 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatJoinDate
 
-/** 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴) */
-@Composable
-private fun blockedUsersViewModel(): BlockedUsersViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        BlockedUsersViewModel(
-            getBlockedUsersUseCase = container.getBlockedUsersUseCase,
-            unblockUserUseCase = container.unblockUserUseCase
-        )
-    }
-}
-
 /**
  * 차단 사용자 관리 — 웹 /settings/blocked 미러(아바타+이름+차단일+해제 버튼).
  * 진입점은 셸 프로필 탭 메뉴. iosApp BlockedUsersView.swift와 1:1 미러
@@ -61,7 +47,13 @@ private fun blockedUsersViewModel(): BlockedUsersViewModel {
 fun BlockedUsersScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: BlockedUsersViewModel = blockedUsersViewModel()
+    // 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴)
+    viewModel: BlockedUsersViewModel = screenViewModel {
+        BlockedUsersViewModel(
+            getBlockedUsersUseCase = it.getBlockedUsersUseCase,
+            unblockUserUseCase = it.unblockUserUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

@@ -69,9 +69,9 @@ final class GroupSettingsViewModel: MviViewModel {
 
     init(
         groupId: Int64,
-        getGroupUseCase: GetGroupUseCase,
-        deleteGroupUseCase: DeleteGroupUseCase,
-        leaveGroupUseCase: LeaveGroupUseCase
+        getGroupUseCase: GetGroupUseCase = AppContainer.shared.getGroupUseCase,
+        deleteGroupUseCase: DeleteGroupUseCase = AppContainer.shared.deleteGroupUseCase,
+        leaveGroupUseCase: LeaveGroupUseCase = AppContainer.shared.leaveGroupUseCase
     ) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase

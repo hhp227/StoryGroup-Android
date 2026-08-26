@@ -164,10 +164,10 @@ final class AccountSettingsViewModel: MviViewModel {
     }
 
     init(
-        getMyProfileUseCase: GetMyProfileUseCase,
-        updateMyProfileUseCase: UpdateMyProfileUseCase,
-        changePasswordUseCase: ChangePasswordUseCase,
-        uploadImageUseCase: UploadImageUseCase
+        getMyProfileUseCase: GetMyProfileUseCase = AppContainer.shared.getMyProfileUseCase,
+        updateMyProfileUseCase: UpdateMyProfileUseCase = AppContainer.shared.updateMyProfileUseCase,
+        changePasswordUseCase: ChangePasswordUseCase = AppContainer.shared.changePasswordUseCase,
+        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase
     ) {
         self.getMyProfileUseCase = getMyProfileUseCase
         self.updateMyProfileUseCase = updateMyProfileUseCase

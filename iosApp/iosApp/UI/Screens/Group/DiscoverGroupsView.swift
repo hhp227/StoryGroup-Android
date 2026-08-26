@@ -7,7 +7,7 @@ import Shared
 /// 검색은 내비바 검색 필드(.searchable) — Compose 상단바 검색 입력폼과 표시 위치 통일.
 /// 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct DiscoverGroupsView: View {
-    @StateObject private var viewModel: DiscoverGroupsViewModel
+    @StateObject private var viewModel = DiscoverGroupsViewModel()
 
     /// 갱신용 — 그룹 탭과 같은 인스턴스(GroupsView가 소유). onAction 호출만 하므로 관찰 불필요
     private let groupsViewModel: GroupsViewModel
@@ -23,13 +23,7 @@ struct DiscoverGroupsView: View {
         .navigationBarScrim(visible: true)
     }
 
-    init(container: AppContainer, groupsViewModel: GroupsViewModel) {
-        _viewModel = StateObject(wrappedValue: DiscoverGroupsViewModel(
-            getDiscoverGroupsPagingDataUseCase: container.getDiscoverGroupsPagingDataUseCase,
-            joinGroupUseCase: container.joinGroupUseCase,
-            joinGroupByCodeUseCase: container.joinGroupByCodeUseCase,
-            cancelJoinRequestUseCase: container.cancelJoinRequestUseCase
-        ))
+    init(groupsViewModel: GroupsViewModel) {
         self.groupsViewModel = groupsViewModel
     }
 }

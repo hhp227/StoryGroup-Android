@@ -49,9 +49,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoPoster
 import kr.hhp227.storygroup.ui.navigation.NavResult
@@ -67,27 +66,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 /** 이미지 로드 전 자리 표시 종횡비 — 실비율은 로드되는 즉시 기억돼 그 뒤로 유지된다(SgVideoAttachment 미러) */
 private const val FALLBACK_IMAGE_ASPECT_RATIO = 4f / 3f
 
-@Composable
-private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
-    val container = LocalAppContainer.current
-    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
-    val videoCompressor = rememberVideoCompressor()
-
-    return viewModel(key = "create-post-$groupId-$postId") {
-        CreatePostViewModel(
-            groupId = groupId,
-            postId = postId,
-            createPostUseCase = container.createPostUseCase,
-            createLoungePostUseCase = container.createLoungePostUseCase,
-            uploadImageUseCase = container.uploadImageUseCase,
-            uploadVideoUseCase = container.uploadVideoUseCase,
-            getPostUseCase = container.getPostUseCase,
-            updatePostUseCase = container.updatePostUseCase,
-            videoCompressor = videoCompressor
-        )
-    }
-}
-
 /**
  * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진·동영상 첨부 행.
  * groupId null이면 라운지(홈 피드)에 게시. NavHost 풀스크린 목적지라 상단바는 화면이 소유하고,
@@ -101,7 +79,22 @@ fun CreatePostScreen(
     // 있으면 수정 모드 — 기존 본문·첨부를 불러와 채운다
     postId: Long? = null,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: CreatePostViewModel = createPostViewModel(groupId, postId)
+    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
+    viewModel: CreatePostViewModel = rememberVideoCompressor().let { videoCompressor ->
+        screenViewModel(key = "create-post-$groupId-$postId") {
+            CreatePostViewModel(
+                groupId = groupId,
+                postId = postId,
+                createPostUseCase = it.createPostUseCase,
+                createLoungePostUseCase = it.createLoungePostUseCase,
+                uploadImageUseCase = it.uploadImageUseCase,
+                uploadVideoUseCase = it.uploadVideoUseCase,
+                getPostUseCase = it.getPostUseCase,
+                updatePostUseCase = it.updatePostUseCase,
+                videoCompressor = videoCompressor
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

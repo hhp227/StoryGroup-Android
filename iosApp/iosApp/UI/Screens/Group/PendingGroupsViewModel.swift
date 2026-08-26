@@ -56,8 +56,8 @@ final class PendingGroupsViewModel: MviViewModel {
     }
 
     init(
-        getMyJoinRequestedGroupsUseCase: GetMyJoinRequestedGroupsUseCase,
-        cancelJoinRequestUseCase: CancelJoinRequestUseCase
+        getMyJoinRequestedGroupsUseCase: GetMyJoinRequestedGroupsUseCase = AppContainer.shared.getMyJoinRequestedGroupsUseCase,
+        cancelJoinRequestUseCase: CancelJoinRequestUseCase = AppContainer.shared.cancelJoinRequestUseCase
     ) {
         self.getMyJoinRequestedGroupsUseCase = getMyJoinRequestedGroupsUseCase
         self.cancelJoinRequestUseCase = cancelJoinRequestUseCase

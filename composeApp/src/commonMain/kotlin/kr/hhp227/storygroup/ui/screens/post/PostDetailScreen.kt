@@ -50,9 +50,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.Comment
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
@@ -65,27 +64,6 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
-
-@Composable
-private fun postDetailViewModel(groupId: Long, postId: Long): PostDetailViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "post-detail-$groupId-$postId") {
-        PostDetailViewModel(
-            groupId = groupId,
-            postId = postId,
-            getPostDetailUseCase = container.getPostDetailUseCase,
-            setPostLikedUseCase = container.setPostLikedUseCase,
-            createCommentUseCase = container.createCommentUseCase,
-            deleteCommentUseCase = container.deleteCommentUseCase,
-            deletePostUseCase = container.deletePostUseCase,
-            reportPostUseCase = container.reportPostUseCase,
-            reportUserUseCase = container.reportUserUseCase,
-            blockUserUseCase = container.blockUserUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
-        )
-    }
-}
 
 /**
  * 게시글 상세 — 본문·이미지·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
@@ -100,7 +78,21 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     pendingResults: Set<NavResult> = sessionNavigationViewModel().uiState.collectAsState().value.pendingResults,
-    viewModel: PostDetailViewModel = postDetailViewModel(groupId, postId)
+    viewModel: PostDetailViewModel = screenViewModel(key = "post-detail-$groupId-$postId") {
+        PostDetailViewModel(
+            groupId = groupId,
+            postId = postId,
+            getPostDetailUseCase = it.getPostDetailUseCase,
+            setPostLikedUseCase = it.setPostLikedUseCase,
+            createCommentUseCase = it.createCommentUseCase,
+            deleteCommentUseCase = it.deleteCommentUseCase,
+            deletePostUseCase = it.deletePostUseCase,
+            reportPostUseCase = it.reportPostUseCase,
+            reportUserUseCase = it.reportUserUseCase,
+            blockUserUseCase = it.blockUserUseCase,
+            getCurrentUserIdUseCase = it.getCurrentUserIdUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction

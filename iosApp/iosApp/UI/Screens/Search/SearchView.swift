@@ -17,8 +17,6 @@ private enum ProfileFollowUp {
 /// 결과 push(그룹 상세·게시글 상세·채팅방)는 자체 소유(GroupDetailView 선례),
 /// 파일은 시스템 브라우저(openURL), 사용자는 행 탭=공개 프로필 시트(친구 추가/해제는 내부 버튼).
 struct SearchView: View {
-    let container: AppContainer
-
     /// 채팅방·그룹 상세 push에 필요 — MainShellView 소유 세션 VM 전달.
     /// 이 화면은 상태를 직접 구독하지 않고 통과만 시킨다 — GroupDetailView 바깥 레이어 선례(plain let)
     let chatViewModel: ChatViewModel
@@ -32,7 +30,7 @@ struct SearchView: View {
     /// NavResult.groupsChanged를 publish한다(TabShellView/DrawerShellView가 소비)
     let onGroupsRefreshNeeded: () -> Void
 
-    @StateObject private var searchViewModel: SearchViewModel
+    @StateObject private var searchViewModel = SearchViewModel()
 
     @State private var queryText = ""
 
@@ -377,7 +375,6 @@ struct SearchView: View {
         if let groupId = selectedGroupId {
             GroupDetailView(
                 groupId: groupId,
-                container: container,
                 chatViewModel: chatViewModel,
                 theme: theme,
                 profileViewModel: profileViewModel,
@@ -393,7 +390,6 @@ struct SearchView: View {
     @ViewBuilder private var postDetailDestination: some View {
         if let post = selectedPost {
             PostDetailView(
-                container: container,
                 groupId: post.groupId,
                 postId: post.postId,
                 chatViewModel: chatViewModel,
@@ -408,7 +404,6 @@ struct SearchView: View {
                 chatRoomId: room.chatRoomId,
                 groupId: room.groupId,
                 title: room.title,
-                container: container,
                 chatViewModel: chatViewModel
             )
         }
@@ -418,7 +413,6 @@ struct SearchView: View {
         if let userId = selectedUserId {
             UserProfileView(
                 userId: userId,
-                container: container,
                 onOpenChatRoom: { room in
                     profileFollowUp = .chatRoom(room)
                     selectedUserId = nil
@@ -433,7 +427,7 @@ struct SearchView: View {
 
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel)
     }
 
     /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
@@ -476,19 +470,11 @@ struct SearchView: View {
     }
 
     init(
-        container: AppContainer,
         chatViewModel: ChatViewModel,
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
         onGroupsRefreshNeeded: @escaping () -> Void
     ) {
-        _searchViewModel = StateObject(wrappedValue: SearchViewModel(
-            searchUseCase: container.searchUseCase,
-            getFriendsUseCase: container.getFriendsUseCase,
-            addFriendUseCase: container.addFriendUseCase,
-            removeFriendUseCase: container.removeFriendUseCase
-        ))
-        self.container = container
         self.chatViewModel = chatViewModel
         self.theme = theme
         self.profileViewModel = profileViewModel

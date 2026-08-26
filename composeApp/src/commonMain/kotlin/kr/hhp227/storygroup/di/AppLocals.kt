@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.hhp227.storygroup.shared.di.AppContainer
 
 /**
  * 화면이 default parameter로 자기 ViewModel을 선언(ConCafe 패턴의 Koin GlobalContext 대체)할 수
@@ -34,4 +35,15 @@ inline fun <reified VM : ViewModel> sessionViewModel(
     return viewModel(viewModelStoreOwner = LocalSessionViewModelStoreOwner.current, key = key) {
         create(container)
     }
+}
+
+/** 화면(기본 ViewModelStoreOwner — NavHost 목적지는 백스택 엔트리) 스코프에 ViewModel을
+ *  default parameter로 선언한다 — sessionViewModel의 화면 스코프 대응물. */
+@Composable
+inline fun <reified VM : ViewModel> screenViewModel(
+    key: String? = null,
+    crossinline create: (AppContainer) -> VM
+): VM {
+    val container = LocalAppContainer.current
+    return viewModel(key = key) { create(container) }
 }

@@ -199,17 +199,8 @@ struct CreatePostView: View {
     }
 
     /// postId가 있으면 같은 폼이 수정 모드로 동작한다(Compose CreatePostScreen 미러)
-    init(container: AppContainer, groupId: Int64?, postId: Int64? = nil, onCreated: @escaping () -> Void) {
-        _viewModel = StateObject(wrappedValue: CreatePostViewModel(
-            groupId: groupId,
-            postId: postId,
-            createPostUseCase: container.createPostUseCase,
-            createLoungePostUseCase: container.createLoungePostUseCase,
-            uploadImageUseCase: container.uploadImageUseCase,
-            uploadVideoUseCase: container.uploadVideoUseCase,
-            getPostUseCase: container.getPostUseCase,
-            updatePostUseCase: container.updatePostUseCase
-        ))
+    init(groupId: Int64?, postId: Int64? = nil, onCreated: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: CreatePostViewModel(groupId: groupId, postId: postId))
         self.onCreated = onCreated
     }
 
