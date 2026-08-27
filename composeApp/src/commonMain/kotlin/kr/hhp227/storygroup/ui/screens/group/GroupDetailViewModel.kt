@@ -14,6 +14,9 @@ import kr.hhp227.storygroup.shared.domain.model.GroupRole
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupDefaultChatRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.group_load_failed
 
 /**
  * 그룹 상세 화면 수준 VM — 커버(이름/설명/역할)+상단바 채팅 버튼용 기본 방 id만 담당.
@@ -54,7 +57,7 @@ class GroupDetailViewModel(
                 }
             }.onFailure { e ->
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "그룹을 불러오지 못했습니다.")
+                    it.copy(isLoading = false, error = e.message ?: getString(Res.string.group_load_failed))
                 }
             }
         }

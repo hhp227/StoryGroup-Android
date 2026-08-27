@@ -38,6 +38,15 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_loading
+import storygroup.composeapp.generated.resources.profile_account_settings
+import storygroup.composeapp.generated.resources.profile_app_settings
+import storygroup.composeapp.generated.resources.profile_blocked_users
+import storygroup.composeapp.generated.resources.profile_logout
+import storygroup.composeapp.generated.resources.profile_privacy
+import storygroup.composeapp.generated.resources.profile_terms
 
 // 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 섹션 미러)
 private const val TERMS_URL = AppLinks.TERMS_URL
@@ -71,7 +80,7 @@ fun ProfileScreen(
                 Spacer(Modifier.width(16.dp))
                 Column {
                     Text(
-                        profile?.name ?: "불러오는 중...",
+                        profile?.name ?: stringResource(Res.string.common_loading),
                         style = SgTheme.typography.titleLarge,
                         color = SgTheme.colors.ink
                     )
@@ -91,38 +100,38 @@ fun ProfileScreen(
         SgCard(modifier = Modifier.fillMaxWidth()) {
             ProfileMenuRow(
                 icon = Icons.Default.ManageAccounts,
-                label = "계정 설정",
+                label = stringResource(Res.string.profile_account_settings),
                 onClick = { onNavigationAction(NavigationAction.NavigateToAccountSettings) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.Default.Settings,
-                label = "앱 설정",
+                label = stringResource(Res.string.profile_app_settings),
                 onClick = { onNavigationAction(NavigationAction.NavigateToAppSettings) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             // 개인정보 보호 — 웹 설정 허브 /settings/blocked 미러
             ProfileMenuRow(
                 icon = Icons.Default.Block,
-                label = "차단 사용자 관리",
+                label = stringResource(Res.string.profile_blocked_users),
                 onClick = { onNavigationAction(NavigationAction.NavigateToBlockedUsers) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.Default.Description,
-                label = "이용약관",
+                label = stringResource(Res.string.profile_terms),
                 onClick = { uriHandler.openUri(TERMS_URL) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.Default.PrivacyTip,
-                label = "개인정보처리방침",
+                label = stringResource(Res.string.profile_privacy),
                 onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
             )
             Divider(color = SgTheme.colors.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuRow(
                 icon = Icons.AutoMirrored.Filled.Logout,
-                label = "로그아웃",
+                label = stringResource(Res.string.profile_logout),
                 onClick = onLogout,
                 tint = SgTheme.colors.rust
             )

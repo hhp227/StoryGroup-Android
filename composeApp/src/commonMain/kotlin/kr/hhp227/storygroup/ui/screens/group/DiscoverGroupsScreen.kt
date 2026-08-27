@@ -70,6 +70,31 @@ import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_close
+import storygroup.composeapp.generated.resources.common_join
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.common_search
+import storygroup.composeapp.generated.resources.count_members_full
+import storygroup.composeapp.generated.resources.discover_code_hint
+import storygroup.composeapp.generated.resources.discover_empty_subtitle
+import storygroup.composeapp.generated.resources.discover_empty_title
+import storygroup.composeapp.generated.resources.discover_invite_code
+import storygroup.composeapp.generated.resources.discover_join_by_code
+import storygroup.composeapp.generated.resources.discover_search_placeholder
+import storygroup.composeapp.generated.resources.discover_sort_popular
+import storygroup.composeapp.generated.resources.discover_sort_recent
+import storygroup.composeapp.generated.resources.group_load_failed
+import storygroup.composeapp.generated.resources.join_type_approval
+import storygroup.composeapp.generated.resources.join_type_auto
+import storygroup.composeapp.generated.resources.membership_joined
+import storygroup.composeapp.generated.resources.membership_request
+import storygroup.composeapp.generated.resources.membership_requested
+import storygroup.composeapp.generated.resources.request_cancel
+import storygroup.composeapp.generated.resources.two_part_dot
 
 /**
  * 그룹 찾기 — 검색+정렬(최신/인기), 카드 탭 시 상세 다이얼로그에서 가입/신청(웹 GroupDetailDialog 미러).
@@ -136,12 +161,12 @@ private fun DiscoverGroupsContent(
         SgTopBar(
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             },
             actions = {
                 IconButton(onClick = { onAction(DiscoverGroupsViewModel.Action.Search(queryText)) }) {
-                    Icon(Icons.Default.Search, contentDescription = "검색", tint = sg.accent)
+                    Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.common_search), tint = sg.accent)
                 }
             }
         ) {
@@ -162,7 +187,7 @@ private fun DiscoverGroupsContent(
                 decorationBox = { innerTextField ->
                     Box {
                         if (queryText.isEmpty()) {
-                            Text("그룹 검색", style = SgTheme.typography.bodyLarge, color = sg.inkFaint)
+                            Text(stringResource(Res.string.discover_search_placeholder), style = SgTheme.typography.bodyLarge, color = sg.inkFaint)
                         }
                         innerTextField()
                     }
@@ -172,19 +197,19 @@ private fun DiscoverGroupsContent(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SortToggleButton(
-                    label = "최신순",
+                    label = stringResource(Res.string.discover_sort_recent),
                     selected = uiState.sort == DiscoverSort.RECENT,
                     onClick = { onAction(DiscoverGroupsViewModel.Action.ChangeSort(DiscoverSort.RECENT)) }
                 )
                 SortToggleButton(
-                    label = "인기순",
+                    label = stringResource(Res.string.discover_sort_popular),
                     selected = uiState.sort == DiscoverSort.POPULAR,
                     onClick = { onAction(DiscoverGroupsViewModel.Action.ChangeSort(DiscoverSort.POPULAR)) }
                 )
                 Spacer(Modifier.weight(1f))
                 // 웹 group-discover 헤더의 "초대 코드로 가입" 버튼 미러
                 TextButton(onClick = { showJoinByCode = true }) {
-                    Text("초대 코드로 가입", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.discover_join_by_code), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
             uiState.error?.let {
@@ -211,20 +236,20 @@ private fun DiscoverGroupsContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            refreshState.error.message ?: "그룹을 불러오지 못했습니다.",
+                            refreshState.error.message ?: stringResource(Res.string.group_load_failed),
                             style = SgTheme.typography.bodyMedium,
                             color = sg.rust
                         )
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = lazyPagingItems::retry) {
-                            Text("다시 시도", color = sg.accent)
+                            Text(stringResource(Res.string.common_retry), color = sg.accent)
                         }
                     }
                 }
                 lazyPagingItems.itemCount == 0 -> item(key = "discover-empty") {
                     SgEmptyState(
-                        title = "그룹을 찾지 못했습니다",
-                        subtitle = "다른 검색어로 시도해보세요.",
+                        title = stringResource(Res.string.discover_empty_title),
+                        subtitle = stringResource(Res.string.discover_empty_subtitle),
                         modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
                     )
                 }
@@ -291,27 +316,27 @@ private fun JoinByCodeDialog(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "초대 코드로 가입",
+                        stringResource(Res.string.discover_join_by_code),
                         style = SgTheme.typography.titleMedium,
                         color = sg.ink,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_close), tint = sg.inkSoft)
                     }
                 }
                 Text(
-                    "전달받은 8자리 초대 코드를 입력하면 바로 가입됩니다.",
+                    stringResource(Res.string.discover_code_hint),
                     style = SgTheme.typography.bodySmall,
                     color = sg.inkSoft
                 )
-                SgTextField(value = code, onValueChange = { code = it }, label = "초대 코드")
+                SgTextField(value = code, onValueChange = { code = it }, label = stringResource(Res.string.discover_invite_code))
                 error?.let {
                     Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
                 }
                 SgPrimaryButton(
-                    text = "가입",
+                    text = stringResource(Res.string.common_join),
                     onClick = { onJoin(code) },
                     enabled = code.isNotBlank(),
                     isLoading = isLoading,
@@ -377,7 +402,11 @@ private fun DiscoverGroupCard(
             Column(Modifier.weight(1f)) {
                 Text(group.name, style = SgTheme.typography.titleMedium, color = sg.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "멤버 ${group.memberCount}명 · ${joinTypeLabel(group.joinType)}",
+                    stringResource(
+                        Res.string.two_part_dot,
+                        pluralStringResource(Res.plurals.count_members_full, group.memberCount.toInt(), group.memberCount),
+                        joinTypeLabel(group.joinType)
+                    ),
                     style = SgTheme.typography.bodySmall,
                     color = sg.inkSoft
                 )
@@ -392,8 +421,8 @@ private fun DiscoverGroupCard(
 private fun MembershipBadge(membership: GroupMembershipStatus, modifier: Modifier = Modifier) {
     val sg = SgTheme.colors
     val label = when (membership) {
-        GroupMembershipStatus.MEMBER -> "가입됨"
-        GroupMembershipStatus.PENDING -> "신청됨"
+        GroupMembershipStatus.MEMBER -> stringResource(Res.string.membership_joined)
+        GroupMembershipStatus.PENDING -> stringResource(Res.string.membership_requested)
         GroupMembershipStatus.NONE -> return
     }
 
@@ -442,27 +471,31 @@ private fun GroupDetailDialog(
                     Column(Modifier.weight(1f)) {
                         Text(group.name, style = SgTheme.typography.titleMedium, color = sg.ink, fontWeight = FontWeight.Bold)
                         Text(
-                            "멤버 ${group.memberCount}명 · ${joinTypeLabel(group.joinType)}",
+                            stringResource(
+                                Res.string.two_part_dot,
+                                pluralStringResource(Res.plurals.count_members_full, group.memberCount.toInt(), group.memberCount),
+                                joinTypeLabel(group.joinType)
+                            ),
                             style = SgTheme.typography.bodySmall,
                             color = sg.inkSoft
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_close), tint = sg.inkSoft)
                     }
                 }
                 if (!group.description.isNullOrBlank()) {
                     Text(group.description.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.ink)
                 }
                 when (membership) {
-                    GroupMembershipStatus.MEMBER -> SgPrimaryButton(text = "가입됨", onClick = {}, enabled = false)
+                    GroupMembershipStatus.MEMBER -> SgPrimaryButton(text = stringResource(Res.string.membership_joined), onClick = {}, enabled = false)
                     GroupMembershipStatus.PENDING -> SgPrimaryButton(
-                        text = "신청 취소",
+                        text = stringResource(Res.string.request_cancel),
                         onClick = onCancelRequest,
                         isLoading = isLoading
                     )
                     GroupMembershipStatus.NONE -> SgPrimaryButton(
-                        text = if (group.joinType == GroupJoinType.AUTO_APPROVE) "가입" else "신청",
+                        text = if (group.joinType == GroupJoinType.AUTO_APPROVE) stringResource(Res.string.common_join) else stringResource(Res.string.membership_request),
                         onClick = onJoin,
                         isLoading = isLoading
                     )
@@ -473,7 +506,8 @@ private fun GroupDetailDialog(
 }
 
 /** 웹 joinTypeLabel 미러 — 그룹 찾기 목록/다이얼로그와 그룹 탭 신청중 행이 공유한다 */
+@Composable
 internal fun joinTypeLabel(joinType: GroupJoinType): String = when (joinType) {
-    GroupJoinType.AUTO_APPROVE -> "자동 승인"
-    GroupJoinType.APPROVAL_REQUIRED -> "승인제"
+    GroupJoinType.AUTO_APPROVE -> stringResource(Res.string.join_type_auto)
+    GroupJoinType.APPROVAL_REQUIRED -> stringResource(Res.string.join_type_approval)
 }

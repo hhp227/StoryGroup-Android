@@ -38,6 +38,16 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatJoinDate
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.blocked_at
+import storygroup.composeapp.generated.resources.blocked_empty_subtitle
+import storygroup.composeapp.generated.resources.blocked_empty_title
+import storygroup.composeapp.generated.resources.blocked_error_load
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.profile_blocked_users
+import storygroup.composeapp.generated.resources.unblock
 
 /**
  * 차단 사용자 관리 — 웹 /settings/blocked 미러(아바타+이름+차단일+해제 버튼).
@@ -61,10 +71,10 @@ fun BlockedUsersScreen(
 
     Column(modifier.fillMaxSize()) {
         SgTopBar(
-            title = "차단 사용자 관리",
+            title = stringResource(Res.string.profile_blocked_users),
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
@@ -79,15 +89,15 @@ fun BlockedUsersScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(uiState.loadError ?: "차단 목록을 불러오지 못했습니다.", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                Text(uiState.loadError ?: stringResource(Res.string.blocked_error_load), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(BlockedUsersViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             blocked.isEmpty() -> SgEmptyState(
-                title = "차단한 사용자가 없습니다.",
-                subtitle = "차단하면 그 사용자의 게시글·댓글·채팅이 내 화면에서 숨겨지고, 서로 DM을 보낼 수 없습니다.",
+                title = stringResource(Res.string.blocked_empty_title),
+                subtitle = stringResource(Res.string.blocked_empty_subtitle),
                 modifier = Modifier.fillMaxSize()
             )
             else -> LazyColumn(
@@ -116,7 +126,7 @@ fun BlockedUsersScreen(
                                     color = sg.ink
                                 )
                                 Text(
-                                    "${formatJoinDate(user.blockedAt)} 차단",
+                                    stringResource(Res.string.blocked_at, formatJoinDate(user.blockedAt)),
                                     style = SgTheme.typography.labelSmall,
                                     color = sg.inkFaint
                                 )
@@ -127,7 +137,7 @@ fun BlockedUsersScreen(
                                 shape = SgTheme.shapes.button,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                             ) {
-                                Text("차단 해제", style = SgTheme.typography.labelLarge)
+                                Text(stringResource(Res.string.unblock), style = SgTheme.typography.labelLarge)
                             }
                         }
                     }

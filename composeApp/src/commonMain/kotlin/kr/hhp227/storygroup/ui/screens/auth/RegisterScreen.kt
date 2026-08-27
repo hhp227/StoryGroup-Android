@@ -32,6 +32,17 @@ import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.auth_email
+import storygroup.composeapp.generated.resources.auth_name
+import storygroup.composeapp.generated.resources.auth_password
+import storygroup.composeapp.generated.resources.login_action
+import storygroup.composeapp.generated.resources.register_action
+import storygroup.composeapp.generated.resources.register_has_account
+import storygroup.composeapp.generated.resources.register_in_progress
+import storygroup.composeapp.generated.resources.register_subtitle
+import storygroup.composeapp.generated.resources.register_title
 
 /**
  * 가입 — 웹 /register 미러. VM은 화면이 default parameter로 선언하고
@@ -67,14 +78,14 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "같이할 사람들을 위한 자리",
+            stringResource(Res.string.register_title),
             style = SgTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = SgTheme.colors.ink
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "StoryGroup에 가입하고 그룹을 만들어보세요.",
+            stringResource(Res.string.register_subtitle),
             style = SgTheme.typography.bodyMedium,
             color = SgTheme.colors.inkSoft
         )
@@ -82,14 +93,14 @@ fun RegisterScreen(
         SgTextField(
             value = name,
             onValueChange = { name = it },
-            label = "이름",
+            label = stringResource(Res.string.auth_name),
             enabled = !uiState.isLoading
         )
         Spacer(Modifier.height(16.dp))
         SgTextField(
             value = email,
             onValueChange = { email = it },
-            label = "이메일",
+            label = stringResource(Res.string.auth_email),
             keyboardType = KeyboardType.Email,
             enabled = !uiState.isLoading
         )
@@ -97,7 +108,7 @@ fun RegisterScreen(
         SgTextField(
             value = password,
             onValueChange = { password = it },
-            label = "비밀번호",
+            label = stringResource(Res.string.auth_password),
             isPassword = true,
             keyboardType = KeyboardType.Password,
             enabled = !uiState.isLoading
@@ -108,7 +119,7 @@ fun RegisterScreen(
         }
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
-            text = if (uiState.isLoading) "가입하는 중..." else "가입하기",
+            text = if (uiState.isLoading) stringResource(Res.string.register_in_progress) else stringResource(Res.string.register_action),
             onClick = { onAction(RegisterViewModel.Action.Register(name.trim(), email.trim(), password)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = name.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
@@ -116,10 +127,10 @@ fun RegisterScreen(
         )
         Spacer(Modifier.height(20.dp))
         Row {
-            Text("이미 계정이 있나요?", style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
+            Text(stringResource(Res.string.register_has_account), style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
             Text(
-                "로그인",
+                stringResource(Res.string.login_action),
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = SgTheme.colors.accent,

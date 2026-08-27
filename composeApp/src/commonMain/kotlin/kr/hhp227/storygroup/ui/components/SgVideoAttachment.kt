@@ -23,6 +23,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.ui.util.rememberVideoFrame
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.video_play
 
 /** 첫 프레임이 오기 전(또는 Desktop처럼 못 뽑는 플랫폼)의 자리 표시 종횡비 */
 private const val FALLBACK_VIDEO_ASPECT_RATIO = 16f / 9f
@@ -122,7 +125,7 @@ private fun VideoPoster(frame: ImageBitmap?, badgeSize: Dp, modifier: Modifier) 
             Modifier.size(badgeSize).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "동영상 재생", tint = Color.White)
+            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(Res.string.video_play), tint = Color.White)
         }
     }
 }

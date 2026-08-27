@@ -63,6 +63,23 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_clear
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.friends_add
+import storygroup.composeapp.generated.resources.friends_remove
+import storygroup.composeapp.generated.resources.nav_groups
+import storygroup.composeapp.generated.resources.search_empty_subtitle
+import storygroup.composeapp.generated.resources.search_empty_title
+import storygroup.composeapp.generated.resources.search_no_results
+import storygroup.composeapp.generated.resources.search_placeholder
+import storygroup.composeapp.generated.resources.search_section_files
+import storygroup.composeapp.generated.resources.search_section_messages
+import storygroup.composeapp.generated.resources.search_section_posts
+import storygroup.composeapp.generated.resources.search_section_users
+import storygroup.composeapp.generated.resources.search_try_again
 
 /**
  * 홈 통합검색 — 웹 /search 미러(5섹션 원페이지, 제출 기반).
@@ -103,7 +120,7 @@ fun SearchScreen(
         SgTopBar(
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         ) {
@@ -134,7 +151,7 @@ fun SearchScreen(
             ) {
                 Text(it, style = SgTheme.typography.bodySmall, color = sg.rust, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onAction(SearchViewModel.Action.Search(queryText)) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
         }
@@ -157,8 +174,8 @@ fun SearchScreen(
                 onRemoveFriend = { onAction(SearchViewModel.Action.RemoveFriend(it)) }
             )
             else -> SgEmptyState(
-                title = "무엇이든 찾아보세요",
-                subtitle = "그룹, 게시글, 파일, 메시지, 사용자를 검색할 수 있습니다.",
+                title = stringResource(Res.string.search_empty_title),
+                subtitle = stringResource(Res.string.search_empty_subtitle),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
             )
         }
@@ -195,7 +212,7 @@ private fun SearchField(
             decorationBox = { innerTextField ->
                 Box {
                     if (queryText.isEmpty()) {
-                        Text("그룹, 게시글, 파일, 메시지 검색", style = SgTheme.typography.bodyMedium, color = sg.inkFaint)
+                        Text(stringResource(Res.string.search_placeholder), style = SgTheme.typography.bodyMedium, color = sg.inkFaint)
                     }
                     innerTextField()
                 }
@@ -203,7 +220,7 @@ private fun SearchField(
         )
         if (queryText.isNotEmpty()) {
             IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(20.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "지우기", tint = sg.inkFaint)
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_clear), tint = sg.inkFaint)
             }
         }
     }
@@ -226,8 +243,8 @@ private fun ResultList(
 ) {
     if (results.isEmpty) {
         SgEmptyState(
-            title = "검색 결과가 없습니다",
-            subtitle = "다른 검색어로 다시 시도해보세요.",
+            title = stringResource(Res.string.search_no_results),
+            subtitle = stringResource(Res.string.search_try_again),
             modifier = modifier.fillMaxWidth().padding(vertical = 48.dp)
         )
         return
@@ -238,7 +255,7 @@ private fun ResultList(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (results.users.isNotEmpty()) {
-            item(key = "users-header") { SgSectionTitle("사용자") }
+            item(key = "users-header") { SgSectionTitle(stringResource(Res.string.search_section_users)) }
             items(results.users, key = { "user-${it.id}" }) { user ->
                 UserRow(
                     user = user,
@@ -252,25 +269,25 @@ private fun ResultList(
             }
         }
         if (results.groups.isNotEmpty()) {
-            item(key = "groups-header") { SgSectionTitle("그룹") }
+            item(key = "groups-header") { SgSectionTitle(stringResource(Res.string.nav_groups)) }
             items(results.groups, key = { "group-${it.id}" }) { group ->
                 GroupRow(group = group, onClick = { onOpenGroupDetail(group.id) })
             }
         }
         if (results.posts.isNotEmpty()) {
-            item(key = "posts-header") { SgSectionTitle("게시글") }
+            item(key = "posts-header") { SgSectionTitle(stringResource(Res.string.search_section_posts)) }
             items(results.posts, key = { "post-${it.id}" }) { post ->
                 PostRow(post = post, onClick = { onOpenPostDetail(post.groupId, post.id) })
             }
         }
         if (results.files.isNotEmpty()) {
-            item(key = "files-header") { SgSectionTitle("파일") }
+            item(key = "files-header") { SgSectionTitle(stringResource(Res.string.search_section_files)) }
             items(results.files, key = { "file-${it.id}" }) { file ->
                 FileRow(file = file, onClick = { onOpenUrl(file.url) })
             }
         }
         if (results.messages.isNotEmpty()) {
-            item(key = "messages-header") { SgSectionTitle("메시지") }
+            item(key = "messages-header") { SgSectionTitle(stringResource(Res.string.search_section_messages)) }
             items(results.messages, key = { "message-${it.id}" }) { message ->
                 MessageRow(
                     message = message,
@@ -320,7 +337,7 @@ private fun UserRow(
                     shape = SgTheme.shapes.button,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                 ) {
-                    Text("친구 해제", style = SgTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.friends_remove), style = SgTheme.typography.labelLarge)
                 }
             } else {
                 Button(
@@ -329,7 +346,7 @@ private fun UserRow(
                     shape = SgTheme.shapes.button,
                     colors = ButtonDefaults.buttonColors(backgroundColor = sg.accent, contentColor = sg.onAccent)
                 ) {
-                    Text("친구 추가", style = SgTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.friends_add), style = SgTheme.typography.labelLarge)
                 }
             }
         }

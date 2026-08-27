@@ -23,6 +23,18 @@ import kr.hhp227.storygroup.shared.domain.usecase.ReportPostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ReportUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SetPostLikedUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.block_done
+import storygroup.composeapp.generated.resources.block_error
+import storygroup.composeapp.generated.resources.post_error_comment_delete
+import storygroup.composeapp.generated.resources.post_error_comment_empty
+import storygroup.composeapp.generated.resources.post_error_comment_submit
+import storygroup.composeapp.generated.resources.post_error_delete
+import storygroup.composeapp.generated.resources.post_error_like
+import storygroup.composeapp.generated.resources.post_error_load
+import storygroup.composeapp.generated.resources.report_error
+import storygroup.composeapp.generated.resources.report_submitted
 
 /**
  * 게시글 상세 — 본문·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
@@ -94,7 +106,7 @@ class PostDetailViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "게시글을 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.post_error_load)) }
                 }
         }
     }
@@ -130,7 +142,7 @@ class PostDetailViewModel(
                             isTogglingLike = false,
                             isLiked = !next,
                             likeCount = (it.likeCount + if (next) -1 else 1).coerceAtLeast(0),
-                            error = e.message ?: "좋아요 처리에 실패했습니다."
+                            error = e.message ?: getString(Res.string.post_error_like)
                         )
                     }
                 }
@@ -140,7 +152,7 @@ class PostDetailViewModel(
     private fun submitComment(text: String) {
         if (_uiState.value.isSubmittingComment) return
         if (text.isBlank()) {
-            _uiState.update { it.copy(error = "댓글 내용을 입력해주세요.") }
+            viewModelScope.launch { _uiState.update { it.copy(error = getString(Res.string.post_error_comment_empty)) } }
             return
         }
         val parentReplyId = _uiState.value.replyTo?.id
@@ -155,7 +167,7 @@ class PostDetailViewModel(
                     _event.tryEmit(Event.CommentCreated)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isSubmittingComment = false, error = e.message ?: "댓글 작성에 실패했습니다.") }
+                    _uiState.update { it.copy(isSubmittingComment = false, error = e.message ?: getString(Res.string.post_error_comment_submit)) }
                 }
         }
     }
@@ -173,7 +185,7 @@ class PostDetailViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message ?: "댓글 삭제에 실패했습니다.") }
+                    _uiState.update { it.copy(error = e.message ?: getString(Res.string.post_error_comment_delete)) }
                 }
         }
     }
@@ -189,7 +201,7 @@ class PostDetailViewModel(
                     _event.tryEmit(Event.PostDeleted)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isDeletingPost = false, error = e.message ?: "게시글 삭제에 실패했습니다.") }
+                    _uiState.update { it.copy(isDeletingPost = false, error = e.message ?: getString(Res.string.post_error_delete)) }
                 }
         }
     }
@@ -202,11 +214,11 @@ class PostDetailViewModel(
             runCatching { reportPostUseCase(groupId, postId) }
                 .onSuccess {
                     // 화면에서 달라지는 게 없으므로 접수됐다는 안내가 유일한 피드백이다(웹 미러)
-                    _uiState.update { it.copy(isReporting = false, notice = "신고가 접수되었습니다.") }
+                    _uiState.update { it.copy(isReporting = false, notice = getString(Res.string.report_submitted)) }
                 }
                 .onFailure { e ->
                     // 이미 대기중 신고가 있으면 409 — 서버 메시지를 그대로 보여준다
-                    _uiState.update { it.copy(isReporting = false, error = e.message ?: "신고에 실패했습니다.") }
+                    _uiState.update { it.copy(isReporting = false, error = e.message ?: getString(Res.string.report_error)) }
                 }
         }
     }
@@ -223,7 +235,7 @@ class PostDetailViewModel(
                     _event.tryEmit(Event.AuthorBlocked)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: "차단에 실패했습니다.") }
+                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: getString(Res.string.block_error)) }
                 }
         }
     }
@@ -235,10 +247,10 @@ class PostDetailViewModel(
         viewModelScope.launch {
             runCatching { reportUserUseCase(userId) }
                 .onSuccess {
-                    _uiState.update { it.copy(isReporting = false, notice = "신고가 접수되었습니다.") }
+                    _uiState.update { it.copy(isReporting = false, notice = getString(Res.string.report_submitted)) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isReporting = false, error = e.message ?: "신고에 실패했습니다.") }
+                    _uiState.update { it.copy(isReporting = false, error = e.message ?: getString(Res.string.report_error)) }
                 }
         }
     }
@@ -255,14 +267,14 @@ class PostDetailViewModel(
                     _uiState.update { state ->
                         state.copy(
                             isBlocking = false,
-                            notice = "차단했습니다.",
+                            notice = getString(Res.string.block_done),
                             comments = state.comments.filterNot { it.userId == userId },
                             replyTo = state.replyTo?.takeIf { it.userId != userId }
                         )
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: "차단에 실패했습니다.") }
+                    _uiState.update { it.copy(isBlocking = false, error = e.message ?: getString(Res.string.block_error)) }
                 }
         }
     }

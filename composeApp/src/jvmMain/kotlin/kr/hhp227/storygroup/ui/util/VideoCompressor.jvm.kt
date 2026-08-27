@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.media.VideoPlan
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.video_error_compress
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
@@ -59,7 +62,7 @@ private class JvmVideoCompressor : VideoCompressor {
                 .onSuccess { trySend(CompressionState.Done(output.absolutePath)) }
                 .onFailure {
                     output.delete()
-                    trySend(CompressionState.Failed("동영상 압축에 실패했습니다."))
+                    trySend(CompressionState.Failed(getString(Res.string.video_error_compress)))
                 }
             close()
         }

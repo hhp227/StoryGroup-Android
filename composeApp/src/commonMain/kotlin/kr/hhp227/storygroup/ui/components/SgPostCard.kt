@@ -34,6 +34,17 @@ import coil3.compose.AsyncImage
 import kr.hhp227.storygroup.shared.domain.model.Post
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.comments_n
+import storygroup.composeapp.generated.resources.likes_n
+import storygroup.composeapp.generated.resources.post_comment
+import storygroup.composeapp.generated.resources.post_like
+import storygroup.composeapp.generated.resources.post_notice_badge
+import storygroup.composeapp.generated.resources.post_share
+import storygroup.composeapp.generated.resources.post_unlike
 
 /** 미디어 그리드에 보여줄 최대 장수 — 넘치면 마지막 타일에 "+N"(전체는 상세에서) */
 private const val MEDIA_GRID_MAX = 6
@@ -70,7 +81,7 @@ fun SgPostCard(
                     }
                     if (post.isNotice) {
                         Text(
-                            "공지",
+                            stringResource(Res.string.post_notice_badge),
                             style = SgTheme.typography.labelSmall,
                             color = sg.accent,
                             modifier = Modifier
@@ -97,15 +108,15 @@ fun SgPostCard(
             Divider(color = sg.stoneBorder)
             Row {
                 SgPostCardAction(
-                    label = if (post.likeCount > 0) "좋아요 ${post.likeCount}" else "좋아요",
+                    label = if (post.likeCount > 0) pluralStringResource(Res.plurals.likes_n, post.likeCount, post.likeCount) else stringResource(Res.string.post_like),
                     icon = if (post.likedByMe) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    iconDescription = if (post.likedByMe) "좋아요 취소" else "좋아요",
+                    iconDescription = if (post.likedByMe) stringResource(Res.string.post_unlike) else stringResource(Res.string.post_like),
                     tint = if (post.likedByMe) sg.accent else sg.inkSoft,
                     onClick = onToggleLike,
                     modifier = Modifier.weight(1f)
                 )
                 SgPostCardAction(
-                    label = if (post.replyCount > 0) "댓글 ${post.replyCount}" else "댓글",
+                    label = if (post.replyCount > 0) pluralStringResource(Res.plurals.comments_n, post.replyCount, post.replyCount) else stringResource(Res.string.post_comment),
                     icon = null,
                     iconDescription = null,
                     tint = sg.inkSoft,
@@ -113,9 +124,9 @@ fun SgPostCard(
                     modifier = Modifier.weight(1f)
                 )
                 SgPostCardAction(
-                    label = "공유",
+                    label = stringResource(Res.string.post_share),
                     icon = Icons.Default.Share,
-                    iconDescription = "공유",
+                    iconDescription = stringResource(Res.string.post_share),
                     tint = sg.inkSoft,
                     onClick = onShare,
                     modifier = Modifier.weight(1f)
@@ -228,7 +239,7 @@ fun SgPagingFooter(
             error != null -> {
                 Text(error, style = SgTheme.typography.bodySmall, color = sg.rust)
                 TextButton(onClick = onRetry) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             isLoadingMore -> CircularProgressIndicator(color = sg.accent, modifier = Modifier.padding(8.dp))

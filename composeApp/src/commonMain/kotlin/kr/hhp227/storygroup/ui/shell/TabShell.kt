@@ -38,6 +38,9 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.profile_app_settings
 
 /** 레일 전환 폭 — M3 window size class의 compact/medium 경계(600dp) */
 private val RailBreakpoint = 600.dp
@@ -78,7 +81,7 @@ internal fun TabShell(
                                     chatUnreadCount = chatUiState.totalUnread
                                 )
                             },
-                            label = { Text(destination.label) },
+                            label = { Text(stringResource(destination.labelRes)) },
                             selectedContentColor = sg.accent,
                             unselectedContentColor = sg.inkSoft
                         )
@@ -92,7 +95,7 @@ internal fun TabShell(
                     // 홈·그룹은 화면이 상단바를 직접 그린다(홈=콜랩싱 헤더, 그룹=목록↔상세 전환)
                     if (currentTab != MainDestination.HOME && currentTab != MainDestination.GROUPS) {
                         SgTopBar(
-                            title = currentTab.label,
+                            title = stringResource(currentTab.labelRes),
                             actions = {
                                 // 알림은 탭에서 빠지고 상단바 종 아이콘으로 진입(알림 화면에서는 숨김)
                                 if (currentTab != MainDestination.NOTIFICATIONS) {
@@ -105,7 +108,7 @@ internal fun TabShell(
                                 }
                                 if (currentTab == MainDestination.PROFILE) {
                                     IconButton(onClick = { onNavigationAction(NavigationAction.NavigateToAppSettings) }) {
-                                        Icon(Icons.Default.Settings, contentDescription = "앱 설정")
+                                        Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.profile_app_settings))
                                     }
                                 }
                             }
@@ -128,7 +131,7 @@ internal fun TabShell(
                                                 chatUnreadCount = chatUiState.totalUnread
                                             )
                                         },
-                                        label = { Text(destination.label) },
+                                        label = { Text(stringResource(destination.labelRes)) },
                                         selectedContentColor = sg.accent,
                                         unselectedContentColor = sg.inkSoft
                                     )
@@ -157,9 +160,9 @@ internal fun TabShell(
 private fun DestinationIcon(destination: MainDestination, chatUnreadCount: Long) {
     if (destination == MainDestination.CHAT) {
         BadgedBox(badge = { SgUnreadBadge(chatUnreadCount) }) {
-            Icon(destination.icon, contentDescription = destination.label)
+            Icon(destination.icon, contentDescription = stringResource(destination.labelRes))
         }
     } else {
-        Icon(destination.icon, contentDescription = destination.label)
+        Icon(destination.icon, contentDescription = stringResource(destination.labelRes))
     }
 }

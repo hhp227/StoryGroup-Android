@@ -26,6 +26,13 @@ import kr.hhp227.storygroup.ui.util.dateKeyOf
 import kr.hhp227.storygroup.ui.util.isoToLocal
 import kr.hhp227.storygroup.ui.util.localToIso
 import kr.hhp227.storygroup.ui.util.todayLocal
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.events_error_create
+import storygroup.composeapp.generated.resources.events_error_delete
+import storygroup.composeapp.generated.resources.events_error_end_before_start
+import storygroup.composeapp.generated.resources.events_error_load
+import storygroup.composeapp.generated.resources.events_error_rsvp
 
 /**
  * 일정 탭 — 웹 /groups/[id]/events 캘린더 페이지 미러(탭별 VM 분리, 레거시 탭 Fragment VM 구조).
@@ -111,7 +118,7 @@ class GroupEventsViewModel(
                 _uiState.update { it.copy(isLoading = false, events = events) }
             }.onFailure { e ->
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false, error = e.message ?: "일정을 불러오지 못했습니다.") }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.events_error_load)) }
             }
         }
     }
@@ -156,7 +163,10 @@ class GroupEventsViewModel(
             if (action.endHour < action.startHour ||
                 (action.endHour == action.startHour && action.endMinute < action.startMinute)
             ) {
-                _uiState.update { it.copy(createError = "종료 시각은 시작 시각보다 빠를 수 없습니다") }
+                // getString은 suspend — 동기 검증 흐름은 그대로 두고 문구 해석만 코루틴에서
+                viewModelScope.launch {
+                    _uiState.update { it.copy(createError = getString(Res.string.events_error_end_before_start)) }
+                }
                 return
             }
             localToIso(year, month, day, action.endHour, action.endMinute)
@@ -182,7 +192,7 @@ class GroupEventsViewModel(
                     )
                 }
             }.onFailure { e ->
-                _uiState.update { it.copy(isCreating = false, createError = e.message ?: "일정을 만들지 못했습니다.") }
+                _uiState.update { it.copy(isCreating = false, createError = e.message ?: getString(Res.string.events_error_create)) }
             }
         }
     }
@@ -200,7 +210,7 @@ class GroupEventsViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(busyEventId = null, actionError = e.message ?: "일정 삭제에 실패했습니다.") }
+                    _uiState.update { it.copy(busyEventId = null, actionError = e.message ?: getString(Res.string.events_error_delete)) }
                 }
         }
     }
@@ -224,7 +234,7 @@ class GroupEventsViewModel(
                     )
                 }
             }.onFailure { e ->
-                _uiState.update { it.copy(busyEventId = null, actionError = e.message ?: "참석 응답에 실패했습니다.") }
+                _uiState.update { it.copy(busyEventId = null, actionError = e.message ?: getString(Res.string.events_error_rsvp)) }
             }
         }
     }

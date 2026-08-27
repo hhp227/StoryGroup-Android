@@ -16,6 +16,11 @@ import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.create_group_error_create
+import storygroup.composeapp.generated.resources.create_group_error_name
+import storygroup.composeapp.generated.resources.error_upload_image
 
 /**
  * 그룹 만들기 — 이름/소개/가입방식+커버 이미지(CreatePost 첨부와 동일하게 선택 즉시 업로드).
@@ -50,7 +55,7 @@ class CreateGroupViewModel(
                     _uiState.update { it.copy(isUploadingImage = false, image = url) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isUploadingImage = false, error = e.message ?: "이미지 업로드에 실패했습니다.") }
+                    _uiState.update { it.copy(isUploadingImage = false, error = e.message ?: getString(Res.string.error_upload_image)) }
                 }
         }
     }
@@ -58,7 +63,9 @@ class CreateGroupViewModel(
     private fun submit(name: String, description: String, joinType: GroupJoinType) {
         if (_uiState.value.isSaving) return
         if (name.isBlank()) {
-            _uiState.update { it.copy(error = "그룹 이름을 입력해주세요.") }
+            viewModelScope.launch {
+                _uiState.update { it.copy(error = getString(Res.string.create_group_error_name)) }
+            }
             return
         }
         _uiState.update { it.copy(isSaving = true, error = null) }
@@ -74,7 +81,7 @@ class CreateGroupViewModel(
                 _uiState.update { it.copy(isSaving = false) }
                 _event.tryEmit(Event.Created(group))
             }.onFailure { e ->
-                _uiState.update { it.copy(isSaving = false, error = e.message ?: "그룹 생성에 실패했습니다.") }
+                _uiState.update { it.copy(isSaving = false, error = e.message ?: getString(Res.string.create_group_error_create)) }
             }
         }
     }

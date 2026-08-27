@@ -32,6 +32,17 @@ import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.auth_email
+import storygroup.composeapp.generated.resources.auth_password
+import storygroup.composeapp.generated.resources.login_action
+import storygroup.composeapp.generated.resources.login_in_progress
+import storygroup.composeapp.generated.resources.login_no_account
+import storygroup.composeapp.generated.resources.login_registered_notice
+import storygroup.composeapp.generated.resources.login_subtitle
+import storygroup.composeapp.generated.resources.login_title
+import storygroup.composeapp.generated.resources.register_action
 
 /** 로그인 — 웹 /login 미러. VM은 세션 게이트라 App 루트와 같은 인스턴스를 default parameter로 선언한다 */
 @Composable
@@ -57,14 +68,14 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "다시 만나서 반가워요",
+            stringResource(Res.string.login_title),
             style = SgTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = SgTheme.colors.ink
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "이메일과 비밀번호로 로그인하세요.",
+            stringResource(Res.string.login_subtitle),
             style = SgTheme.typography.bodyMedium,
             color = SgTheme.colors.inkSoft
         )
@@ -72,7 +83,7 @@ fun LoginScreen(
         if (justRegistered) {
             SgCard(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "가입이 완료됐습니다. 로그인해주세요.",
+                    stringResource(Res.string.login_registered_notice),
                     style = SgTheme.typography.bodyMedium,
                     color = SgTheme.colors.moss,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -83,7 +94,7 @@ fun LoginScreen(
         SgTextField(
             value = email,
             onValueChange = { email = it },
-            label = "이메일",
+            label = stringResource(Res.string.auth_email),
             keyboardType = KeyboardType.Email,
             enabled = !uiState.isLoading
         )
@@ -91,7 +102,7 @@ fun LoginScreen(
         SgTextField(
             value = password,
             onValueChange = { password = it },
-            label = "비밀번호",
+            label = stringResource(Res.string.auth_password),
             isPassword = true,
             keyboardType = KeyboardType.Password,
             enabled = !uiState.isLoading
@@ -102,7 +113,7 @@ fun LoginScreen(
         }
         Spacer(Modifier.height(24.dp))
         SgPrimaryButton(
-            text = if (uiState.isLoading) "로그인하는 중..." else "로그인",
+            text = if (uiState.isLoading) stringResource(Res.string.login_in_progress) else stringResource(Res.string.login_action),
             onClick = { onAction(LoginViewModel.Action.Login(email.trim(), password)) },
             modifier = Modifier.fillMaxWidth(),
             enabled = email.isNotBlank() && password.isNotBlank(),
@@ -110,10 +121,10 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(20.dp))
         Row {
-            Text("아직 계정이 없나요?", style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
+            Text(stringResource(Res.string.login_no_account), style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
             Text(
-                "가입하기",
+                stringResource(Res.string.register_action),
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = SgTheme.colors.accent,

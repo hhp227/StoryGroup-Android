@@ -50,6 +50,23 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.account_bio
+import storygroup.composeapp.generated.resources.account_change_password
+import storygroup.composeapp.generated.resources.account_change_photo
+import storygroup.composeapp.generated.resources.account_confirm_password
+import storygroup.composeapp.generated.resources.account_current_password
+import storygroup.composeapp.generated.resources.account_new_password
+import storygroup.composeapp.generated.resources.account_password_changed
+import storygroup.composeapp.generated.resources.account_saved
+import storygroup.composeapp.generated.resources.account_status_message
+import storygroup.composeapp.generated.resources.auth_name
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_profile
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.common_save
+import storygroup.composeapp.generated.resources.profile_account_settings
 
 /**
  * 계정 설정 — 프로필 수정+비밀번호 변경(웹 /settings/profile·password 두 페이지를 한 화면 두 카드로).
@@ -119,10 +136,10 @@ fun AccountSettingsScreen(
     }
     Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
-            title = "계정 설정",
+            title = stringResource(Res.string.profile_account_settings),
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
@@ -140,7 +157,7 @@ fun AccountSettingsScreen(
                 Text(uiState.loadError!!, style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(AccountSettingsViewModel.Action.Load) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             else -> Column(
@@ -152,7 +169,7 @@ fun AccountSettingsScreen(
                 SgCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            "프로필",
+                            stringResource(Res.string.common_profile),
                             style = SgTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = sg.ink
@@ -184,7 +201,7 @@ fun AccountSettingsScreen(
                                 } else {
                                     Icon(
                                         Icons.Default.PhotoCamera,
-                                        contentDescription = "프로필 이미지 변경",
+                                        contentDescription = stringResource(Res.string.account_change_photo),
                                         tint = sg.onAccent,
                                         modifier = Modifier
                                             .align(Alignment.BottomEnd)
@@ -204,19 +221,19 @@ fun AccountSettingsScreen(
                         SgTextField(
                             value = name,
                             onValueChange = { if (it.length <= 50) name = it },
-                            label = "이름",
+                            label = stringResource(Res.string.auth_name),
                             enabled = !uiState.isSaving
                         )
                         SgTextField(
                             value = statusMessage,
                             onValueChange = { if (it.length <= 100) statusMessage = it },
-                            label = "상태메시지",
+                            label = stringResource(Res.string.account_status_message),
                             enabled = !uiState.isSaving
                         )
                         SgTextField(
                             value = bio,
                             onValueChange = { if (it.length <= 500) bio = it },
-                            label = "소개",
+                            label = stringResource(Res.string.account_bio),
                             singleLine = false,
                             minLines = 4,
                             enabled = !uiState.isSaving
@@ -225,10 +242,10 @@ fun AccountSettingsScreen(
                             Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
                         }
                         if (profileSaved) {
-                            Text("저장했습니다.", style = SgTheme.typography.bodySmall, color = sg.accent)
+                            Text(stringResource(Res.string.account_saved), style = SgTheme.typography.bodySmall, color = sg.accent)
                         }
                         SgPrimaryButton(
-                            text = "저장",
+                            text = stringResource(Res.string.common_save),
                             onClick = {
                                 profileSaved = false
                                 onAction(AccountSettingsViewModel.Action.SaveProfile(name, bio, statusMessage))
@@ -240,7 +257,7 @@ fun AccountSettingsScreen(
                 SgCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            "비밀번호 변경",
+                            stringResource(Res.string.account_change_password),
                             style = SgTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = sg.ink
@@ -248,21 +265,21 @@ fun AccountSettingsScreen(
                         SgTextField(
                             value = currentPassword,
                             onValueChange = { currentPassword = it },
-                            label = "현재 비밀번호",
+                            label = stringResource(Res.string.account_current_password),
                             isPassword = true,
                             enabled = !uiState.isChangingPassword
                         )
                         SgTextField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
-                            label = "새 비밀번호 (8자 이상)",
+                            label = stringResource(Res.string.account_new_password),
                             isPassword = true,
                             enabled = !uiState.isChangingPassword
                         )
                         SgTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = "새 비밀번호 확인",
+                            label = stringResource(Res.string.account_confirm_password),
                             isPassword = true,
                             enabled = !uiState.isChangingPassword
                         )
@@ -271,13 +288,13 @@ fun AccountSettingsScreen(
                         }
                         if (passwordChanged) {
                             Text(
-                                "비밀번호를 변경했습니다. 다른 기기에서는 다시 로그인해야 합니다.",
+                                stringResource(Res.string.account_password_changed),
                                 style = SgTheme.typography.bodySmall,
                                 color = sg.accent
                             )
                         }
                         SgPrimaryButton(
-                            text = "비밀번호 변경",
+                            text = stringResource(Res.string.account_change_password),
                             onClick = {
                                 passwordChanged = false
                                 onAction(

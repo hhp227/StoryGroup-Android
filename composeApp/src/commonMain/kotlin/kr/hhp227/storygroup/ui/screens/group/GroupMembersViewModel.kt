@@ -20,6 +20,12 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupMembersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetJoinRequestsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.approve_failed
+import storygroup.composeapp.generated.resources.group_members_error_load
+import storygroup.composeapp.generated.resources.invite_create_failed
+import storygroup.composeapp.generated.resources.reject_failed
 
 /**
  * 멤버 탭 — 레거시 MemberFragment의 VM 미러(탭별 VM 분리). 멤버 그리드+차단 필터+
@@ -79,7 +85,7 @@ class GroupMembersViewModel(
                 }
             }.onFailure { e ->
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "멤버를 불러오지 못했습니다.")
+                    it.copy(isLoading = false, error = e.message ?: getString(Res.string.group_members_error_load))
                 }
             }
         }
@@ -105,7 +111,7 @@ class GroupMembersViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingRequestUserId = null, actionError = e.message ?: "가입 승인에 실패했습니다.")
+                        it.copy(processingRequestUserId = null, actionError = e.message ?: getString(Res.string.approve_failed))
                     }
                 }
         }
@@ -128,7 +134,7 @@ class GroupMembersViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingRequestUserId = null, actionError = e.message ?: "가입 거절에 실패했습니다.")
+                        it.copy(processingRequestUserId = null, actionError = e.message ?: getString(Res.string.reject_failed))
                     }
                 }
         }
@@ -146,7 +152,7 @@ class GroupMembersViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isCreatingInvite = false, inviteError = e.message ?: "초대코드 생성에 실패했습니다.")
+                        it.copy(isCreatingInvite = false, inviteError = e.message ?: getString(Res.string.invite_create_failed))
                     }
                 }
         }

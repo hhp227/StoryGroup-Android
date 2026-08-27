@@ -21,6 +21,9 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetDirectRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupChatRoomsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.chat_error_load
 
 /**
  * 채팅 허브 — 웹 /dm 미러: 그룹 채팅방(GET /api/chat-rooms, 라운지 제외)+DM 방(GET /api/dm)
@@ -78,7 +81,7 @@ class ChatViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "채팅방을 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.chat_error_load)) }
                 }
         }
     }

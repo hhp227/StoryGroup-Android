@@ -23,6 +23,9 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObservePostUpdatesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveUserBlocksUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.post_error_like
 
 /**
  * 소식 탭 — 레거시 PostFragment의 VM 미러(탭별 VM 분리). 피드는 UiState에 담기는 최신
@@ -87,7 +90,7 @@ class GroupFeedViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(likeError = e.message ?: "좋아요 처리에 실패했습니다.") }
+                _uiState.update { it.copy(likeError = e.message ?: getString(Res.string.post_error_like)) }
             }
         }
     }

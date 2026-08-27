@@ -42,9 +42,8 @@ import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgSectionTitle
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberShareLauncher
-
-/** 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, 폐쇄형이라 외부 공개 URL은 서비스 홈뿐) */
-private const val APP_SHARE_TEXT = "StoryGroup — 그룹과 함께하는 이야기\n${AppLinks.BASE_URL}"
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 
 /** 레거시 privacy_policy 미러 — 웹 개인정보처리방침(웹·API 같은 서비스) */
 private const val PRIVACY_POLICY_URL = AppLinks.PRIVACY_URL
@@ -75,6 +74,8 @@ internal fun GroupSettingsTab(
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
     var confirmingLeave by rememberSaveable { mutableStateOf(false) }
     val share = rememberShareLauncher()
+    // 공유 문구 — 레거시 share 미러(앱 소개+웹 주소, 폐쇄형이라 외부 공개 URL은 서비스 홈뿐)
+    val shareText = stringResource(Res.string.app_share_text, AppLinks.BASE_URL)
     val uriHandler = LocalUriHandler.current
 
     when {
@@ -85,10 +86,10 @@ internal fun GroupSettingsTab(
             modifier.fillMaxSize().padding(vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(uiState.error ?: "그룹 정보를 불러오지 못했습니다.", style = SgTheme.typography.bodyMedium, color = sg.rust)
+            Text(uiState.error ?: stringResource(Res.string.group_error_load), style = SgTheme.typography.bodyMedium, color = sg.rust)
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = { onAction(GroupSettingsViewModel.Action.Refresh) }) {
-                Text("다시 시도", color = sg.accent)
+                Text(stringResource(Res.string.common_retry), color = sg.accent)
             }
         }
         else -> Column(
@@ -96,7 +97,7 @@ internal fun GroupSettingsTab(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 유저 설정 — 레거시 user_settings 섹션(프로필 행 → 계정 설정)
-            SgSectionTitle("유저 설정")
+            SgSectionTitle(stringResource(Res.string.group_settings_user_section))
             SgCard(Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -109,7 +110,7 @@ internal fun GroupSettingsTab(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            profile?.name ?: "불러오는 중...",
+                            profile?.name ?: stringResource(Res.string.common_loading),
                             style = SgTheme.typography.bodyLarge,
                             color = sg.ink,
                             fontWeight = FontWeight.Bold
@@ -127,29 +128,29 @@ internal fun GroupSettingsTab(
             Spacer(Modifier.height(8.dp))
             // 그룹 설정 — 라운지 비OWNER는 항목이 없어 섹션째 숨긴다
             if (uiState.isOwner || !uiState.isLounge) {
-                SgSectionTitle("그룹 설정")
+                SgSectionTitle(stringResource(Res.string.group_settings_group_section))
                 SgCard(Modifier.fillMaxWidth()) {
                     Column {
                         // 신고함 — 웹 커버 "신고함" 버튼의 KMP 대응(모더레이터 기능은 탭 메뉴에 모은다)
                         if (uiState.canModerate) {
-                            SettingsMenuRow("신고함", onClick = onOpenGroupReports, showChevron = true)
+                            SettingsMenuRow(stringResource(Res.string.group_reports_title), onClick = onOpenGroupReports, showChevron = true)
                         }
                         if (uiState.isOwner) {
                             // OWNER는 항상 canModerate — 위에 신고함 행이 있어 구분선이 필요하다
                             Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
-                            SettingsMenuRow("그룹 정보 수정", onClick = onOpenGroupEdit, showChevron = true)
+                            SettingsMenuRow(stringResource(Res.string.group_edit_title), onClick = onOpenGroupEdit, showChevron = true)
                         }
                         // 라운지는 삭제·나가기 불가(웹 미러)
                         if (!uiState.isLounge) {
                             if (uiState.isOwner) {
                                 Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
-                                SettingsMenuRow("그룹 삭제", onClick = { confirmingDelete = true }, tint = sg.rust)
+                                SettingsMenuRow(stringResource(Res.string.group_delete), onClick = { confirmingDelete = true }, tint = sg.rust)
                             } else {
                                 if (uiState.canModerate) {
                                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                                 }
                                 // 비OWNER — 그룹 나가기(레거시 설정 탭 ll_withdrawal 미러, POST /leave 소비)
-                                SettingsMenuRow("그룹 나가기", onClick = { confirmingLeave = true }, tint = sg.rust)
+                                SettingsMenuRow(stringResource(Res.string.group_leave), onClick = { confirmingLeave = true }, tint = sg.rust)
                             }
                         }
                     }
@@ -157,26 +158,26 @@ internal fun GroupSettingsTab(
                 Spacer(Modifier.height(8.dp))
             }
             // 어플리케이션 정보 — 레거시 application_info 섹션(KMP에 대응 화면이 있는 항목만)
-            SgSectionTitle("어플리케이션 정보")
+            SgSectionTitle(stringResource(Res.string.app_info_section))
             SgCard(Modifier.fillMaxWidth()) {
                 Column {
-                    SettingsMenuRow("앱 설정", onClick = onOpenAppSettings, showChevron = true)
+                    SettingsMenuRow(stringResource(Res.string.profile_app_settings), onClick = onOpenAppSettings, showChevron = true)
                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsMenuRow("공유하기", onClick = { share(APP_SHARE_TEXT) })
+                    SettingsMenuRow(stringResource(Res.string.share_app), onClick = { share(shareText) })
                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
                     // 약관·정책 — 웹 /terms·/privacy를 외부 브라우저로 연다(설정 허브 "약관 및 정책" 미러)
-                    SettingsMenuRow("이용약관", onClick = { uriHandler.openUri(TERMS_URL) })
+                    SettingsMenuRow(stringResource(Res.string.profile_terms), onClick = { uriHandler.openUri(TERMS_URL) })
                     Divider(color = sg.stoneBorder, modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsMenuRow("개인정보처리방침", onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) })
+                    SettingsMenuRow(stringResource(Res.string.profile_privacy), onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) })
                 }
             }
         }
     }
     if (confirmingDelete) {
         CloseConfirmDialog(
-            title = "그룹 삭제",
-            message = "정말 삭제할까요? 게시글, 채팅, 파일이 모두 사라집니다.",
-            confirmText = "삭제",
+            title = stringResource(Res.string.group_delete),
+            message = stringResource(Res.string.group_delete_confirm),
+            confirmText = stringResource(Res.string.common_delete),
             isLoading = uiState.isClosing,
             error = uiState.closeError,
             onDismiss = {
@@ -188,9 +189,9 @@ internal fun GroupSettingsTab(
     }
     if (confirmingLeave) {
         CloseConfirmDialog(
-            title = "그룹 나가기",
-            message = "정말 나갈까요? 나가면 이 그룹의 게시글·채팅에 더는 참여할 수 없습니다.",
-            confirmText = "나가기",
+            title = stringResource(Res.string.group_leave),
+            message = stringResource(Res.string.group_leave_confirm),
+            confirmText = stringResource(Res.string.group_leave_action),
             isLoading = uiState.isClosing,
             error = uiState.closeError,
             onDismiss = {
@@ -261,7 +262,7 @@ private fun CloseConfirmDialog(
                         shape = SgTheme.shapes.button,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("취소", color = sg.ink)
+                        Text(stringResource(Res.string.common_cancel), color = sg.ink)
                     }
                     SgPrimaryButton(
                         text = confirmText,

@@ -5,6 +5,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.picker_file
 import ws.schild.jave.MultimediaObject
 import java.awt.FileDialog
 import java.awt.Frame
@@ -15,11 +18,12 @@ import java.nio.file.Files
 @Composable
 actual fun rememberFilePickerLauncher(onPicked: (PickedFile) -> Unit): () -> Unit {
     val scope = rememberCoroutineScope()
+    val title = stringResource(Res.string.picker_file)
 
     return {
         // FileDialog.isVisible=true는 모달 블로킹 호출 — Dispatchers.IO에서 열어 Swing EDT를 막지 않는다
         scope.launch(Dispatchers.IO) {
-            val dialog = FileDialog(null as Frame?, "파일 선택", FileDialog.LOAD)
+            val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD)
             dialog.isVisible = true
 
             val directory = dialog.directory

@@ -87,6 +87,9 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
 import kr.hhp227.storygroup.ui.util.postShareText
 import kr.hhp227.storygroup.ui.util.rememberShareLauncher
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 
 /**
  * 그룹 상세 — 웹 /groups/[id] 미러: 커버 배너(그라데이션 폴백+이름/설명/역할 칩)+5탭
@@ -244,7 +247,13 @@ private fun GroupDetailContent(
     val photoLazyPagingItems = photosPagingDataFlow.collectAsLazyPagingItems()
     val sg = SgTheme.colors
     // 레거시 R.array.tab_name(소식/앨범/맴버/설정)에 일정 추가 — 일정·설정은 빈 화면(추후 구현)
-    val tabs = remember { listOf("소식", "앨범", "일정", "멤버", "설정") }
+    val tabs = listOf(
+        stringResource(Res.string.tab_feed),
+        stringResource(Res.string.tab_album),
+        stringResource(Res.string.tab_events),
+        stringResource(Res.string.tab_members),
+        stringResource(Res.string.settings)
+    )
     val pagerState = rememberPagerState { tabs.size }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
     // 컴포지션에서 한 번만 선언해 카드마다 재사용한다
@@ -287,7 +296,7 @@ private fun GroupDetailContent(
         pagerState = pagerState,
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
             }
         },
         // 그룹 채팅방 진입 — 상단바 액션(레거시 group.xml action_chat·웹 커버 "채팅" 버튼 미러).
@@ -298,7 +307,7 @@ private fun GroupDetailContent(
                     // 방 제목은 허브(그룹 방 목록)와 동일하게 그룹명을 쓴다
                     onOpenChatRoom(chatRoomId, viewModel.groupId, uiState.group?.name.orEmpty())
                 }) {
-                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "채팅")
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(Res.string.nav_chat))
                 }
             }
         },
@@ -311,7 +320,7 @@ private fun GroupDetailContent(
                     backgroundColor = sg.accent,
                     contentColor = sg.onAccent
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "글쓰기")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.create_post_title))
                 }
             }
         } else null,
@@ -445,7 +454,7 @@ private fun GroupDetailContent(
             text = { Text(message) },
             confirmButton = {
                 TextButton(onClick = { feedViewModel.onAction(GroupFeedViewModel.Action.DismissLikeError) }) {
-                    Text("확인", color = SgTheme.colors.accent)
+                    Text(stringResource(Res.string.common_ok), color = SgTheme.colors.accent)
                 }
             }
         )
@@ -494,7 +503,7 @@ private fun GroupFeedTab(
                     Text(detailError, style = SgTheme.typography.bodyMedium, color = sg.rust)
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = onRetryDetail) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
@@ -506,20 +515,20 @@ private fun GroupFeedTab(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        refreshState.error.message ?: "피드를 불러오지 못했습니다.",
+                        refreshState.error.message ?: stringResource(Res.string.feed_error_load),
                         style = SgTheme.typography.bodyMedium,
                         color = sg.rust
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = lazyPagingItems::retry) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
             lazyPagingItems.itemCount == 0 -> item(key = "feed-empty") {
                 SgEmptyState(
-                    title = "아직 이야기가 없습니다",
-                    subtitle = "첫 이야기를 남겨보세요.",
+                    title = stringResource(Res.string.feed_empty_title),
+                    subtitle = stringResource(Res.string.feed_empty_subtitle),
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
                 )
             }
@@ -580,7 +589,7 @@ private fun GroupMembersTab(
                     Text(uiState.error, style = SgTheme.typography.bodyMedium, color = sg.rust)
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = onRetry) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
@@ -611,12 +620,12 @@ private fun GroupMembersTab(
                     shape = SgTheme.shapes.button,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("초대코드 만들기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.group_invite_create), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
         }
         item(key = "member-count", span = { GridItemSpan(maxLineSpan) }) {
-            Text("멤버 ${uiState.visibleMembers.size}", style = SgTheme.typography.titleSmall, color = sg.ink)
+            Text(stringResource(Res.string.group_detail_members_n, uiState.visibleMembers.size), style = SgTheme.typography.titleSmall, color = sg.ink)
         }
         items(uiState.visibleMembers, key = GroupMember::userId) { member ->
             Column(
@@ -657,14 +666,14 @@ private fun InviteDialog(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "초대코드 만들기",
+                        stringResource(Res.string.group_invite_create),
                         style = SgTheme.typography.titleMedium,
                         color = sg.ink,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_close), tint = sg.inkSoft)
                     }
                 }
                 if (invite == null) {
@@ -674,27 +683,27 @@ private fun InviteDialog(
                     val expiresInDays = expiresInDaysText.toIntOrNull()
 
                     Text(
-                        "코드를 전달받은 사람은 승인 없이 바로 가입됩니다.",
+                        stringResource(Res.string.group_invite_hint),
                         style = SgTheme.typography.bodySmall,
                         color = sg.inkSoft
                     )
                     SgTextField(
                         value = maxUsesText,
                         onValueChange = { maxUsesText = it.filter(Char::isDigit) },
-                        label = "최대 사용 횟수 (비우면 무제한)",
+                        label = stringResource(Res.string.group_invite_max_uses),
                         keyboardType = KeyboardType.Number
                     )
                     SgTextField(
                         value = expiresInDaysText,
                         onValueChange = { expiresInDaysText = it.filter(Char::isDigit) },
-                        label = "유효 기간(일, 비우면 무기한)",
+                        label = stringResource(Res.string.group_invite_validity),
                         keyboardType = KeyboardType.Number
                     )
                     error?.let {
                         Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
                     }
                     SgPrimaryButton(
-                        text = "만들기",
+                        text = stringResource(Res.string.common_create),
                         onClick = { onCreate(maxUses, expiresInDays) },
                         // 서버 검증(@Min 1, @Max 365)을 입력 단계에서 막는다 — 빈칸은 무제한/무기한
                         enabled = (maxUsesText.isEmpty() || (maxUses ?: 0) >= 1) &&
@@ -706,10 +715,10 @@ private fun InviteDialog(
                     val clipboard = LocalClipboardManager.current
                     var copied by remember { mutableStateOf(false) }
                     val limitLabel = listOfNotNull(
-                        invite.maxUses?.let { "최대 ${it}회 사용" },
+                        invite.maxUses?.let { stringResource(Res.string.group_invite_max_uses_label, it) },
                         // 서버 ISO-8601 원문에서 날짜만 잘라 보여준다
-                        invite.expiresAt?.let { "${it.take(10)}까지 유효" }
-                    ).joinToString(" · ").ifEmpty { "사용 제한 없음" }
+                        invite.expiresAt?.let { stringResource(Res.string.group_invite_valid_until, it.take(10)) }
+                    ).joinToString(" · ").ifEmpty { stringResource(Res.string.group_invite_no_limit) }
 
                     Text(
                         invite.code,
@@ -728,7 +737,7 @@ private fun InviteDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                     SgPrimaryButton(
-                        text = if (copied) "복사됨" else "코드 복사",
+                        text = if (copied) stringResource(Res.string.copied) else stringResource(Res.string.copy_code),
                         onClick = {
                             clipboard.setText(AnnotatedString(invite.code))
                             copied = true
@@ -754,7 +763,7 @@ private fun JoinRequestInbox(
     val sg = SgTheme.colors
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("가입 신청 ${requests.size}건", style = SgTheme.typography.titleSmall, color = sg.ink)
+        Text(pluralStringResource(Res.plurals.group_join_requests_n, requests.size, requests.size), style = SgTheme.typography.titleSmall, color = sg.ink)
         if (actionError != null) {
             Text(actionError, style = SgTheme.typography.bodySmall, color = sg.rust)
         }
@@ -799,7 +808,7 @@ private fun JoinRequestCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "${formatRelativeTime(request.requestedAt)} 신청",
+                    stringResource(Res.string.group_requested_at, formatRelativeTime(request.requestedAt)),
                     style = SgTheme.typography.labelSmall,
                     color = sg.inkFaint
                 )
@@ -823,10 +832,10 @@ private fun JoinRequestCard(
                     )
                     Spacer(Modifier.width(6.dp))
                 }
-                Text("승인", fontWeight = FontWeight.Bold)
+                Text(stringResource(Res.string.common_approve), fontWeight = FontWeight.Bold)
             }
             OutlinedButton(onClick = onReject, enabled = enabled, shape = SgTheme.shapes.button) {
-                Text("거절", color = if (enabled) sg.ink else sg.inkFaint)
+                Text(stringResource(Res.string.common_reject), color = if (enabled) sg.ink else sg.inkFaint)
             }
         }
     }

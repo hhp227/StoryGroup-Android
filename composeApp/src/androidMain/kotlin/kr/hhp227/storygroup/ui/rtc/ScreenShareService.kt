@@ -11,6 +11,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import kr.hhp227.storygroup.R
 
 /**
  * 화면 공유용 포그라운드 서비스 — API 29+는 mediaProjection 타입 FGS가 떠 있어야
@@ -26,12 +27,12 @@ internal class ScreenShareService : Service() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "화면 공유", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(CHANNEL_ID, getString(R.string.screen_share), NotificationManager.IMPORTANCE_LOW)
             )
         }
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_share)
-            .setContentTitle("화면 공유 중")
+            .setContentTitle(getString(R.string.screen_share_active))
             .setOngoing(true)
             .build()
 

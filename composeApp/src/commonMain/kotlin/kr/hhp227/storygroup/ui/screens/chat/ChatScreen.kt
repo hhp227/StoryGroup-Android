@@ -35,6 +35,16 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.chat_empty_subtitle
+import storygroup.composeapp.generated.resources.chat_empty_title
+import storygroup.composeapp.generated.resources.chat_no_messages_yet
+import storygroup.composeapp.generated.resources.chat_section_dm
+import storygroup.composeapp.generated.resources.chat_section_group
+import storygroup.composeapp.generated.resources.common_file
+import storygroup.composeapp.generated.resources.common_photo
+import storygroup.composeapp.generated.resources.common_retry
 
 /**
  * 채팅 허브 — 웹 /dm 미러(그룹 채팅 + 다이렉트 메시지, 라운지 제외).
@@ -68,13 +78,13 @@ fun ChatScreen(
                 Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(ChatViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
         uiState.groupRooms.isEmpty() && uiState.directRooms.isEmpty() ->
             SgEmptyState(
-                title = "채팅방이 없습니다",
-                subtitle = "그룹에 가입하거나 친구에게 메시지를 보내보세요.",
+                title = stringResource(Res.string.chat_empty_title),
+                subtitle = stringResource(Res.string.chat_empty_subtitle),
                 icon = Icons.AutoMirrored.Filled.Chat,
                 modifier = modifier.fillMaxSize()
             )
@@ -84,7 +94,7 @@ fun ChatScreen(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             if (uiState.groupRooms.isNotEmpty()) {
-                item(key = "group-title") { SgSectionTitle("그룹 채팅", Modifier.padding(horizontal = 16.dp)) }
+                item(key = "group-title") { SgSectionTitle(stringResource(Res.string.chat_section_group), Modifier.padding(horizontal = 16.dp)) }
                 items(uiState.groupRooms, key = { "group-${it.id}" }) { room ->
                     ChatRoomRow(
                         title = room.groupName,
@@ -102,7 +112,7 @@ fun ChatScreen(
             if (uiState.directRooms.isNotEmpty()) {
                 item(key = "dm-title") {
                     if (uiState.groupRooms.isNotEmpty()) Spacer(Modifier.height(12.dp))
-                    SgSectionTitle("다이렉트 메시지", Modifier.padding(horizontal = 16.dp))
+                    SgSectionTitle(stringResource(Res.string.chat_section_dm), Modifier.padding(horizontal = 16.dp))
                 }
                 items(uiState.directRooms, key = { "dm-${it.id}" }) { room ->
                     ChatRoomRow(
@@ -197,9 +207,10 @@ private fun ChatRoomRow(
 }
 
 /** 미리보기 라벨 — 첨부 전용 메시지(text 빈 문자열)는 종류로 표기한다. iosApp ChatView.swift preview와 1:1 미러 */
+@Composable
 private fun messagePreview(text: String?, attachmentType: String?, lastMessageAt: String?): String = when {
-    lastMessageAt == null -> "아직 메시지가 없습니다"
+    lastMessageAt == null -> stringResource(Res.string.chat_no_messages_yet)
     !text.isNullOrEmpty() -> text
-    attachmentType?.startsWith("image/") == true -> "사진"
-    else -> "파일"
+    attachmentType?.startsWith("image/") == true -> stringResource(Res.string.common_photo)
+    else -> stringResource(Res.string.common_file)
 }

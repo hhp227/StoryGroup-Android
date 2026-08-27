@@ -1,0 +1,4 @@
+<resources>
+    <string name="screen_share">화면 공유</string>
+    <string name="screen_share_active">화면 공유 중</string>
+</resources>

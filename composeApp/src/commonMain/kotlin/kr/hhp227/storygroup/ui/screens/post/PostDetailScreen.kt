@@ -64,6 +64,9 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 
 /**
  * 게시글 상세 — 본문·이미지·좋아요·댓글(답글 포함). 웹 /groups/{id}/posts/{postId} 미러.
@@ -139,10 +142,10 @@ fun PostDetailScreen(
 
     Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
-            title = "게시글",
+            title = stringResource(Res.string.post_detail_title),
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             },
             actions = {
@@ -154,7 +157,7 @@ fun PostDetailScreen(
                         onClick = { menuExpanded = true },
                         enabled = !uiState.isDeletingPost && !uiState.isBlocking
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "더보기")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.common_more))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         if (uiState.isMyPost) {
@@ -164,7 +167,7 @@ fun PostDetailScreen(
                                     onNavigationAction(NavigationAction.NavigateToCreatePost(groupId, postId))
                                 }
                             ) {
-                                Text("수정", style = SgTheme.typography.bodyMedium, color = sg.ink)
+                                Text(stringResource(Res.string.common_edit), style = SgTheme.typography.bodyMedium, color = sg.ink)
                             }
                             DropdownMenuItem(
                                 onClick = {
@@ -172,7 +175,7 @@ fun PostDetailScreen(
                                     onAction(PostDetailViewModel.Action.DeletePost)
                                 }
                             ) {
-                                Text("삭제", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                                Text(stringResource(Res.string.common_delete), style = SgTheme.typography.bodyMedium, color = sg.rust)
                             }
                         } else {
                             DropdownMenuItem(
@@ -181,7 +184,7 @@ fun PostDetailScreen(
                                     confirmAction = ConfirmAction.ReportPost
                                 }
                             ) {
-                                Text("신고하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                                Text(stringResource(Res.string.post_report_action), style = SgTheme.typography.bodyMedium, color = sg.rust)
                             }
                             DropdownMenuItem(
                                 // 글이 아직 안 실렸으면 작성자를 모르므로 차단할 수 없다
@@ -191,7 +194,7 @@ fun PostDetailScreen(
                                     confirmAction = ConfirmAction.BlockAuthor
                                 }
                             ) {
-                                Text("차단하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                                Text(stringResource(Res.string.post_block_action), style = SgTheme.typography.bodyMedium, color = sg.rust)
                             }
                         }
                     }
@@ -206,7 +209,7 @@ fun PostDetailScreen(
             ) {
                 Text(message, style = SgTheme.typography.bodySmall, color = sg.moss, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onAction(PostDetailViewModel.Action.ClearNotice) }) {
-                    Text("닫기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.common_close), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
         }
@@ -218,7 +221,7 @@ fun PostDetailScreen(
             ) {
                 Text(message, style = SgTheme.typography.bodySmall, color = sg.ink, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onAction(PostDetailViewModel.Action.ClearError) }) {
-                    Text("닫기", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.common_close), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
         }
@@ -233,7 +236,7 @@ fun PostDetailScreen(
                 uiState.post == null ->
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         TextButton(onClick = { onAction(PostDetailViewModel.Action.Reload) }) {
-                            Text("다시 시도", color = sg.accent)
+                            Text(stringResource(Res.string.common_retry), color = sg.accent)
                         }
                     }
 
@@ -255,7 +258,7 @@ fun PostDetailScreen(
                     item {
                         Divider(color = sg.stoneBorder)
                         Text(
-                            "댓글 ${uiState.comments.size}",
+                            pluralStringResource(Res.plurals.comments_n, uiState.comments.size, uiState.comments.size),
                             style = SgTheme.typography.labelLarge,
                             color = sg.inkSoft,
                             modifier = Modifier.padding(start = 16.dp, top = 12.dp)
@@ -310,28 +313,24 @@ fun PostDetailScreen(
     }
 
     confirmAction?.let { action ->
-        // 차단 문구는 어디서 눌렀든 같다 — 차단은 사용자 단위라 글·댓글이 함께 숨겨진다
-        val blockMessage = { name: String ->
-            "${name}님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다."
-        }
-
         ActionConfirmDialog(
             title = when (action) {
-                ConfirmAction.ReportPost -> "게시글 신고"
-                is ConfirmAction.ReportComment -> "사용자 신고"
-                else -> "사용자 차단"
+                ConfirmAction.ReportPost -> stringResource(Res.string.post_detail_report_post_title)
+                is ConfirmAction.ReportComment -> stringResource(Res.string.post_detail_report_user_title)
+                else -> stringResource(Res.string.post_detail_block_user_title)
             },
             message = when (action) {
-                ConfirmAction.ReportPost -> "이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다."
+                ConfirmAction.ReportPost -> stringResource(Res.string.report_post_confirm)
                 // 댓글엔 신고 API가 없어 작성자를 신고한다 — 접수처도 운영자로 달라서 문구를 구분한다
                 is ConfirmAction.ReportComment ->
-                    "${action.authorName}님을 신고할까요?\n접수된 신고는 운영자가 확인합니다."
-                ConfirmAction.BlockAuthor -> blockMessage(uiState.post?.authorName ?: "")
-                is ConfirmAction.BlockComment -> blockMessage(action.authorName)
+                    stringResource(Res.string.report_user_confirm, action.authorName)
+                // 차단 문구는 어디서 눌렀든 같다 — 차단은 사용자 단위라 글·댓글이 함께 숨겨진다
+                ConfirmAction.BlockAuthor -> stringResource(Res.string.block_user_confirm, uiState.post?.authorName ?: "")
+                is ConfirmAction.BlockComment -> stringResource(Res.string.block_user_confirm, action.authorName)
             },
             confirmText = when (action) {
-                ConfirmAction.ReportPost, is ConfirmAction.ReportComment -> "신고"
-                else -> "차단"
+                ConfirmAction.ReportPost, is ConfirmAction.ReportComment -> stringResource(Res.string.common_report)
+                else -> stringResource(Res.string.common_block)
             },
             isLoading = when (action) {
                 ConfirmAction.ReportPost, is ConfirmAction.ReportComment -> uiState.isReporting
@@ -387,7 +386,7 @@ private fun ActionConfirmDialog(
                 Text(message, style = SgTheme.typography.bodyMedium, color = sg.ink)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = onDismiss, shape = SgTheme.shapes.button, modifier = Modifier.weight(1f)) {
-                        Text("취소", color = sg.ink)
+                        Text(stringResource(Res.string.common_cancel), color = sg.ink)
                     }
                     SgPrimaryButton(
                         text = confirmText,
@@ -459,13 +458,13 @@ private fun PostBody(
             ) {
                 Icon(
                     if (uiState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (uiState.isLiked) "좋아요 취소" else "좋아요",
+                    contentDescription = stringResource(if (uiState.isLiked) Res.string.post_unlike else Res.string.post_like),
                     tint = if (uiState.isLiked) sg.accent else sg.inkFaint
                 )
             }
-            Text("좋아요 ${uiState.likeCount}", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
+            Text(pluralStringResource(Res.plurals.likes_n, uiState.likeCount, uiState.likeCount), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
             Spacer(Modifier.width(16.dp))
-            Text("댓글 ${uiState.comments.size}", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
+            Text(pluralStringResource(Res.plurals.comments_n, uiState.comments.size, uiState.comments.size), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
         }
     }
 }
@@ -509,7 +508,7 @@ private fun CommentRow(
                 // TextButton은 최소 64×36dp를 강제해 iOS(caption2 텍스트 그대로)보다 크게 벌어진다 —
                 // 클릭 영역이 텍스트 크기로 줄지만 iOS와 같은 크기라 정합. top 2dp = iOS VStack spacing 미러
                 Text(
-                    "답글",
+                    stringResource(Res.string.post_reply),
                     style = SgTheme.typography.labelSmall,
                     color = sg.inkFaint,
                     modifier = Modifier.padding(top = 2.dp).clickable(onClick = onReply)
@@ -522,7 +521,7 @@ private fun CommentRow(
             IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(28.dp)) {
                 Icon(
                     Icons.Default.MoreVert,
-                    contentDescription = "더보기",
+                    contentDescription = stringResource(Res.string.common_more),
                     tint = sg.inkFaint,
                     modifier = Modifier.size(18.dp)
                 )
@@ -535,7 +534,7 @@ private fun CommentRow(
                             onDelete()
                         }
                     ) {
-                        Text("삭제", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                        Text(stringResource(Res.string.common_delete), style = SgTheme.typography.bodyMedium, color = sg.rust)
                     }
                 } else {
                     DropdownMenuItem(
@@ -544,7 +543,7 @@ private fun CommentRow(
                             onReport()
                         }
                     ) {
-                        Text("신고하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                        Text(stringResource(Res.string.post_report_action), style = SgTheme.typography.bodyMedium, color = sg.rust)
                     }
                     DropdownMenuItem(
                         onClick = {
@@ -552,7 +551,7 @@ private fun CommentRow(
                             onBlock()
                         }
                     ) {
-                        Text("차단하기", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                        Text(stringResource(Res.string.post_block_action), style = SgTheme.typography.bodyMedium, color = sg.rust)
                     }
                 }
             }
@@ -582,13 +581,13 @@ private fun CommentComposer(
                     .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
             ) {
                 Text(
-                    "${target.authorName}님에게 답글",
+                    stringResource(Res.string.post_reply_to, target.authorName),
                     style = SgTheme.typography.labelSmall,
                     color = sg.ink,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onCancelReply, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "답글 취소", tint = sg.inkFaint)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.post_reply_cancel), tint = sg.inkFaint)
                 }
             }
         }
@@ -603,7 +602,7 @@ private fun CommentComposer(
             SgComposerField(
                 value = text,
                 onValueChange = onTextChange,
-                placeholder = "댓글을 입력하세요.",
+                placeholder = stringResource(Res.string.post_comment_placeholder),
                 modifier = Modifier.weight(1f)
             )
             IconButton(
@@ -613,7 +612,7 @@ private fun CommentComposer(
             ) {
                 Icon(
                     Icons.Default.Send,
-                    contentDescription = "등록",
+                    contentDescription = stringResource(Res.string.create_post_submit),
                     tint = if (isSubmitting || text.isBlank()) sg.inkFaint else sg.accent
                 )
             }

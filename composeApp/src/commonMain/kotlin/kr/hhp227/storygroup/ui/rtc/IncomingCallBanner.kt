@@ -23,6 +23,14 @@ import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.call_accept
+import storygroup.composeapp.generated.resources.call_banner_incoming
+import storygroup.composeapp.generated.resources.call_banner_incoming_room
+import storygroup.composeapp.generated.resources.call_kind_video
+import storygroup.composeapp.generated.resources.call_voice_talk
+import storygroup.composeapp.generated.resources.common_reject
 
 /** 수신 통화 배너(DM·그룹 방) — 셸 위 오버레이로 뜨는 수락/거절 카드(웹 헤더 배너 미러) */
 @Composable
@@ -42,11 +50,12 @@ fun IncomingCallBanner(
             SgAvatar(name = call.callerName)
             Spacer(Modifier.width(12.dp))
             // 보이스톡이면 문구로 구분 — 수락 시 카메라 OFF 입장과 짝을 이룬다
-            val kind = if (call.video) "통화" else "보이스톡"
+            val kind = if (call.video) stringResource(Res.string.call_kind_video) else stringResource(Res.string.call_voice_talk)
 
             Text(
                 // 그룹 방이면 어느 방의 통화인지 함께 — DM은 발신자 이름만(기존 문구)
-                call.roomName?.let { "$it — ${call.callerName}님의 $kind" } ?: "${call.callerName}님의 $kind",
+                call.roomName?.let { stringResource(Res.string.call_banner_incoming_room, it, call.callerName, kind) }
+                    ?: stringResource(Res.string.call_banner_incoming, call.callerName, kind),
                 style = SgTheme.typography.bodyMedium,
                 color = sg.ink,
                 fontWeight = FontWeight.Bold,
@@ -59,13 +68,13 @@ fun IncomingCallBanner(
                 onClick = onDecline,
                 colors = ButtonDefaults.textButtonColors(contentColor = sg.inkSoft)
             ) {
-                Text("거절", style = SgTheme.typography.labelLarge)
+                Text(stringResource(Res.string.common_reject), style = SgTheme.typography.labelLarge)
             }
             IconButton(
                 onClick = onAccept,
                 modifier = Modifier.background(sg.accent, CircleShape)
             ) {
-                Icon(Icons.Default.Call, contentDescription = "수락", tint = sg.onAccent)
+                Icon(Icons.Default.Call, contentDescription = stringResource(Res.string.call_accept), tint = sg.onAccent)
             }
         }
     }

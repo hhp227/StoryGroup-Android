@@ -52,8 +52,17 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.postShareText
 import kr.hhp227.storygroup.ui.util.rememberShareLauncher
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_ok
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.common_search
+import storygroup.composeapp.generated.resources.create_post_title
+import storygroup.composeapp.generated.resources.feed_empty_subtitle
+import storygroup.composeapp.generated.resources.feed_empty_title
+import storygroup.composeapp.generated.resources.feed_error_load
 import storygroup.composeapp.generated.resources.header
+import storygroup.composeapp.generated.resources.home_title
 
 /**
  * 홈(라운지) 피드 — 웹 메인 피드 미러 + 레거시 CollapsingToolbar 헤더(SgCollapsingHeaderScaffold).
@@ -140,11 +149,11 @@ private fun HomeContent(
         }
     }
     SgCollapsingHeaderScaffold(
-        title = "우리들의 이야기",
+        title = stringResource(Res.string.home_title),
         navigationIcon = navigationIcon,
         actions = {
             IconButton(onClick = onOpenSearch) {
-                Icon(Icons.Default.Search, contentDescription = "검색")
+                Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.common_search))
             }
             SgBellAction(
                 unreadCount = notificationsUiState.unreadCount,
@@ -158,7 +167,7 @@ private fun HomeContent(
                 backgroundColor = sg.accent,
                 contentColor = sg.onAccent
             ) {
-                Icon(Icons.Default.Add, contentDescription = "글쓰기")
+                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.create_post_title))
             }
         },
         // 당겨서 새로고침 — 글쓰기 복귀와 같은 Refresh 경로(VM Event → lazyPagingItems.refresh())를 탄다.
@@ -201,20 +210,20 @@ private fun HomeContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        refreshState.error.message ?: "피드를 불러오지 못했습니다.",
+                        refreshState.error.message ?: stringResource(Res.string.feed_error_load),
                         style = SgTheme.typography.bodyMedium,
                         color = sg.rust
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = lazyPagingItems::retry) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
             lazyPagingItems.itemCount == 0 -> item(key = "feed-empty") {
                 SgEmptyState(
-                    title = "아직 이야기가 없습니다",
-                    subtitle = "첫 이야기를 남겨보세요.",
+                    title = stringResource(Res.string.feed_empty_title),
+                    subtitle = stringResource(Res.string.feed_empty_subtitle),
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
                 )
             }
@@ -249,7 +258,7 @@ private fun HomeContent(
             text = { Text(message) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onAction(HomeViewModel.Action.DismissLikeError) }) {
-                    Text("확인", color = SgTheme.colors.accent)
+                    Text(stringResource(Res.string.common_ok), color = SgTheme.colors.accent)
                 }
             }
         )

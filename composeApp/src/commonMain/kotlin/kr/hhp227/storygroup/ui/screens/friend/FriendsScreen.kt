@@ -55,6 +55,22 @@ import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_cancel
+import storygroup.composeapp.generated.resources.common_clear
+import storygroup.composeapp.generated.resources.common_message
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.common_search
+import storygroup.composeapp.generated.resources.friends_add
+import storygroup.composeapp.generated.resources.friends_empty_subtitle
+import storygroup.composeapp.generated.resources.friends_empty_title
+import storygroup.composeapp.generated.resources.friends_remove
+import storygroup.composeapp.generated.resources.friends_remove_confirm
+import storygroup.composeapp.generated.resources.friends_remove_short
+import storygroup.composeapp.generated.resources.friends_search_placeholder
+import storygroup.composeapp.generated.resources.friends_search_scope_note
+import storygroup.composeapp.generated.resources.search_no_results
 
 /** 세션 스코프 친구 VM — 로그아웃 시 함께 사라진다(다음 로그인은 init이 자가 로드) */
 @Composable
@@ -165,12 +181,12 @@ private fun FriendsContent(
                 Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(FriendsViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             uiState.friends.isEmpty() -> SgEmptyState(
-                title = "아직 친구가 없습니다",
-                subtitle = "위 검색으로 사용자를 찾아 친구를 추가해보세요.",
+                title = stringResource(Res.string.friends_empty_title),
+                subtitle = stringResource(Res.string.friends_empty_subtitle),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
             )
             else -> LazyColumn(
@@ -219,7 +235,7 @@ private fun SearchBar(
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.Search, contentDescription = "검색", tint = sg.inkFaint, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.common_search), tint = sg.inkFaint, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         BasicTextField(
             value = queryText,
@@ -233,7 +249,7 @@ private fun SearchBar(
             decorationBox = { innerTextField ->
                 Box {
                     if (queryText.isEmpty()) {
-                        Text("이름으로 사용자 검색", style = SgTheme.typography.bodyMedium, color = sg.inkFaint)
+                        Text(stringResource(Res.string.friends_search_placeholder), style = SgTheme.typography.bodyMedium, color = sg.inkFaint)
                     }
                     innerTextField()
                 }
@@ -241,7 +257,7 @@ private fun SearchBar(
         )
         if (queryText.isNotEmpty()) {
             IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(20.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "지우기", tint = sg.inkFaint)
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_clear), tint = sg.inkFaint)
             }
         }
     }
@@ -259,8 +275,8 @@ private fun SearchResultList(
 ) {
     if (results.isEmpty()) {
         SgEmptyState(
-            title = "검색 결과가 없습니다",
-            subtitle = "같은 그룹에 소속된 사용자만 검색됩니다.",
+            title = stringResource(Res.string.search_no_results),
+            subtitle = stringResource(Res.string.friends_search_scope_note),
             modifier = modifier.fillMaxWidth().padding(vertical = 48.dp)
         )
         return
@@ -319,7 +335,7 @@ private fun SearchResultRow(
                     shape = SgTheme.shapes.button,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                 ) {
-                    Text("친구 해제", style = SgTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.friends_remove), style = SgTheme.typography.labelLarge)
                 }
             } else {
                 Button(
@@ -328,7 +344,7 @@ private fun SearchResultRow(
                     shape = SgTheme.shapes.button,
                     colors = ButtonDefaults.buttonColors(backgroundColor = sg.accent, contentColor = sg.onAccent)
                 ) {
-                    Text("친구 추가", style = SgTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.friends_add), style = SgTheme.typography.labelLarge)
                 }
             }
         }
@@ -376,10 +392,10 @@ private fun FriendRow(
             }
             Spacer(Modifier.width(8.dp))
             TextButton(onClick = onOpenDm, enabled = !isBusy) {
-                Text("메시지", style = SgTheme.typography.labelLarge, color = sg.accent)
+                Text(stringResource(Res.string.common_message), style = SgTheme.typography.labelLarge, color = sg.accent)
             }
             TextButton(onClick = onRemove, enabled = !isBusy) {
-                Text("해제", style = SgTheme.typography.labelLarge, color = sg.inkSoft)
+                Text(stringResource(Res.string.friends_remove_short), style = SgTheme.typography.labelLarge, color = sg.inkSoft)
             }
         }
     }
@@ -398,22 +414,22 @@ private fun RemoveFriendDialog(
         SgCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "친구 해제",
+                    stringResource(Res.string.friends_remove),
                     style = SgTheme.typography.titleMedium,
                     color = sg.ink,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "${friend.name}님을 친구에서 해제할까요?",
+                    stringResource(Res.string.friends_remove_confirm, friend.name),
                     style = SgTheme.typography.bodyMedium,
                     color = sg.inkSoft
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("취소", color = sg.inkSoft)
+                        Text(stringResource(Res.string.common_cancel), color = sg.inkSoft)
                     }
                     TextButton(onClick = onConfirm) {
-                        Text("해제", color = sg.rust)
+                        Text(stringResource(Res.string.friends_remove_short), color = sg.rust)
                     }
                 }
             }

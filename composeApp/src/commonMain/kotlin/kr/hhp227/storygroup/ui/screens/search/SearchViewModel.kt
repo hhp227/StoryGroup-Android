@@ -16,6 +16,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetFriendsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SearchUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.friends_error_add
+import storygroup.composeapp.generated.resources.friends_error_remove
+import storygroup.composeapp.generated.resources.search_error_failed
 
 /**
  * 홈 통합검색 — 웹 /search 미러(제출 기반, 5섹션 원페이지).
@@ -62,7 +67,7 @@ class SearchViewModel(
                     _uiState.update { it.copy(isSearching = false, results = results) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isSearching = false, error = e.message ?: "검색에 실패했습니다.") }
+                    _uiState.update { it.copy(isSearching = false, error = e.message ?: getString(Res.string.search_error_failed)) }
                 }
         }
     }
@@ -89,7 +94,7 @@ class SearchViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingUserId = null, actionError = e.message ?: "친구 등록에 실패했습니다.")
+                        it.copy(processingUserId = null, actionError = e.message ?: getString(Res.string.friends_error_add))
                     }
                 }
         }
@@ -106,7 +111,7 @@ class SearchViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingUserId = null, actionError = e.message ?: "친구 해제에 실패했습니다.")
+                        it.copy(processingUserId = null, actionError = e.message ?: getString(Res.string.friends_error_remove))
                     }
                 }
         }

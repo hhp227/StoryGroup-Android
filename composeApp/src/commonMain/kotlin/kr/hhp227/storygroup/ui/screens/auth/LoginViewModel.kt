@@ -13,6 +13,9 @@ import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.login_error
 
 /** 세션 홀더 — iosApp LoginViewModel.swift와 1:1 미러(같은 UiState·Action·로직, shared 유스케이스 소비) */
 class LoginViewModel(
@@ -44,7 +47,7 @@ class LoginViewModel(
                     _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "로그인에 실패했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.login_error)) }
                 }
         }
     }

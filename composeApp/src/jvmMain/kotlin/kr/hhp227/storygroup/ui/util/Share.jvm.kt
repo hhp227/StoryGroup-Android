@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.delay
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.share_copied
 
 /** Desktop엔 공유 시트가 없어 클립보드 복사로 대신하고, 잠깐 뜨는 팝업으로 복사됐음을 알린다 */
 @Composable
@@ -29,7 +32,7 @@ actual fun rememberShareLauncher(): (String) -> Unit {
 
         Popup(alignment = Alignment.BottomCenter) {
             Text(
-                "클립보드에 복사됨",
+                stringResource(Res.string.share_copied),
                 style = SgTheme.typography.bodySmall,
                 color = sg.paper,
                 modifier = Modifier

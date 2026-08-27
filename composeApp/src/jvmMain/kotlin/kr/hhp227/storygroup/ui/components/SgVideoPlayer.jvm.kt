@@ -18,6 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.video_open_browser_failed
+import storygroup.composeapp.generated.resources.video_open_in_browser
+import storygroup.composeapp.generated.resources.video_playing_in_browser
 import java.awt.Desktop
 import java.net.URI
 
@@ -41,7 +46,7 @@ actual fun SgVideoPlayer(url: String, modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            if (failed) "브라우저를 열지 못했습니다. 주소를 복사해 직접 열어주세요." else "브라우저에서 재생 중입니다.",
+            if (failed) stringResource(Res.string.video_open_browser_failed) else stringResource(Res.string.video_playing_in_browser),
             style = SgTheme.typography.bodySmall,
             color = Color.White,
             textAlign = TextAlign.Center
@@ -51,7 +56,7 @@ actual fun SgVideoPlayer(url: String, modifier: Modifier) {
             Text(url, style = SgTheme.typography.labelSmall, color = Color.White, textAlign = TextAlign.Center)
         }
         OutlinedButton(onClick = { failed = !openInBrowser(url) }, shape = SgTheme.shapes.button) {
-            Text("브라우저에서 열기", color = Color.White)
+            Text(stringResource(Res.string.video_open_in_browser), color = Color.White)
         }
     }
 }

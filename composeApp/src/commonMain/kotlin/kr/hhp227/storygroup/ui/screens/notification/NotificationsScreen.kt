@@ -60,6 +60,26 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.notification_type_chat
+import storygroup.composeapp.generated.resources.notification_type_invite
+import storygroup.composeapp.generated.resources.notification_type_join_approved
+import storygroup.composeapp.generated.resources.notification_type_join_rejected
+import storygroup.composeapp.generated.resources.notification_type_join_request
+import storygroup.composeapp.generated.resources.notification_type_meeting
+import storygroup.composeapp.generated.resources.notification_type_mention
+import storygroup.composeapp.generated.resources.notification_type_new_post
+import storygroup.composeapp.generated.resources.notifications_empty_subtitle
+import storygroup.composeapp.generated.resources.notifications_empty_title
+import storygroup.composeapp.generated.resources.notifications_error_load
+import storygroup.composeapp.generated.resources.notifications_mark_all
+import storygroup.composeapp.generated.resources.notifications_mark_read
+import storygroup.composeapp.generated.resources.notifications_unread_n
+import storygroup.composeapp.generated.resources.post_comment
+import storygroup.composeapp.generated.resources.post_like
+import storygroup.composeapp.generated.resources.post_notice_badge
 
 /**
  * 알림 — 미읽음 헤더(N건+모두 읽음 처리)+풀블리드 행 목록(미읽음=linen, 행 사이 헤어라인).
@@ -128,7 +148,7 @@ private fun NotificationsContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "미읽음 ${uiState.unreadCount}건",
+                    stringResource(Res.string.notifications_unread_n, uiState.unreadCount),
                     style = SgTheme.typography.bodySmall,
                     color = sg.inkSoft,
                     modifier = Modifier.weight(1f)
@@ -137,7 +157,7 @@ private fun NotificationsContent(
                     onClick = { onAction(NotificationsViewModel.Action.MarkAllAsRead) },
                     enabled = !uiState.isMarkingAll
                 ) {
-                    Text("모두 읽음 처리", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.notifications_mark_all), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
         }
@@ -169,20 +189,20 @@ private fun NotificationsContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            refreshState.error.message ?: "알림을 불러오지 못했습니다.",
+                            refreshState.error.message ?: stringResource(Res.string.notifications_error_load),
                             style = SgTheme.typography.bodyMedium,
                             color = sg.rust
                         )
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = lazyPagingItems::retry) {
-                            Text("다시 시도", color = sg.accent)
+                            Text(stringResource(Res.string.common_retry), color = sg.accent)
                         }
                     }
                 }
                 lazyPagingItems.itemCount == 0 -> item(key = "notifications-empty") {
                     SgEmptyState(
-                        title = "알림이 없습니다",
-                        subtitle = "새 소식이 생기면 여기에 표시됩니다.",
+                        title = stringResource(Res.string.notifications_empty_title),
+                        subtitle = stringResource(Res.string.notifications_empty_subtitle),
                         icon = Icons.Default.Notifications,
                         modifier = Modifier.fillParentMaxWidth().padding(vertical = 48.dp)
                     )
@@ -294,7 +314,7 @@ private fun NotificationRow(
                     )
                 } else {
                     TextButton(onClick = onMarkAsRead, enabled = enabled) {
-                        Text("읽음", color = if (enabled) sg.accent else sg.inkFaint)
+                        Text(stringResource(Res.string.notifications_mark_read), color = if (enabled) sg.accent else sg.inkFaint)
                     }
                 }
             }
@@ -332,16 +352,17 @@ private fun typeIcon(type: NotificationType): ImageVector = when (type) {
 }
 
 /** 웹 TYPE_LABEL 미러 — iosApp typeLabel과 동일 */
+@Composable
 private fun typeLabel(type: NotificationType): String = when (type) {
-    NotificationType.NEW_POST -> "새 게시글"
-    NotificationType.COMMENT -> "댓글"
-    NotificationType.LIKE -> "좋아요"
-    NotificationType.MENTION -> "멘션"
-    NotificationType.CHAT -> "채팅 메시지"
-    NotificationType.MEETING_STARTED -> "화상회의 시작"
-    NotificationType.NOTICE -> "공지"
-    NotificationType.INVITE -> "초대"
-    NotificationType.JOIN_REQUEST -> "가입 신청"
-    NotificationType.JOIN_APPROVED -> "가입 승인"
-    NotificationType.JOIN_REJECTED -> "가입 거절"
+    NotificationType.NEW_POST -> stringResource(Res.string.notification_type_new_post)
+    NotificationType.COMMENT -> stringResource(Res.string.post_comment)
+    NotificationType.LIKE -> stringResource(Res.string.post_like)
+    NotificationType.MENTION -> stringResource(Res.string.notification_type_mention)
+    NotificationType.CHAT -> stringResource(Res.string.notification_type_chat)
+    NotificationType.MEETING_STARTED -> stringResource(Res.string.notification_type_meeting)
+    NotificationType.NOTICE -> stringResource(Res.string.post_notice_badge)
+    NotificationType.INVITE -> stringResource(Res.string.notification_type_invite)
+    NotificationType.JOIN_REQUEST -> stringResource(Res.string.notification_type_join_request)
+    NotificationType.JOIN_APPROVED -> stringResource(Res.string.notification_type_join_approved)
+    NotificationType.JOIN_REJECTED -> stringResource(Res.string.notification_type_join_rejected)
 }

@@ -65,6 +65,19 @@ import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.theme.SgColors
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.groups_create
+import storygroup.composeapp.generated.resources.groups_discover
+import storygroup.composeapp.generated.resources.groups_empty_subtitle
+import storygroup.composeapp.generated.resources.groups_empty_title
+import storygroup.composeapp.generated.resources.groups_list_load_failed
+import storygroup.composeapp.generated.resources.groups_pending
+import storygroup.composeapp.generated.resources.nav_groups
+import storygroup.composeapp.generated.resources.role_admin
+import storygroup.composeapp.generated.resources.role_member
+import storygroup.composeapp.generated.resources.role_owner
 
 /**
  * 가입중인 그룹 목록 + 만들기/찾기 진입 — 웹 /groups 내 그룹 탭 미러(라운지 제외).
@@ -138,7 +151,7 @@ private fun GroupsContent(
     // 그룹 탭은 상세(콜랩싱 헤더)와의 전환 때문에 셸이 아닌 화면이 상단바를 소유한다(홈과 동일)
     Column(modifier) {
         SgTopBar(
-            title = "그룹",
+            title = stringResource(Res.string.nav_groups),
             navigationIcon = navigationIcon,
             actions = {
                 SgBellAction(
@@ -192,20 +205,20 @@ private fun GroupsContent(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                refreshState.error.message ?: "그룹 목록을 불러오지 못했습니다.",
+                                refreshState.error.message ?: stringResource(Res.string.groups_list_load_failed),
                                 style = SgTheme.typography.bodyMedium,
                                 color = sg.rust
                             )
                             Spacer(Modifier.height(8.dp))
                             TextButton(onClick = lazyPagingItems::retry) {
-                                Text("다시 시도", color = sg.accent)
+                                Text(stringResource(Res.string.common_retry), color = sg.accent)
                             }
                         }
                     }
                     lazyPagingItems.itemCount == 0 -> item(key = "groups-empty", span = { GridItemSpan(maxLineSpan) }) {
                         SgEmptyState(
-                            title = "아직 그룹이 없습니다",
-                            subtitle = "새 그룹을 만들거나 그룹 찾기에서 참여해보세요.",
+                            title = stringResource(Res.string.groups_empty_title),
+                            subtitle = stringResource(Res.string.groups_empty_subtitle),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
                         )
                     }
@@ -245,21 +258,21 @@ private fun GroupActionsStrip(
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             GroupActionSegment(
                 icon = Icons.Default.Search,
-                label = "그룹 찾기",
+                label = stringResource(Res.string.groups_discover),
                 onClick = onOpenDiscoverGroups,
                 modifier = Modifier.weight(1f)
             )
             Box(Modifier.width(1.dp).fillMaxHeight().background(sg.stoneBorder))
             GroupActionSegment(
                 icon = Icons.Default.People,
-                label = "가입 신청중",
+                label = stringResource(Res.string.groups_pending),
                 onClick = onOpenPendingGroups,
                 modifier = Modifier.weight(1f)
             )
             Box(Modifier.width(1.dp).fillMaxHeight().background(sg.stoneBorder))
             GroupActionSegment(
                 icon = Icons.Default.Add,
-                label = "그룹 만들기",
+                label = stringResource(Res.string.groups_create),
                 onClick = onOpenCreateGroup,
                 modifier = Modifier.weight(1f)
             )
@@ -348,10 +361,11 @@ private fun GroupCard(group: Group, onClick: () -> Unit, modifier: Modifier = Mo
 }
 
 /** 웹 roleLabel 미러 */
+@Composable
 internal fun roleLabel(role: GroupRole): String = when (role) {
-    GroupRole.OWNER -> "방장"
-    GroupRole.ADMIN -> "부방장"
-    GroupRole.MEMBER -> "멤버"
+    GroupRole.OWNER -> stringResource(Res.string.role_owner)
+    GroupRole.ADMIN -> stringResource(Res.string.role_admin)
+    GroupRole.MEMBER -> stringResource(Res.string.role_member)
 }
 
 /** 역할 칩 — 웹 roleChipClass 미러(방장=accent, 부방장 등=accent2) */

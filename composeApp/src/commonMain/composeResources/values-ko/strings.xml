@@ -1,0 +1,488 @@
+<resources>
+    <!-- 공통 액션/라벨 -->
+    <string name="common_retry">다시 시도</string>
+    <string name="common_back">뒤로</string>
+    <string name="common_close">닫기</string>
+    <string name="common_cancel">취소</string>
+    <string name="common_delete">삭제</string>
+    <string name="common_save">저장</string>
+    <string name="common_edit">수정</string>
+    <string name="common_ok">확인</string>
+    <string name="common_search">검색</string>
+    <string name="common_loading">불러오는 중...</string>
+    <string name="common_send">전송</string>
+    <string name="common_menu">메뉴</string>
+    <string name="common_more">더보기</string>
+    <string name="common_photo">사진</string>
+    <string name="common_file">파일</string>
+    <string name="common_message">메시지</string>
+    <string name="common_clear">지우기</string>
+    <string name="common_today">오늘</string>
+    <string name="common_me">나</string>
+    <string name="common_unknown">알 수 없음</string>
+    <string name="common_profile">프로필</string>
+    <string name="common_report">신고</string>
+    <string name="common_block">차단</string>
+    <string name="common_join">가입</string>
+    <string name="common_approve">승인</string>
+    <string name="common_reject">거절</string>
+    <string name="common_create">만들기</string>
+    <string name="common_uploading">업로드 중...</string>
+    <string name="common_remove">제거</string>
+    <string name="common_error_process">처리에 실패했습니다.</string>
+    <string name="settings">설정</string>
+    <string name="two_part_dot">%1$s · %2$s</string>
+
+    <!-- 내비게이션 탭 -->
+    <string name="nav_home">홈</string>
+    <string name="nav_groups">그룹</string>
+    <string name="nav_friends">친구</string>
+    <string name="nav_chat">채팅</string>
+    <string name="nav_notifications">알림</string>
+    <string name="nav_profile">프로필</string>
+
+    <!-- 네트워크 배너 -->
+    <string name="network_offline">인터넷 연결이 원활하지 않습니다.</string>
+    <string name="network_recovered">인터넷 연결이 복구되었습니다.</string>
+
+    <!-- 시간/날짜 -->
+    <string name="time_just_now">방금</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="other">%1$d분 전</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%1$d시간 전</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%1$d일 전</item>
+    </plurals>
+    <string-array name="month_names">
+        <item>1월</item>
+        <item>2월</item>
+        <item>3월</item>
+        <item>4월</item>
+        <item>5월</item>
+        <item>6월</item>
+        <item>7월</item>
+        <item>8월</item>
+        <item>9월</item>
+        <item>10월</item>
+        <item>11월</item>
+        <item>12월</item>
+    </string-array>
+    <string-array name="day_names_short">
+        <item>일</item>
+        <item>월</item>
+        <item>화</item>
+        <item>수</item>
+        <item>목</item>
+        <item>금</item>
+        <item>토</item>
+    </string-array>
+    <string-array name="day_names_full">
+        <item>일요일</item>
+        <item>월요일</item>
+        <item>화요일</item>
+        <item>수요일</item>
+        <item>목요일</item>
+        <item>금요일</item>
+        <item>토요일</item>
+    </string-array>
+    <!-- %1$s=연, %2$s=월 이름, %3$s=일, %4$s=요일(전체) -->
+    <string name="date_chat_format">%1$s년 %2$s %3$s일 %4$s</string>
+    <!-- %1$s=연, %2$s=월 이름 -->
+    <string name="date_year_month">%1$s년 %2$s</string>
+    <!-- %1$s=월 이름, %2$s=일, %3$s=요일(축약) -->
+    <string name="date_month_day_weekday">%1$s %2$s일 (%3$s)</string>
+
+    <!-- 게시글 카드/공통 -->
+    <string name="post_notice_badge">공지</string>
+    <string name="post_like">좋아요</string>
+    <string name="post_unlike">좋아요 취소</string>
+    <string name="post_comment">댓글</string>
+    <string name="post_share">공유</string>
+    <plurals name="likes_n">
+        <item quantity="other">좋아요 %1$d</item>
+    </plurals>
+    <plurals name="comments_n">
+        <item quantity="other">댓글 %1$d</item>
+    </plurals>
+    <string name="video_play">동영상 재생</string>
+    <plurals name="count_photos">
+        <item quantity="other">%1$d장</item>
+    </plurals>
+    <plurals name="count_people">
+        <item quantity="other">%1$d명</item>
+    </plurals>
+    <plurals name="count_members_full">
+        <item quantity="other">멤버 %1$d명</item>
+    </plurals>
+
+    <!-- 통화/RTC -->
+    <string name="call_kind_video">통화</string>
+    <string name="call_voice_talk">보이스톡</string>
+    <string name="call_video_talk">페이스톡</string>
+    <!-- %1$s=방 이름, %2$s=발신자, %3$s=통화 종류 -->
+    <string name="call_banner_incoming_room">%1$s — %2$s님의 %3$s</string>
+    <!-- %1$s=발신자, %2$s=통화 종류 -->
+    <string name="call_banner_incoming">%1$s님의 %2$s</string>
+    <string name="call_accept">수락</string>
+    <string name="call_ended_no_answer">응답이 없어 통화를 종료합니다.</string>
+    <string name="call_connecting">연결 중…</string>
+    <string name="call_reconnecting">재연결 중…</string>
+    <string name="call_waiting_answer">응답을 기다리는 중…</string>
+    <string name="call_no_participants">아직 다른 참여자가 없습니다.</string>
+    <string name="call_in_progress">통화 중</string>
+    <string name="call_no_av_notice">카메라·마이크 없이 참여 중입니다.</string>
+    <string name="call_mic_off">마이크 끄기</string>
+    <string name="call_mic_on">마이크 켜기</string>
+    <string name="call_cam_off">카메라 끄기</string>
+    <string name="call_cam_on">카메라 켜기</string>
+    <string name="call_switch_camera">카메라 전환</string>
+    <string name="call_speaker_off">스피커 끄기</string>
+    <string name="call_speaker_on">스피커 켜기</string>
+    <string name="call_screen_share">화면 공유</string>
+    <string name="call_screen_share_stop">화면 공유 중지</string>
+    <string name="call_hang_up">통화 끊기</string>
+
+    <!-- 인증 -->
+    <string name="login_title">다시 만나서 반가워요</string>
+    <string name="login_subtitle">이메일과 비밀번호로 로그인하세요.</string>
+    <string name="login_registered_notice">가입이 완료됐습니다. 로그인해주세요.</string>
+    <string name="auth_email">이메일</string>
+    <string name="auth_password">비밀번호</string>
+    <string name="auth_name">이름</string>
+    <string name="login_in_progress">로그인하는 중...</string>
+    <string name="login_action">로그인</string>
+    <string name="login_no_account">아직 계정이 없나요?</string>
+    <string name="login_error">로그인에 실패했습니다.</string>
+    <string name="register_title">같이할 사람들을 위한 자리</string>
+    <string name="register_subtitle">StoryGroup에 가입하고 그룹을 만들어보세요.</string>
+    <string name="register_in_progress">가입하는 중...</string>
+    <string name="register_action">가입하기</string>
+    <string name="register_has_account">이미 계정이 있나요?</string>
+    <string name="register_error">가입에 실패했습니다.</string>
+
+    <!-- 채팅 목록 -->
+    <string name="chat_empty_title">채팅방이 없습니다</string>
+    <string name="chat_empty_subtitle">그룹에 가입하거나 친구에게 메시지를 보내보세요.</string>
+    <string name="chat_section_group">그룹 채팅</string>
+    <string name="chat_section_dm">다이렉트 메시지</string>
+    <string name="chat_no_messages_yet">아직 메시지가 없습니다</string>
+    <string name="chat_error_load">채팅방을 불러오지 못했습니다.</string>
+
+    <!-- 채팅방 -->
+    <string name="chat_room_call_in_progress">%1$s님이 통화 중이에요</string>
+    <string name="chat_room_join">참가</string>
+    <string name="chat_room_empty_title">메시지가 없습니다</string>
+    <string name="chat_room_empty_subtitle">첫 메시지를 보내보세요.</string>
+    <string name="chat_room_typing">%1$s님이 입력 중...</string>
+    <string name="chat_room_compressing">동영상 압축 중 %1$d%</string>
+    <string name="chat_room_dm_title">1:1 대화</string>
+    <string name="chat_room_group_title">그룹 대화</string>
+    <string name="chat_room_members_section">대화상대</string>
+    <string name="chat_room_no_photos">주고받은 사진이 없습니다.</string>
+    <string name="chat_room_members_error">대화상대를 불러오지 못했습니다.</string>
+    <string name="chat_read">읽음</string>
+    <string name="chat_read_n">읽음 %1$d</string>
+    <string name="chat_room_attachment_cancel">첨부 취소</string>
+    <string name="chat_room_attachments_close">첨부 닫기</string>
+    <string name="chat_room_attachments">첨부</string>
+    <string name="chat_room_input_placeholder_attachment">메시지 (선택)</string>
+    <string name="chat_room_input_placeholder">메시지를 입력하세요.</string>
+    <string name="chat_room_emoji">이모지</string>
+    <string name="chat_room_error_load">메시지를 불러오지 못했습니다.</string>
+    <string name="chat_room_error_load_older">이전 메시지를 불러오지 못했습니다.</string>
+    <string name="chat_room_error_send">전송에 실패했습니다.</string>
+
+    <!-- 동영상 첨부 공통 -->
+    <string name="video_error_read_info">동영상 정보를 읽지 못했습니다.</string>
+    <string name="video_error_too_large">파일이 너무 큽니다. (최대 500MB)</string>
+    <string name="video_error_too_long">동영상은 최대 3분까지 첨부할 수 있습니다.</string>
+    <string name="video_error_compress">동영상 압축에 실패했습니다.</string>
+
+    <!-- 친구 -->
+    <string name="friends_empty_title">아직 친구가 없습니다</string>
+    <string name="friends_empty_subtitle">위 검색으로 사용자를 찾아 친구를 추가해보세요.</string>
+    <string name="friends_search_placeholder">이름으로 사용자 검색</string>
+    <string name="friends_search_scope_note">같은 그룹에 소속된 사용자만 검색됩니다.</string>
+    <string name="friends_remove">친구 해제</string>
+    <string name="friends_add">친구 추가</string>
+    <string name="friends_remove_short">해제</string>
+    <string name="friends_remove_confirm">%1$s님을 친구에서 해제할까요?</string>
+    <string name="friends_error_load">친구 목록을 불러오지 못했습니다.</string>
+    <string name="friends_error_add">친구 등록에 실패했습니다.</string>
+    <string name="friends_error_remove">친구 해제에 실패했습니다.</string>
+    <string name="friends_error_open_dm">DM을 열지 못했습니다.</string>
+
+    <!-- 검색 -->
+    <string name="search_no_results">검색 결과가 없습니다</string>
+    <string name="search_error_failed">검색에 실패했습니다.</string>
+    <string name="search_empty_title">무엇이든 찾아보세요</string>
+    <string name="search_empty_subtitle">그룹, 게시글, 파일, 메시지, 사용자를 검색할 수 있습니다.</string>
+    <string name="search_placeholder">그룹, 게시글, 파일, 메시지 검색</string>
+    <string name="search_try_again">다른 검색어로 다시 시도해보세요.</string>
+    <string name="search_section_users">사용자</string>
+    <string name="search_section_posts">게시글</string>
+    <string name="search_section_files">파일</string>
+    <string name="search_section_messages">메시지</string>
+
+    <!-- 그룹 목록 -->
+    <string name="groups_list_load_failed">그룹 목록을 불러오지 못했습니다.</string>
+    <string name="groups_empty_title">아직 그룹이 없습니다</string>
+    <string name="groups_empty_subtitle">새 그룹을 만들거나 그룹 찾기에서 참여해보세요.</string>
+    <string name="groups_discover">그룹 찾기</string>
+    <string name="groups_pending">가입 신청중</string>
+    <string name="groups_create">그룹 만들기</string>
+    <string name="role_owner">방장</string>
+    <string name="role_admin">부방장</string>
+    <string name="role_member">멤버</string>
+
+    <!-- 그룹 만들기/수정 -->
+    <string name="create_group_name">그룹 이름</string>
+    <string name="create_group_desc">그룹 소개</string>
+    <string name="join_type">가입 방식</string>
+    <string name="join_type_auto_full">자동 승인 — 바로 가입</string>
+    <string name="join_type_approval_full">승인제 — 신청 후 승인</string>
+    <string name="join_type_auto">자동 승인</string>
+    <string name="join_type_approval">승인제</string>
+    <string name="create_group_add_cover">커버 이미지 추가</string>
+    <string name="create_group_error_name">그룹 이름을 입력해주세요.</string>
+    <string name="create_group_error_create">그룹 생성에 실패했습니다.</string>
+    <string name="group_edit_title">그룹 정보 수정</string>
+    <string name="group_edit_desc">설명</string>
+    <string name="group_edit_change_image">대표 이미지 변경</string>
+    <string name="group_error_load">그룹 정보를 불러오지 못했습니다.</string>
+    <string name="error_upload_image">이미지 업로드에 실패했습니다.</string>
+    <string name="error_save">저장에 실패했습니다.</string>
+
+    <!-- 그룹 탐색 -->
+    <string name="discover_search_placeholder">그룹 검색</string>
+    <string name="discover_sort_recent">최신순</string>
+    <string name="discover_sort_popular">인기순</string>
+    <string name="discover_join_by_code">초대 코드로 가입</string>
+    <string name="group_load_failed">그룹을 불러오지 못했습니다.</string>
+    <string name="discover_empty_title">그룹을 찾지 못했습니다</string>
+    <string name="discover_empty_subtitle">다른 검색어로 시도해보세요.</string>
+    <string name="discover_code_hint">전달받은 8자리 초대 코드를 입력하면 바로 가입됩니다.</string>
+    <string name="discover_invite_code">초대 코드</string>
+    <string name="membership_joined">가입됨</string>
+    <string name="membership_requested">신청됨</string>
+    <string name="membership_request">신청</string>
+    <string name="request_cancel">신청 취소</string>
+    <string name="group_join_failed">가입에 실패했습니다.</string>
+    <string name="discover_error_join_code">초대 코드 가입에 실패했습니다.</string>
+    <string name="request_cancel_failed">신청 취소에 실패했습니다.</string>
+    <string name="pending_empty_title">가입 신청중인 그룹이 없습니다</string>
+    <string name="pending_empty_subtitle">그룹 찾기에서 승인제 그룹에 가입을 신청해보세요.</string>
+    <string name="pending_error_load">가입 신청중 그룹을 불러오지 못했습니다.</string>
+
+    <!-- 그룹 상세 -->
+    <string name="tab_feed">소식</string>
+    <string name="tab_album">앨범</string>
+    <string name="tab_events">일정</string>
+    <string name="tab_members">멤버</string>
+    <string name="feed_error_load">피드를 불러오지 못했습니다.</string>
+    <string name="feed_empty_title">아직 이야기가 없습니다</string>
+    <string name="feed_empty_subtitle">첫 이야기를 남겨보세요.</string>
+    <string name="group_invite_create">초대코드 만들기</string>
+    <string name="group_detail_members_n">멤버 %1$d</string>
+    <string name="group_invite_hint">코드를 전달받은 사람은 승인 없이 바로 가입됩니다.</string>
+    <string name="group_invite_max_uses">최대 사용 횟수 (비우면 무제한)</string>
+    <string name="group_invite_validity">유효 기간(일, 비우면 무기한)</string>
+    <string name="group_invite_max_uses_label">최대 %1$d회 사용</string>
+    <string name="group_invite_valid_until">%1$s까지 유효</string>
+    <string name="group_invite_no_limit">사용 제한 없음</string>
+    <string name="copied">복사됨</string>
+    <string name="copy_code">코드 복사</string>
+    <plurals name="group_join_requests_n">
+        <item quantity="other">가입 신청 %1$d건</item>
+    </plurals>
+    <string name="group_requested_at">%1$s 신청</string>
+    <string name="group_members_error_load">멤버를 불러오지 못했습니다.</string>
+    <string name="approve_failed">가입 승인에 실패했습니다.</string>
+    <string name="reject_failed">가입 거절에 실패했습니다.</string>
+    <string name="invite_create_failed">초대코드 생성에 실패했습니다.</string>
+
+    <!-- 그룹 앨범 -->
+    <string name="album_error_load">사진을 불러오지 못했습니다.</string>
+    <string name="album_empty_title">아직 사진이 없습니다</string>
+    <string name="album_empty_subtitle">게시글에 사진이나 동영상을 올리면 여기에 모여요.</string>
+    <string name="album_photo_by">%1$s의 사진</string>
+    <string name="album_video_by">%1$s의 동영상</string>
+
+    <!-- 그룹 일정 -->
+    <string name="rsvp_going">참석</string>
+    <string name="rsvp_maybe">미정</string>
+    <string name="rsvp_not_going">불참</string>
+    <string name="events_empty_title">이 날짜에는 일정이 없습니다</string>
+    <string name="events_empty_subtitle">일정 만들기로 첫 일정을 등록해 보세요.</string>
+    <string name="events_delete_confirm">이 일정을 삭제할까요?</string>
+    <string name="events_prev_month">이전 달</string>
+    <string name="events_next_month">다음 달</string>
+    <string name="events_create">일정 만들기</string>
+    <string name="events_new_title">새 일정 — %1$s</string>
+    <string name="events_title_label">일정 제목</string>
+    <string name="events_start_label">시작(HH:MM)</string>
+    <string name="events_end_label">종료(선택)</string>
+    <string name="events_location_label">장소 (선택)</string>
+    <string name="events_desc_label">설명 (선택)</string>
+    <string name="events_submit">등록</string>
+    <string name="events_error_start_format">시작 시각은 HH:MM 형식으로 입력해 주세요</string>
+    <string name="events_error_end_format">종료 시각은 HH:MM 형식으로 입력해 주세요</string>
+    <string name="events_error_end_before_start">종료 시각은 시작 시각보다 빠를 수 없습니다</string>
+    <string name="events_rsvp_counts">참석 %1$d · 미정 %2$d · 불참 %3$d</string>
+    <string name="events_no_attendees">아직 응답한 멤버가 없습니다.</string>
+    <string name="events_created_by">%1$s님이 만든 일정</string>
+    <string name="events_error_load">일정을 불러오지 못했습니다.</string>
+    <string name="events_error_create">일정을 만들지 못했습니다.</string>
+    <string name="events_error_delete">일정 삭제에 실패했습니다.</string>
+    <string name="events_error_rsvp">참석 응답에 실패했습니다.</string>
+
+    <!-- 그룹 설정 -->
+    <string name="app_share_text">StoryGroup — 그룹과 함께하는 이야기\n%1$s</string>
+    <string name="group_settings_user_section">유저 설정</string>
+    <string name="group_settings_group_section">그룹 설정</string>
+    <string name="group_reports_title">신고함</string>
+    <string name="group_delete">그룹 삭제</string>
+    <string name="group_leave">그룹 나가기</string>
+    <string name="app_info_section">어플리케이션 정보</string>
+    <string name="share_app">공유하기</string>
+    <string name="group_delete_confirm">정말 삭제할까요? 게시글, 채팅, 파일이 모두 사라집니다.</string>
+    <string name="group_leave_confirm">정말 나갈까요? 나가면 이 그룹의 게시글·채팅에 더는 참여할 수 없습니다.</string>
+    <string name="group_leave_action">나가기</string>
+
+    <!-- 그룹 신고함 -->
+    <string name="group_reports_desc">멤버가 신고한 게시글입니다. 확인/기각은 처리 기록이며, 게시글 삭제 등 조치는 게시글에서 직접 합니다.</string>
+    <string name="report_status_pending">대기중</string>
+    <string name="group_reports_all">전체</string>
+    <string name="group_reports_error_load">신고 목록을 불러오지 못했습니다.</string>
+    <string name="group_reports_empty_pending">대기중인 신고가 없습니다.</string>
+    <string name="group_reports_empty_all">신고 내역이 없습니다.</string>
+    <string name="group_reports_empty_subtitle">멤버가 게시글을 신고하면 여기로 접수됩니다.</string>
+    <string name="report_status_resolved">확인됨</string>
+    <string name="report_status_dismissed">기각됨</string>
+    <!-- %1$s=상대 시각, %2$s=신고자 이름 -->
+    <string name="group_reports_reported_by">%1$s · %2$s님 신고</string>
+    <string name="post_by">%1$s님의 게시글</string>
+    <string name="group_reports_no_text">(본문 없이 첨부만 있는 게시글)</string>
+    <string name="group_reports_reason">신고 사유: %1$s</string>
+    <string name="group_reports_resolve">확인 처리</string>
+    <string name="group_reports_dismiss">기각</string>
+    <string name="group_reports_error_action">신고 처리에 실패했습니다.</string>
+
+    <!-- 홈 -->
+    <string name="home_title">우리들의 이야기</string>
+
+    <!-- 알림 -->
+    <string name="notifications_unread_n">미읽음 %1$d건</string>
+    <string name="notifications_mark_all">모두 읽음 처리</string>
+    <string name="notifications_error_load">알림을 불러오지 못했습니다.</string>
+    <string name="notifications_empty_title">알림이 없습니다</string>
+    <string name="notifications_empty_subtitle">새 소식이 생기면 여기에 표시됩니다.</string>
+    <string name="notifications_mark_read">읽음</string>
+    <string name="notification_type_new_post">새 게시글</string>
+    <string name="notification_type_mention">멘션</string>
+    <string name="notification_type_chat">채팅 메시지</string>
+    <string name="notification_type_meeting">화상회의 시작</string>
+    <string name="notification_type_invite">초대</string>
+    <string name="notification_type_join_request">가입 신청</string>
+    <string name="notification_type_join_approved">가입 승인</string>
+    <string name="notification_type_join_rejected">가입 거절</string>
+    <string name="notifications_error_mark">읽음 처리에 실패했습니다.</string>
+    <string name="notifications_error_mark_all">전체 읽음 처리에 실패했습니다.</string>
+
+    <!-- 글쓰기 -->
+    <string name="create_post_title">글쓰기</string>
+    <string name="create_post_title_edit">글 수정</string>
+    <string name="create_post_submit">등록</string>
+    <string name="create_post_placeholder">무슨 이야기가 있나요?</string>
+    <string name="create_post_add_photo">사진 추가</string>
+    <string name="create_post_add_video">동영상 추가</string>
+    <string name="create_post_compressing">압축 중 %1$d%</string>
+    <string name="create_post_error_upload_video">동영상 업로드에 실패했습니다.</string>
+    <string name="create_post_error_empty">내용을 입력하거나 사진·동영상을 추가해주세요.</string>
+    <string name="create_post_error_edit">게시글 수정에 실패했습니다.</string>
+    <string name="create_post_error_create">게시글 작성에 실패했습니다.</string>
+
+    <!-- 게시글 상세 -->
+    <string name="post_detail_title">게시글</string>
+    <string name="post_error_load">게시글을 불러오지 못했습니다.</string>
+    <string name="post_error_like">좋아요 처리에 실패했습니다.</string>
+    <string name="post_report_action">신고하기</string>
+    <string name="post_block_action">차단하기</string>
+    <string name="block_user_confirm">%1$s님을 차단할까요?\n차단하면 이 사용자의 글·댓글이 내 화면에서 숨겨지고 DM이 막힙니다.</string>
+    <string name="post_detail_report_post_title">게시글 신고</string>
+    <string name="post_detail_report_user_title">사용자 신고</string>
+    <string name="post_detail_block_user_title">사용자 차단</string>
+    <string name="report_post_confirm">이 게시글을 신고할까요?\n접수된 신고는 그룹 관리자가 확인합니다.</string>
+    <string name="report_user_confirm">%1$s님을 신고할까요?\n접수된 신고는 운영자가 확인합니다.</string>
+    <string name="post_reply">답글</string>
+    <string name="post_reply_to">%1$s님에게 답글</string>
+    <string name="post_reply_cancel">답글 취소</string>
+    <string name="post_comment_placeholder">댓글을 입력하세요.</string>
+    <string name="post_error_comment_empty">댓글 내용을 입력해주세요.</string>
+    <string name="post_error_comment_submit">댓글 작성에 실패했습니다.</string>
+    <string name="post_error_comment_delete">댓글 삭제에 실패했습니다.</string>
+    <string name="post_error_delete">게시글 삭제에 실패했습니다.</string>
+    <string name="report_submitted">신고가 접수되었습니다.</string>
+    <string name="report_error">신고에 실패했습니다.</string>
+    <string name="block_done">차단했습니다.</string>
+    <string name="block_error">차단에 실패했습니다.</string>
+
+    <!-- 프로필/설정 -->
+    <string name="profile_error_load">내 정보를 불러오지 못했습니다.</string>
+    <string name="profile_account_settings">계정 설정</string>
+    <string name="profile_app_settings">앱 설정</string>
+    <string name="profile_blocked_users">차단 사용자 관리</string>
+    <string name="profile_terms">이용약관</string>
+    <string name="profile_privacy">개인정보처리방침</string>
+    <string name="profile_logout">로그아웃</string>
+    <string name="account_change_photo">프로필 이미지 변경</string>
+    <string name="account_status_message">상태메시지</string>
+    <string name="account_bio">소개</string>
+    <string name="account_saved">저장했습니다.</string>
+    <string name="account_change_password">비밀번호 변경</string>
+    <string name="account_current_password">현재 비밀번호</string>
+    <string name="account_new_password">새 비밀번호 (8자 이상)</string>
+    <string name="account_confirm_password">새 비밀번호 확인</string>
+    <string name="account_password_changed">비밀번호를 변경했습니다. 다른 기기에서는 다시 로그인해야 합니다.</string>
+    <string name="account_error_name_required">이름을 입력해주세요.</string>
+    <string name="account_error_image_save">이미지 저장에 실패했습니다.</string>
+    <string name="account_error_password_required">비밀번호를 입력해주세요.</string>
+    <string name="account_error_password_short">새 비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="account_error_password_mismatch">새 비밀번호가 서로 일치하지 않습니다.</string>
+    <string name="account_error_password_change">비밀번호 변경에 실패했습니다.</string>
+    <string name="app_settings_theme_mood">테마 무드</string>
+    <string name="app_settings_mood_warm">다정함 (웜)</string>
+    <string name="app_settings_mood_vibrant">캐주얼 (비비드)</string>
+    <string name="app_settings_display_mode">화면 모드</string>
+    <string name="app_settings_mode_system">시스템 설정</string>
+    <string name="app_settings_mode_light">라이트</string>
+    <string name="app_settings_mode_dark">다크</string>
+    <string name="app_settings_nav_style">내비게이션 스타일</string>
+    <string name="app_settings_nav_tabs">기본 (탭 — 넓은 화면은 레일)</string>
+    <string name="app_settings_nav_drawer">레거시 (드로어)</string>
+    <string name="blocked_error_load">차단 목록을 불러오지 못했습니다.</string>
+    <string name="blocked_empty_title">차단한 사용자가 없습니다.</string>
+    <string name="blocked_empty_subtitle">차단하면 그 사용자의 게시글·댓글·채팅이 내 화면에서 숨겨지고, 서로 DM을 보낼 수 없습니다.</string>
+    <string name="blocked_at">%1$s 차단</string>
+    <string name="unblock">차단 해제</string>
+    <string name="blocked_error_unblock">차단 해제에 실패했습니다.</string>
+
+    <!-- 공개 프로필 -->
+    <string name="user_error_load">프로필을 불러오지 못했습니다.</string>
+    <string name="user_joined">%1$s 가입</string>
+    <string name="user_edit_profile">프로필 수정</string>
+    <string name="user_error_friend">친구 처리에 실패했습니다.</string>
+    <string name="user_error_dm">DM을 시작하지 못했습니다.</string>
+
+    <!-- 데스크톱(JVM) -->
+    <string name="video_open_browser_failed">브라우저를 열지 못했습니다. 주소를 복사해 직접 열어주세요.</string>
+    <string name="video_playing_in_browser">브라우저에서 재생 중입니다.</string>
+    <string name="video_open_in_browser">브라우저에서 열기</string>
+    <string name="share_copied">클립보드에 복사됨</string>
+    <string name="picker_file">파일 선택</string>
+    <string name="picker_video">동영상 선택</string>
+    <string name="picker_image">이미지 선택</string>
+</resources>

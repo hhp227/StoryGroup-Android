@@ -37,6 +37,16 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatJoinDate
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_close
+import storygroup.composeapp.generated.resources.common_profile
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.friends_add
+import storygroup.composeapp.generated.resources.friends_remove
+import storygroup.composeapp.generated.resources.user_edit_profile
+import storygroup.composeapp.generated.resources.user_error_load
+import storygroup.composeapp.generated.resources.user_joined
 
 /**
  * 공개 프로필 — 웹 /users/[userId] 미러(아바타+이름+상태메시지+가입일+bio,
@@ -87,14 +97,14 @@ fun UserProfileScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "프로필",
+                stringResource(Res.string.common_profile),
                 style = SgTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = sg.ink,
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_close), tint = sg.inkSoft)
             }
         }
         val profile = uiState.profile
@@ -110,10 +120,10 @@ fun UserProfileScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(uiState.loadError ?: "프로필을 불러오지 못했습니다.", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                Text(uiState.loadError ?: stringResource(Res.string.user_error_load), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(UserProfileViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             // 다이얼로그 높이는 내용만큼 — 긴 bio만 화면 높이 안에서 스크롤(weight fill=false)
@@ -134,7 +144,7 @@ fun UserProfileScreen(
                             Text(profile.statusMessage.orEmpty(), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
                         }
                         Spacer(Modifier.height(2.dp))
-                        Text("${formatJoinDate(profile.createdAt)} 가입", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+                        Text(stringResource(Res.string.user_joined, formatJoinDate(profile.createdAt)), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
                     }
                 }
                 if (!profile.bio.isNullOrBlank()) {
@@ -148,7 +158,7 @@ fun UserProfileScreen(
                             shape = SgTheme.shapes.button,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                         ) {
-                            Text("프로필 수정", style = SgTheme.typography.labelLarge)
+                            Text(stringResource(Res.string.user_edit_profile), style = SgTheme.typography.labelLarge)
                         }
                     } else {
                         Button(
@@ -167,7 +177,7 @@ fun UserProfileScreen(
                                 shape = SgTheme.shapes.button,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                             ) {
-                                Text(if (isFriend) "친구 해제" else "친구 추가", style = SgTheme.typography.labelLarge)
+                                Text(if (isFriend) stringResource(Res.string.friends_remove) else stringResource(Res.string.friends_add), style = SgTheme.typography.labelLarge)
                             }
                         }
                     }

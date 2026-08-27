@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.media.VideoPlan
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.video_error_compress
 import java.io.File
 import java.util.UUID
 
@@ -44,7 +47,8 @@ class AndroidVideoCompressor(private val context: Context) : VideoCompressor {
                         close()
                     }
                     WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
-                        trySend(CompressionState.Failed("동영상 압축에 실패했습니다."))
+                        // Failed.message는 VM이 그대로 UI 에러로 띄운다 — 여기서 로컬라이즈
+                        trySend(CompressionState.Failed(getString(Res.string.video_error_compress)))
                         close()
                     }
                     else -> Unit
