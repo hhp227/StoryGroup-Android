@@ -5,8 +5,6 @@ import Shared
 /// push가 아니라 시트로 뜬다(Compose는 카드 다이얼로그). 후속 이동 2종(DM 성공→채팅방,
 /// 본인 "프로필 수정"→계정 설정)은 콜백으로 부모에 넘기고, 부모가 시트를 닫은 뒤 push한다
 struct UserProfileView: View {
-    let container: AppContainer
-
     /// DM 성공 — 부모가 시트를 닫고(onDismiss 완료 후) 채팅방을 push한다
     let onOpenChatRoom: (ChatRoomRef) -> Void
 
@@ -155,20 +153,10 @@ struct UserProfileView: View {
 
     init(
         userId: Int64,
-        container: AppContainer,
         onOpenChatRoom: @escaping (ChatRoomRef) -> Void,
         onOpenAccountSettings: @escaping () -> Void
     ) {
-        _userProfileViewModel = StateObject(wrappedValue: UserProfileViewModel(
-            userId: userId,
-            getPublicProfileUseCase: container.getPublicProfileUseCase,
-            getFriendsUseCase: container.getFriendsUseCase,
-            addFriendUseCase: container.addFriendUseCase,
-            removeFriendUseCase: container.removeFriendUseCase,
-            openDirectRoomUseCase: container.openDirectRoomUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
-        self.container = container
+        _userProfileViewModel = StateObject(wrappedValue: UserProfileViewModel(userId: userId))
         self.onOpenChatRoom = onOpenChatRoom
         self.onOpenAccountSettings = onOpenAccountSettings
     }

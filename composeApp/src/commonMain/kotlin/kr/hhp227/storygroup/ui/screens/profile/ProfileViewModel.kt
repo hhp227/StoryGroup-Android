@@ -12,6 +12,9 @@ import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.profile_error_load
 
 /** 내 정보(GET /api/users/me) — 프로필 화면/드로어 헤더가 공유한다. iosApp ProfileViewModel.swift와 1:1 미러 */
 class ProfileViewModel(
@@ -39,7 +42,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, profile = profile) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "내 정보를 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.profile_error_load)) }
                 }
         }
     }

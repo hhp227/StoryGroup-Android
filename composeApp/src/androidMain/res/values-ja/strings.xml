@@ -1,0 +1,4 @@
+<resources>
+    <string name="screen_share">画面共有</string>
+    <string name="screen_share_active">画面を共有中</string>
+</resources>

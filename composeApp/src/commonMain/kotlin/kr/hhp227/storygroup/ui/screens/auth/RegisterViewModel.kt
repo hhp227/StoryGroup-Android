@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.register_error
 
 /**
  * 가입 성공 시 웹과 동일하게 로그인 화면으로 돌려보낸다(자동 로그인 안 함) — Event.Registered 일회성 발화.
@@ -45,7 +48,7 @@ class RegisterViewModel(
                     _event.tryEmit(Event.Registered)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "가입에 실패했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.register_error)) }
                 }
         }
     }

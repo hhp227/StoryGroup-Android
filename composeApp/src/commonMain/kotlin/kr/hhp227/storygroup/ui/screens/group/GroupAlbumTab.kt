@@ -41,7 +41,16 @@ import kr.hhp227.storygroup.shared.domain.model.GroupPhotoMediaType
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPagingFooter
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import kr.hhp227.storygroup.ui.util.formatYearMonth
 import kr.hhp227.storygroup.ui.util.rememberVideoFrame
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.album_empty_subtitle
+import storygroup.composeapp.generated.resources.album_empty_title
+import storygroup.composeapp.generated.resources.album_error_load
+import storygroup.composeapp.generated.resources.album_photo_by
+import storygroup.composeapp.generated.resources.album_video_by
+import storygroup.composeapp.generated.resources.common_retry
 
 /**
  * 앨범 탭 — 그룹 게시글 첨부(사진/동영상)의 파생 뷰(웹 /groups/[id]/photos·레거시 AlbumFragment 미러).
@@ -87,20 +96,20 @@ internal fun GroupAlbumTab(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        refreshState.error.message ?: "사진을 불러오지 못했습니다.",
+                        refreshState.error.message ?: stringResource(Res.string.album_error_load),
                         style = SgTheme.typography.bodyMedium,
                         color = sg.rust
                     )
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = lazyPagingItems::retry) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
             lazyPagingItems.itemCount == 0 -> item(key = "album-empty", span = { GridItemSpan(maxLineSpan) }) {
                 SgEmptyState(
-                    title = "아직 사진이 없습니다",
-                    subtitle = "게시글에 사진이나 동영상을 올리면 여기에 모여요.",
+                    title = stringResource(Res.string.album_empty_title),
+                    subtitle = stringResource(Res.string.album_empty_subtitle),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
                 )
             }
@@ -111,12 +120,13 @@ internal fun GroupAlbumTab(
                 val snapshot = lazyPagingItems.itemSnapshotList.items
                 var lastMonth: String? = null
                 snapshot.forEachIndexed { index, photo ->
-                    val month = monthLabel(photo.createdAt)
+                    // 월 경계 판정·키는 ISO 원문 "yyyy-MM" 그대로 — 표시 문구는 item 안(컴포저블)에서 만든다
+                    val month = photo.createdAt.take(7)
                     if (month != lastMonth) {
                         lastMonth = month
                         item(key = "month-$month", span = { GridItemSpan(maxLineSpan) }) {
                             Text(
-                                month,
+                                monthLabel(photo.createdAt),
                                 style = SgTheme.typography.titleSmall,
                                 color = sg.inkSoft,
                                 modifier = Modifier.padding(top = if (index == 0) 0.dp else 12.dp, bottom = 4.dp)
@@ -143,10 +153,11 @@ internal fun GroupAlbumTab(
 }
 
 /** "2026-08-03T…" → "2026년 8월" — 서버 ISO-8601 원문에서 잘라 만든다(웹 monthLabel 미러) */
+@Composable
 private fun monthLabel(createdAt: String): String {
-    val year = createdAt.take(4)
-    val month = createdAt.drop(5).take(2).trimStart('0')
-    return "${year}년 ${month}월"
+    val year = createdAt.take(4).toInt()
+    val month = createdAt.drop(5).take(2).toInt()
+    return formatYearMonth(year, month)
 }
 
 /**
@@ -170,7 +181,7 @@ private fun AlbumCell(photo: GroupPhoto, onClick: () -> Unit, modifier: Modifier
             GroupPhotoMediaType.IMAGE -> {
                 AsyncImage(
                     model = photo.image,
-                    contentDescription = "${photo.authorName}의 사진",
+                    contentDescription = stringResource(Res.string.album_photo_by, photo.authorName),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.matchParentSize()
                 )
@@ -193,7 +204,7 @@ private fun AlbumCell(photo: GroupPhoto, onClick: () -> Unit, modifier: Modifier
                 if (frame != null) {
                     Image(
                         bitmap = frame,
-                        contentDescription = "${photo.authorName}의 동영상",
+                        contentDescription = stringResource(Res.string.album_video_by, photo.authorName),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.matchParentSize()
                     )

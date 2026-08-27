@@ -14,6 +14,10 @@ import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupReportsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ProcessGroupReportUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.group_reports_error_action
+import storygroup.composeapp.generated.resources.group_reports_error_load
 
 /**
  * 그룹 신고함(모더레이터 전용) — 웹 /groups/[id]/reports 미러. 필터(대기중/전체)와
@@ -53,7 +57,7 @@ class GroupReportsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isLoading = false, loadError = e.message ?: "신고 목록을 불러오지 못했습니다.")
+                        it.copy(isLoading = false, loadError = e.message ?: getString(Res.string.group_reports_error_load))
                     }
                 }
         }
@@ -88,7 +92,7 @@ class GroupReportsViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(busyReportId = null, actionError = e.message ?: "신고 처리에 실패했습니다.") }
+                    _uiState.update { it.copy(busyReportId = null, actionError = e.message ?: getString(Res.string.group_reports_error_action)) }
                 }
         }
     }

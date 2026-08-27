@@ -1,0 +1,488 @@
+<resources>
+    <!-- 공통 액션/라벨 -->
+    <string name="common_retry">再試行</string>
+    <string name="common_back">戻る</string>
+    <string name="common_close">閉じる</string>
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_delete">削除</string>
+    <string name="common_save">保存</string>
+    <string name="common_edit">編集</string>
+    <string name="common_ok">OK</string>
+    <string name="common_search">検索</string>
+    <string name="common_loading">読み込み中...</string>
+    <string name="common_send">送信</string>
+    <string name="common_menu">メニュー</string>
+    <string name="common_more">その他</string>
+    <string name="common_photo">写真</string>
+    <string name="common_file">ファイル</string>
+    <string name="common_message">メッセージ</string>
+    <string name="common_clear">クリア</string>
+    <string name="common_today">今日</string>
+    <string name="common_me">自分</string>
+    <string name="common_unknown">不明</string>
+    <string name="common_profile">プロフィール</string>
+    <string name="common_report">通報</string>
+    <string name="common_block">ブロック</string>
+    <string name="common_join">参加</string>
+    <string name="common_approve">承認</string>
+    <string name="common_reject">拒否</string>
+    <string name="common_create">作成</string>
+    <string name="common_uploading">アップロード中...</string>
+    <string name="common_remove">削除</string>
+    <string name="common_error_process">処理に失敗しました。</string>
+    <string name="settings">設定</string>
+    <string name="two_part_dot">%1$s · %2$s</string>
+
+    <!-- 내비게이션 탭 -->
+    <string name="nav_home">ホーム</string>
+    <string name="nav_groups">グループ</string>
+    <string name="nav_friends">友だち</string>
+    <string name="nav_chat">チャット</string>
+    <string name="nav_notifications">通知</string>
+    <string name="nav_profile">プロフィール</string>
+
+    <!-- 네트워크 배너 -->
+    <string name="network_offline">インターネット接続が不安定です。</string>
+    <string name="network_recovered">インターネット接続が復旧しました。</string>
+
+    <!-- 시간/날짜 -->
+    <string name="time_just_now">たった今</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="other">%1$d分前</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%1$d時間前</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%1$d日前</item>
+    </plurals>
+    <string-array name="month_names">
+        <item>1月</item>
+        <item>2月</item>
+        <item>3月</item>
+        <item>4月</item>
+        <item>5月</item>
+        <item>6月</item>
+        <item>7月</item>
+        <item>8月</item>
+        <item>9月</item>
+        <item>10月</item>
+        <item>11月</item>
+        <item>12月</item>
+    </string-array>
+    <string-array name="day_names_short">
+        <item>日</item>
+        <item>月</item>
+        <item>火</item>
+        <item>水</item>
+        <item>木</item>
+        <item>金</item>
+        <item>土</item>
+    </string-array>
+    <string-array name="day_names_full">
+        <item>日曜日</item>
+        <item>月曜日</item>
+        <item>火曜日</item>
+        <item>水曜日</item>
+        <item>木曜日</item>
+        <item>金曜日</item>
+        <item>土曜日</item>
+    </string-array>
+    <!-- %1$s=연, %2$s=월 이름, %3$s=일, %4$s=요일(전체) -->
+    <string name="date_chat_format">%1$s年%2$s%3$s日 %4$s</string>
+    <!-- %1$s=연, %2$s=월 이름 -->
+    <string name="date_year_month">%1$s年%2$s</string>
+    <!-- %1$s=월 이름, %2$s=일, %3$s=요일(축약) -->
+    <string name="date_month_day_weekday">%1$s%2$s日（%3$s）</string>
+
+    <!-- 게시글 카드/공통 -->
+    <string name="post_notice_badge">お知らせ</string>
+    <string name="post_like">いいね</string>
+    <string name="post_unlike">いいねを取り消す</string>
+    <string name="post_comment">コメント</string>
+    <string name="post_share">共有</string>
+    <plurals name="likes_n">
+        <item quantity="other">いいね %1$d</item>
+    </plurals>
+    <plurals name="comments_n">
+        <item quantity="other">コメント %1$d</item>
+    </plurals>
+    <string name="video_play">動画を再生</string>
+    <plurals name="count_photos">
+        <item quantity="other">%1$d枚</item>
+    </plurals>
+    <plurals name="count_people">
+        <item quantity="other">%1$d人</item>
+    </plurals>
+    <plurals name="count_members_full">
+        <item quantity="other">メンバー%1$d人</item>
+    </plurals>
+
+    <!-- 통화/RTC -->
+    <string name="call_kind_video">ビデオ通話</string>
+    <string name="call_voice_talk">音声通話</string>
+    <string name="call_video_talk">ビデオ通話</string>
+    <!-- %1$s=방 이름, %2$s=발신자, %3$s=통화 종류 -->
+    <string name="call_banner_incoming_room">%1$s — %2$sさんからの%3$s</string>
+    <!-- %1$s=발신자, %2$s=통화 종류 -->
+    <string name="call_banner_incoming">%1$sさんからの%2$s</string>
+    <string name="call_accept">応答</string>
+    <string name="call_ended_no_answer">応答がないため通話を終了します。</string>
+    <string name="call_connecting">接続中…</string>
+    <string name="call_reconnecting">再接続中…</string>
+    <string name="call_waiting_answer">応答を待っています…</string>
+    <string name="call_no_participants">まだ他の参加者がいません。</string>
+    <string name="call_in_progress">通話中</string>
+    <string name="call_no_av_notice">カメラ・マイクなしで参加中です。</string>
+    <string name="call_mic_off">マイクをオフ</string>
+    <string name="call_mic_on">マイクをオン</string>
+    <string name="call_cam_off">カメラをオフ</string>
+    <string name="call_cam_on">カメラをオン</string>
+    <string name="call_switch_camera">カメラを切り替え</string>
+    <string name="call_speaker_off">スピーカーをオフ</string>
+    <string name="call_speaker_on">スピーカーをオン</string>
+    <string name="call_screen_share">画面共有</string>
+    <string name="call_screen_share_stop">画面共有を停止</string>
+    <string name="call_hang_up">通話を終了</string>
+
+    <!-- 인증 -->
+    <string name="login_title">おかえりなさい</string>
+    <string name="login_subtitle">メールアドレスとパスワードでログインしてください。</string>
+    <string name="login_registered_notice">登録が完了しました。ログインしてください。</string>
+    <string name="auth_email">メールアドレス</string>
+    <string name="auth_password">パスワード</string>
+    <string name="auth_name">名前</string>
+    <string name="login_in_progress">ログイン中...</string>
+    <string name="login_action">ログイン</string>
+    <string name="login_no_account">アカウントをお持ちではありませんか？</string>
+    <string name="login_error">ログインに失敗しました。</string>
+    <string name="register_title">一緒に楽しむ仲間のための場所</string>
+    <string name="register_subtitle">StoryGroupに登録してグループを作りましょう。</string>
+    <string name="register_in_progress">登録中...</string>
+    <string name="register_action">新規登録</string>
+    <string name="register_has_account">すでにアカウントをお持ちですか？</string>
+    <string name="register_error">登録に失敗しました。</string>
+
+    <!-- 채팅 목록 -->
+    <string name="chat_empty_title">トークルームがありません</string>
+    <string name="chat_empty_subtitle">グループに参加するか、友だちにメッセージを送ってみましょう。</string>
+    <string name="chat_section_group">グループチャット</string>
+    <string name="chat_section_dm">ダイレクトメッセージ</string>
+    <string name="chat_no_messages_yet">まだメッセージがありません</string>
+    <string name="chat_error_load">トークルームを読み込めませんでした。</string>
+
+    <!-- 채팅방 -->
+    <string name="chat_room_call_in_progress">%1$sさんが通話中です</string>
+    <string name="chat_room_join">参加</string>
+    <string name="chat_room_empty_title">メッセージがありません</string>
+    <string name="chat_room_empty_subtitle">最初のメッセージを送ってみましょう。</string>
+    <string name="chat_room_typing">%1$sさんが入力中...</string>
+    <string name="chat_room_compressing">動画を圧縮中 %1$d%</string>
+    <string name="chat_room_dm_title">1:1トーク</string>
+    <string name="chat_room_group_title">グループトーク</string>
+    <string name="chat_room_members_section">参加メンバー</string>
+    <string name="chat_room_no_photos">まだ共有された写真はありません。</string>
+    <string name="chat_room_members_error">参加メンバーを読み込めませんでした。</string>
+    <string name="chat_read">既読</string>
+    <string name="chat_read_n">既読 %1$d</string>
+    <string name="chat_room_attachment_cancel">添付を取り消す</string>
+    <string name="chat_room_attachments_close">添付を閉じる</string>
+    <string name="chat_room_attachments">添付</string>
+    <string name="chat_room_input_placeholder_attachment">メッセージ（任意）</string>
+    <string name="chat_room_input_placeholder">メッセージを入力してください。</string>
+    <string name="chat_room_emoji">絵文字</string>
+    <string name="chat_room_error_load">メッセージを読み込めませんでした。</string>
+    <string name="chat_room_error_load_older">以前のメッセージを読み込めませんでした。</string>
+    <string name="chat_room_error_send">送信に失敗しました。</string>
+
+    <!-- 동영상 첨부 공통 -->
+    <string name="video_error_read_info">動画の情報を読み取れませんでした。</string>
+    <string name="video_error_too_large">ファイルが大きすぎます。（最大500MB）</string>
+    <string name="video_error_too_long">動画は最大3分まで添付できます。</string>
+    <string name="video_error_compress">動画の圧縮に失敗しました。</string>
+
+    <!-- 친구 -->
+    <string name="friends_empty_title">まだ友だちがいません</string>
+    <string name="friends_empty_subtitle">上の検索でユーザーを見つけて友だちに追加してみましょう。</string>
+    <string name="friends_search_placeholder">名前でユーザーを検索</string>
+    <string name="friends_search_scope_note">同じグループに所属するユーザーのみ検索できます。</string>
+    <string name="friends_remove">友だちを解除</string>
+    <string name="friends_add">友だちに追加</string>
+    <string name="friends_remove_short">解除</string>
+    <string name="friends_remove_confirm">%1$sさんを友だちから解除しますか？</string>
+    <string name="friends_error_load">友だちリストを読み込めませんでした。</string>
+    <string name="friends_error_add">友だちの追加に失敗しました。</string>
+    <string name="friends_error_remove">友だちの解除に失敗しました。</string>
+    <string name="friends_error_open_dm">DMを開けませんでした。</string>
+
+    <!-- 검색 -->
+    <string name="search_no_results">検索結果がありません</string>
+    <string name="search_error_failed">検索に失敗しました。</string>
+    <string name="search_empty_title">なんでも探してみましょう</string>
+    <string name="search_empty_subtitle">グループ、投稿、ファイル、メッセージ、ユーザーを検索できます。</string>
+    <string name="search_placeholder">グループ、投稿、ファイル、メッセージを検索</string>
+    <string name="search_try_again">別のキーワードでもう一度お試しください。</string>
+    <string name="search_section_users">ユーザー</string>
+    <string name="search_section_posts">投稿</string>
+    <string name="search_section_files">ファイル</string>
+    <string name="search_section_messages">メッセージ</string>
+
+    <!-- 그룹 목록 -->
+    <string name="groups_list_load_failed">グループ一覧を読み込めませんでした。</string>
+    <string name="groups_empty_title">まだグループがありません</string>
+    <string name="groups_empty_subtitle">新しいグループを作るか、グループ検索から参加してみましょう。</string>
+    <string name="groups_discover">グループを探す</string>
+    <string name="groups_pending">参加申請中</string>
+    <string name="groups_create">グループ作成</string>
+    <string name="role_owner">オーナー</string>
+    <string name="role_admin">管理者</string>
+    <string name="role_member">メンバー</string>
+
+    <!-- 그룹 만들기/수정 -->
+    <string name="create_group_name">グループ名</string>
+    <string name="create_group_desc">グループ紹介</string>
+    <string name="join_type">参加方法</string>
+    <string name="join_type_auto_full">自動承認 — すぐに参加</string>
+    <string name="join_type_approval_full">承認制 — 申請後に承認</string>
+    <string name="join_type_auto">自動承認</string>
+    <string name="join_type_approval">承認制</string>
+    <string name="create_group_add_cover">カバー画像を追加</string>
+    <string name="create_group_error_name">グループ名を入力してください。</string>
+    <string name="create_group_error_create">グループの作成に失敗しました。</string>
+    <string name="group_edit_title">グループ情報を編集</string>
+    <string name="group_edit_desc">説明</string>
+    <string name="group_edit_change_image">カバー画像を変更</string>
+    <string name="group_error_load">グループ情報を読み込めませんでした。</string>
+    <string name="error_upload_image">画像のアップロードに失敗しました。</string>
+    <string name="error_save">保存に失敗しました。</string>
+
+    <!-- 그룹 탐색 -->
+    <string name="discover_search_placeholder">グループを検索</string>
+    <string name="discover_sort_recent">新着順</string>
+    <string name="discover_sort_popular">人気順</string>
+    <string name="discover_join_by_code">招待コードで参加</string>
+    <string name="group_load_failed">グループを読み込めませんでした。</string>
+    <string name="discover_empty_title">グループが見つかりませんでした</string>
+    <string name="discover_empty_subtitle">別のキーワードでお試しください。</string>
+    <string name="discover_code_hint">受け取った8桁の招待コードを入力すると、すぐに参加できます。</string>
+    <string name="discover_invite_code">招待コード</string>
+    <string name="membership_joined">参加済み</string>
+    <string name="membership_requested">申請済み</string>
+    <string name="membership_request">申請</string>
+    <string name="request_cancel">申請を取り消す</string>
+    <string name="group_join_failed">参加に失敗しました。</string>
+    <string name="discover_error_join_code">招待コードでの参加に失敗しました。</string>
+    <string name="request_cancel_failed">申請の取り消しに失敗しました。</string>
+    <string name="pending_empty_title">参加申請中のグループはありません</string>
+    <string name="pending_empty_subtitle">グループ検索から承認制グループに参加を申請してみましょう。</string>
+    <string name="pending_error_load">参加申請中のグループを読み込めませんでした。</string>
+
+    <!-- 그룹 상세 -->
+    <string name="tab_feed">フィード</string>
+    <string name="tab_album">アルバム</string>
+    <string name="tab_events">予定</string>
+    <string name="tab_members">メンバー</string>
+    <string name="feed_error_load">フィードを読み込めませんでした。</string>
+    <string name="feed_empty_title">まだ投稿がありません</string>
+    <string name="feed_empty_subtitle">最初の投稿をしてみましょう。</string>
+    <string name="group_invite_create">招待コードを作成</string>
+    <string name="group_detail_members_n">メンバー %1$d</string>
+    <string name="group_invite_hint">コードを受け取った人は承認なしですぐに参加できます。</string>
+    <string name="group_invite_max_uses">最大使用回数（空欄で無制限）</string>
+    <string name="group_invite_validity">有効期間（日、空欄で無期限）</string>
+    <string name="group_invite_max_uses_label">最大%1$d回使用可能</string>
+    <string name="group_invite_valid_until">%1$sまで有効</string>
+    <string name="group_invite_no_limit">使用制限なし</string>
+    <string name="copied">コピーしました</string>
+    <string name="copy_code">コードをコピー</string>
+    <plurals name="group_join_requests_n">
+        <item quantity="other">参加申請 %1$d件</item>
+    </plurals>
+    <string name="group_requested_at">%1$s 申請</string>
+    <string name="group_members_error_load">メンバーを読み込めませんでした。</string>
+    <string name="approve_failed">参加の承認に失敗しました。</string>
+    <string name="reject_failed">参加の拒否に失敗しました。</string>
+    <string name="invite_create_failed">招待コードの作成に失敗しました。</string>
+
+    <!-- 그룹 앨범 -->
+    <string name="album_error_load">写真を読み込めませんでした。</string>
+    <string name="album_empty_title">まだ写真がありません</string>
+    <string name="album_empty_subtitle">投稿に写真や動画をアップすると、ここに集まります。</string>
+    <string name="album_photo_by">%1$sの写真</string>
+    <string name="album_video_by">%1$sの動画</string>
+
+    <!-- 그룹 일정 -->
+    <string name="rsvp_going">参加</string>
+    <string name="rsvp_maybe">未定</string>
+    <string name="rsvp_not_going">不参加</string>
+    <string name="events_empty_title">この日には予定がありません</string>
+    <string name="events_empty_subtitle">「予定を作成」から最初の予定を登録してみましょう。</string>
+    <string name="events_delete_confirm">この予定を削除しますか？</string>
+    <string name="events_prev_month">前の月</string>
+    <string name="events_next_month">次の月</string>
+    <string name="events_create">予定を作成</string>
+    <string name="events_new_title">新しい予定 — %1$s</string>
+    <string name="events_title_label">予定のタイトル</string>
+    <string name="events_start_label">開始（HH:MM）</string>
+    <string name="events_end_label">終了（任意）</string>
+    <string name="events_location_label">場所（任意）</string>
+    <string name="events_desc_label">説明（任意）</string>
+    <string name="events_submit">登録</string>
+    <string name="events_error_start_format">開始時刻はHH:MM形式で入力してください</string>
+    <string name="events_error_end_format">終了時刻はHH:MM形式で入力してください</string>
+    <string name="events_error_end_before_start">終了時刻は開始時刻より前にできません</string>
+    <string name="events_rsvp_counts">参加 %1$d · 未定 %2$d · 不参加 %3$d</string>
+    <string name="events_no_attendees">まだ回答したメンバーがいません。</string>
+    <string name="events_created_by">%1$sさんが作成した予定</string>
+    <string name="events_error_load">予定を読み込めませんでした。</string>
+    <string name="events_error_create">予定を作成できませんでした。</string>
+    <string name="events_error_delete">予定の削除に失敗しました。</string>
+    <string name="events_error_rsvp">出欠の回答に失敗しました。</string>
+
+    <!-- 그룹 설정 -->
+    <string name="app_share_text">StoryGroup — グループと一緒に紡ぐ物語\n%1$s</string>
+    <string name="group_settings_user_section">ユーザー設定</string>
+    <string name="group_settings_group_section">グループ設定</string>
+    <string name="group_reports_title">通報ボックス</string>
+    <string name="group_delete">グループを削除</string>
+    <string name="group_leave">グループを退会</string>
+    <string name="app_info_section">アプリ情報</string>
+    <string name="share_app">共有する</string>
+    <string name="group_delete_confirm">本当に削除しますか？投稿、チャット、ファイルがすべて消えます。</string>
+    <string name="group_leave_confirm">本当に退会しますか？退会するとこのグループの投稿・チャットに参加できなくなります。</string>
+    <string name="group_leave_action">退会</string>
+
+    <!-- 그룹 신고함 -->
+    <string name="group_reports_desc">メンバーが通報した投稿です。確認/棄却は処理記録であり、投稿の削除などの対応は投稿から直接行います。</string>
+    <string name="report_status_pending">対応待ち</string>
+    <string name="group_reports_all">すべて</string>
+    <string name="group_reports_error_load">通報リストを読み込めませんでした。</string>
+    <string name="group_reports_empty_pending">対応待ちの通報はありません。</string>
+    <string name="group_reports_empty_all">通報履歴はありません。</string>
+    <string name="group_reports_empty_subtitle">メンバーが投稿を通報するとここに届きます。</string>
+    <string name="report_status_resolved">確認済み</string>
+    <string name="report_status_dismissed">棄却済み</string>
+    <!-- %1$s=상대 시각, %2$s=신고자 이름 -->
+    <string name="group_reports_reported_by">%1$s · %2$sさんが通報</string>
+    <string name="post_by">%1$sさんの投稿</string>
+    <string name="group_reports_no_text">（本文なし・添付のみの投稿）</string>
+    <string name="group_reports_reason">通報理由: %1$s</string>
+    <string name="group_reports_resolve">確認処理</string>
+    <string name="group_reports_dismiss">棄却</string>
+    <string name="group_reports_error_action">通報の処理に失敗しました。</string>
+
+    <!-- 홈 -->
+    <string name="home_title">私たちの物語</string>
+
+    <!-- 알림 -->
+    <string name="notifications_unread_n">未読 %1$d件</string>
+    <string name="notifications_mark_all">すべて既読にする</string>
+    <string name="notifications_error_load">通知を読み込めませんでした。</string>
+    <string name="notifications_empty_title">通知はありません</string>
+    <string name="notifications_empty_subtitle">新しいお知らせが届くとここに表示されます。</string>
+    <string name="notifications_mark_read">既読</string>
+    <string name="notification_type_new_post">新しい投稿</string>
+    <string name="notification_type_mention">メンション</string>
+    <string name="notification_type_chat">チャットメッセージ</string>
+    <string name="notification_type_meeting">ミーティング開始</string>
+    <string name="notification_type_invite">招待</string>
+    <string name="notification_type_join_request">参加申請</string>
+    <string name="notification_type_join_approved">参加承認</string>
+    <string name="notification_type_join_rejected">参加拒否</string>
+    <string name="notifications_error_mark">既読処理に失敗しました。</string>
+    <string name="notifications_error_mark_all">全件の既読処理に失敗しました。</string>
+
+    <!-- 글쓰기 -->
+    <string name="create_post_title">投稿する</string>
+    <string name="create_post_title_edit">投稿を編集</string>
+    <string name="create_post_submit">投稿</string>
+    <string name="create_post_placeholder">どんなお話がありますか？</string>
+    <string name="create_post_add_photo">写真を追加</string>
+    <string name="create_post_add_video">動画を追加</string>
+    <string name="create_post_compressing">圧縮中 %1$d%</string>
+    <string name="create_post_error_upload_video">動画のアップロードに失敗しました。</string>
+    <string name="create_post_error_empty">本文を入力するか、写真・動画を追加してください。</string>
+    <string name="create_post_error_edit">投稿の編集に失敗しました。</string>
+    <string name="create_post_error_create">投稿に失敗しました。</string>
+
+    <!-- 게시글 상세 -->
+    <string name="post_detail_title">投稿</string>
+    <string name="post_error_load">投稿を読み込めませんでした。</string>
+    <string name="post_error_like">いいねの処理に失敗しました。</string>
+    <string name="post_report_action">通報する</string>
+    <string name="post_block_action">ブロックする</string>
+    <string name="block_user_confirm">%1$sさんをブロックしますか？\nブロックするとこのユーザーの投稿・コメントが非表示になり、DMもできなくなります。</string>
+    <string name="post_detail_report_post_title">投稿を通報</string>
+    <string name="post_detail_report_user_title">ユーザーを通報</string>
+    <string name="post_detail_block_user_title">ユーザーをブロック</string>
+    <string name="report_post_confirm">この投稿を通報しますか？\n通報はグループの管理者が確認します。</string>
+    <string name="report_user_confirm">%1$sさんを通報しますか？\n通報は運営者が確認します。</string>
+    <string name="post_reply">返信</string>
+    <string name="post_reply_to">%1$sさんへ返信</string>
+    <string name="post_reply_cancel">返信を取り消す</string>
+    <string name="post_comment_placeholder">コメントを入力してください。</string>
+    <string name="post_error_comment_empty">コメントを入力してください。</string>
+    <string name="post_error_comment_submit">コメントの投稿に失敗しました。</string>
+    <string name="post_error_comment_delete">コメントの削除に失敗しました。</string>
+    <string name="post_error_delete">投稿の削除に失敗しました。</string>
+    <string name="report_submitted">通報を受け付けました。</string>
+    <string name="report_error">通報に失敗しました。</string>
+    <string name="block_done">ブロックしました。</string>
+    <string name="block_error">ブロックに失敗しました。</string>
+
+    <!-- 프로필/설정 -->
+    <string name="profile_error_load">プロフィール情報を読み込めませんでした。</string>
+    <string name="profile_account_settings">アカウント設定</string>
+    <string name="profile_app_settings">アプリ設定</string>
+    <string name="profile_blocked_users">ブロックしたユーザー</string>
+    <string name="profile_terms">利用規約</string>
+    <string name="profile_privacy">プライバシーポリシー</string>
+    <string name="profile_logout">ログアウト</string>
+    <string name="account_change_photo">プロフィール画像を変更</string>
+    <string name="account_status_message">ステータスメッセージ</string>
+    <string name="account_bio">自己紹介</string>
+    <string name="account_saved">保存しました。</string>
+    <string name="account_change_password">パスワード変更</string>
+    <string name="account_current_password">現在のパスワード</string>
+    <string name="account_new_password">新しいパスワード（8文字以上）</string>
+    <string name="account_confirm_password">新しいパスワード（確認）</string>
+    <string name="account_password_changed">パスワードを変更しました。他の端末では再ログインが必要です。</string>
+    <string name="account_error_name_required">名前を入力してください。</string>
+    <string name="account_error_image_save">画像の保存に失敗しました。</string>
+    <string name="account_error_password_required">パスワードを入力してください。</string>
+    <string name="account_error_password_short">新しいパスワードは8文字以上にしてください。</string>
+    <string name="account_error_password_mismatch">新しいパスワードが一致しません。</string>
+    <string name="account_error_password_change">パスワードの変更に失敗しました。</string>
+    <string name="app_settings_theme_mood">テーマムード</string>
+    <string name="app_settings_mood_warm">やさしい（ウォーム）</string>
+    <string name="app_settings_mood_vibrant">カジュアル（ビビッド）</string>
+    <string name="app_settings_display_mode">画面モード</string>
+    <string name="app_settings_mode_system">システム設定</string>
+    <string name="app_settings_mode_light">ライト</string>
+    <string name="app_settings_mode_dark">ダーク</string>
+    <string name="app_settings_nav_style">ナビゲーションスタイル</string>
+    <string name="app_settings_nav_tabs">標準（タブ — 大画面ではレール）</string>
+    <string name="app_settings_nav_drawer">レガシー（ドロワー）</string>
+    <string name="blocked_error_load">ブロックリストを読み込めませんでした。</string>
+    <string name="blocked_empty_title">ブロックしたユーザーはいません。</string>
+    <string name="blocked_empty_subtitle">ブロックするとそのユーザーの投稿・コメント・チャットが非表示になり、お互いにDMを送れなくなります。</string>
+    <string name="blocked_at">%1$s ブロック</string>
+    <string name="unblock">ブロック解除</string>
+    <string name="blocked_error_unblock">ブロック解除に失敗しました。</string>
+
+    <!-- 공개 프로필 -->
+    <string name="user_error_load">プロフィールを読み込めませんでした。</string>
+    <string name="user_joined">%1$s 登録</string>
+    <string name="user_edit_profile">プロフィール編集</string>
+    <string name="user_error_friend">友だち処理に失敗しました。</string>
+    <string name="user_error_dm">DMを開始できませんでした。</string>
+
+    <!-- 데스크톱(JVM) -->
+    <string name="video_open_browser_failed">ブラウザを開けませんでした。アドレスをコピーして直接開いてください。</string>
+    <string name="video_playing_in_browser">ブラウザで再生中です。</string>
+    <string name="video_open_in_browser">ブラウザで開く</string>
+    <string name="share_copied">クリップボードにコピーしました</string>
+    <string name="picker_file">ファイルを選択</string>
+    <string name="picker_video">動画を選択</string>
+    <string name="picker_image">画像を選択</string>
+</resources>

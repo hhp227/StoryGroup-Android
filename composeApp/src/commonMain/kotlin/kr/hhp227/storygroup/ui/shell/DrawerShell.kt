@@ -52,6 +52,12 @@ import kr.hhp227.storygroup.ui.screens.chat.sessionChatViewModel
 import kr.hhp227.storygroup.ui.screens.notification.sessionNotificationsViewModel
 import kr.hhp227.storygroup.ui.screens.profile.ProfileViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_loading
+import storygroup.composeapp.generated.resources.common_menu
+import storygroup.composeapp.generated.resources.profile_logout
+import storygroup.composeapp.generated.resources.settings
 
 /** 레거시 쉘: 구 앱 드로어(프로필 헤더 + 라운지·그룹·친구·채팅 + 알림·설정·로그아웃 보강) */
 @Composable
@@ -79,7 +85,7 @@ internal fun DrawerShell(
             DrawerHeader(profileUiState.profile)
             MainDestination.entries.forEach { destination ->
                 DrawerItem(
-                    label = destination.label,
+                    label = stringResource(destination.labelRes),
                     icon = destination.icon,
                     selected = destination == currentTab,
                     badgeCount = when (destination) {
@@ -98,7 +104,7 @@ internal fun DrawerShell(
                 modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
             )
             DrawerItem(
-                label = "설정",
+                label = stringResource(Res.string.settings),
                 icon = Icons.Default.Settings,
                 selected = false,
                 onClick = {
@@ -107,7 +113,7 @@ internal fun DrawerShell(
                 }
             )
             DrawerItem(
-                label = "로그아웃",
+                label = stringResource(Res.string.profile_logout),
                 icon = Icons.AutoMirrored.Filled.Logout,
                 selected = false,
                 onClick = {
@@ -123,10 +129,10 @@ internal fun DrawerShell(
                 // 홈·그룹은 화면이 상단바를 직접 그린다(메뉴 아이콘은 menuNavigationIcon으로 전달)
                 if (currentTab != MainDestination.HOME && currentTab != MainDestination.GROUPS) {
                     SgTopBar(
-                        title = currentTab.label,
+                        title = stringResource(currentTab.labelRes),
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "메뉴")
+                                Icon(Icons.Default.Menu, contentDescription = stringResource(Res.string.common_menu))
                             }
                         },
                         actions = {
@@ -149,7 +155,7 @@ internal fun DrawerShell(
                 onLogout = onLogout,
                 menuNavigationIcon = {
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Icon(Icons.Default.Menu, contentDescription = "메뉴")
+                        Icon(Icons.Default.Menu, contentDescription = stringResource(Res.string.common_menu))
                     }
                 },
                 // 드로어 쉘은 하단 바가 없어 시스템 내비바 인셋을 콘텐츠가 직접 소화
@@ -218,7 +224,7 @@ private fun DrawerHeader(profile: Profile?) {
         SgAvatar(profile?.name ?: "?", size = 64.dp, containerColor = sg.accentSoft, contentColor = sg.accent)
         Spacer(Modifier.height(12.dp))
         Text(
-            profile?.name ?: "불러오는 중...",
+            profile?.name ?: stringResource(Res.string.common_loading),
             style = SgTheme.typography.titleMedium,
             color = sg.onAccent
         )

@@ -13,6 +13,10 @@ import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.usecase.GetBlockedUsersUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UnblockUserUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.blocked_error_load
+import storygroup.composeapp.generated.resources.blocked_error_unblock
 
 /**
  * 차단 사용자 관리 — 웹 /settings/blocked 미러(목록+해제). 해제 성공은 목록에서 그 행만
@@ -47,7 +51,7 @@ class BlockedUsersViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isLoading = false, loadError = e.message ?: "차단 목록을 불러오지 못했습니다.")
+                        it.copy(isLoading = false, loadError = e.message ?: getString(Res.string.blocked_error_load))
                     }
                 }
         }
@@ -65,7 +69,7 @@ class BlockedUsersViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(busyUserId = null, actionError = e.message ?: "차단 해제에 실패했습니다.") }
+                    _uiState.update { it.copy(busyUserId = null, actionError = e.message ?: getString(Res.string.blocked_error_unblock)) }
                 }
         }
     }

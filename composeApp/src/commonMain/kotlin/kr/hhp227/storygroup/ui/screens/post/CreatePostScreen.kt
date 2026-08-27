@@ -49,9 +49,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.components.SgVideoPoster
 import kr.hhp227.storygroup.ui.navigation.NavResult
@@ -61,32 +60,23 @@ import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.PickerMode
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
+import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_edit
+import storygroup.composeapp.generated.resources.common_remove
+import storygroup.composeapp.generated.resources.create_post_add_photo
+import storygroup.composeapp.generated.resources.create_post_add_video
+import storygroup.composeapp.generated.resources.create_post_compressing
+import storygroup.composeapp.generated.resources.create_post_placeholder
+import storygroup.composeapp.generated.resources.create_post_submit
+import storygroup.composeapp.generated.resources.create_post_title
+import storygroup.composeapp.generated.resources.create_post_title_edit
 
 /** 이미지 로드 전 자리 표시 종횡비 — 실비율은 로드되는 즉시 기억돼 그 뒤로 유지된다(SgVideoAttachment 미러) */
 private const val FALLBACK_IMAGE_ASPECT_RATIO = 4f / 3f
-
-@Composable
-private fun createPostViewModel(groupId: Long?, postId: Long?): CreatePostViewModel {
-    val container = LocalAppContainer.current
-    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
-    val videoCompressor = rememberVideoCompressor()
-
-    return viewModel(key = "create-post-$groupId-$postId") {
-        CreatePostViewModel(
-            groupId = groupId,
-            postId = postId,
-            createPostUseCase = container.createPostUseCase,
-            createLoungePostUseCase = container.createLoungePostUseCase,
-            uploadImageUseCase = container.uploadImageUseCase,
-            uploadVideoUseCase = container.uploadVideoUseCase,
-            getPostUseCase = container.getPostUseCase,
-            updatePostUseCase = container.updatePostUseCase,
-            videoCompressor = videoCompressor
-        )
-    }
-}
 
 /**
  * 게시글 작성 — 상단바(뒤로+등록)와 전면 본문 입력(웹 작성 폼 미러) + 하단 사진·동영상 첨부 행.
@@ -101,7 +91,22 @@ fun CreatePostScreen(
     // 있으면 수정 모드 — 기존 본문·첨부를 불러와 채운다
     postId: Long? = null,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: CreatePostViewModel = createPostViewModel(groupId, postId)
+    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
+    viewModel: CreatePostViewModel = rememberVideoCompressor().let { videoCompressor ->
+        screenViewModel(key = "create-post-$groupId-$postId") {
+            CreatePostViewModel(
+                groupId = groupId,
+                postId = postId,
+                createPostUseCase = it.createPostUseCase,
+                createLoungePostUseCase = it.createLoungePostUseCase,
+                uploadImageUseCase = it.uploadImageUseCase,
+                uploadVideoUseCase = it.uploadVideoUseCase,
+                getPostUseCase = it.getPostUseCase,
+                updatePostUseCase = it.updatePostUseCase,
+                videoCompressor = videoCompressor
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -140,10 +145,10 @@ fun CreatePostScreen(
 
     Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
-            title = if (uiState.isEditMode) "글 수정" else "글쓰기",
+            title = stringResource(if (uiState.isEditMode) Res.string.create_post_title_edit else Res.string.create_post_title),
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             },
             actions = {
@@ -154,7 +159,7 @@ fun CreatePostScreen(
                         uiState.compressionProgress == null
                 ) {
                     Text(
-                        if (uiState.isEditMode) "수정" else "등록",
+                        stringResource(if (uiState.isEditMode) Res.string.common_edit else Res.string.create_post_submit),
                         fontWeight = FontWeight.Bold,
                         color = if (uiState.isLoading) sg.inkFaint else sg.accent
                     )
@@ -196,7 +201,7 @@ fun CreatePostScreen(
                             if (uiState.error != null) onAction(CreatePostViewModel.Action.ClearError)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("무슨 이야기가 있나요?", color = sg.inkFaint) },
+                        placeholder = { Text(stringResource(Res.string.create_post_placeholder), color = sg.inkFaint) },
                         enabled = !uiState.isLoading,
                         colors = TextFieldDefaults.textFieldColors(
                             textColor = sg.ink,
@@ -237,21 +242,21 @@ fun CreatePostScreen(
         ) {
             AttachBarButton(
                 icon = Icons.Default.AddAPhoto,
-                description = "사진 추가",
+                description = stringResource(Res.string.create_post_add_photo),
                 isUploading = uiState.isUploadingImage,
                 canAddMore = uiState.images.size < CreatePostViewModel.MAX_IMAGES,
                 onClick = pickImage
             )
             AttachBarButton(
                 icon = Icons.Default.VideoCall,
-                description = "동영상 추가",
+                description = stringResource(Res.string.create_post_add_video),
                 isUploading = uiState.isUploadingVideo || uiState.compressionProgress != null,
                 canAddMore = uiState.videos.size < CreatePostViewModel.MAX_VIDEOS,
                 onClick = pickVideo
             )
             uiState.compressionProgress?.let { progress ->
                 Text(
-                    "압축 중 ${(progress * 100).toInt()}%",
+                    stringResource(Res.string.create_post_compressing, (progress * 100).toInt()),
                     style = SgTheme.typography.bodySmall,
                     color = sg.inkFaint
                 )
@@ -294,7 +299,7 @@ private fun AttachmentItem(
         ) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = "제거",
+                contentDescription = stringResource(Res.string.common_remove),
                 tint = sg.onAccent,
                 modifier = Modifier.background(sg.ink, CircleShape)
             )

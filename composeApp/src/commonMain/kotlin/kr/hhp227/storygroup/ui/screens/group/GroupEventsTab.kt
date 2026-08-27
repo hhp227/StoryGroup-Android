@@ -51,20 +51,24 @@ import kr.hhp227.storygroup.ui.components.SgPrimaryButton
 import kr.hhp227.storygroup.ui.components.SgTextField
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.dateKeyOf
-import kr.hhp227.storygroup.ui.util.dayOfWeek
+import kr.hhp227.storygroup.ui.util.dayNameShort
 import kr.hhp227.storygroup.ui.util.firstDayOfWeekOfMonth
+import kr.hhp227.storygroup.ui.util.formatMonthDayWeekday
+import kr.hhp227.storygroup.ui.util.formatYearMonth
 import kr.hhp227.storygroup.ui.util.isoToLocal
 import kr.hhp227.storygroup.ui.util.monthLength
 import kr.hhp227.storygroup.ui.util.todayLocal
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 
-// 웹 DAY_LABELS 미러 — 일=rust, 토=accent 강조는 셀에서 인덱스로 판정
-private val DayLabels = listOf("일", "월", "화", "수", "목", "금", "토")
+private val RsvpOptions = listOf(RsvpStatus.GOING, RsvpStatus.MAYBE, RsvpStatus.NOT_GOING)
 
-private val RsvpOptions = listOf(
-    RsvpStatus.GOING to "참석",
-    RsvpStatus.MAYBE to "미정",
-    RsvpStatus.NOT_GOING to "불참"
-)
+@Composable
+private fun rsvpLabel(status: RsvpStatus): String = when (status) {
+    RsvpStatus.GOING -> stringResource(Res.string.rsvp_going)
+    RsvpStatus.MAYBE -> stringResource(Res.string.rsvp_maybe)
+    RsvpStatus.NOT_GOING -> stringResource(Res.string.rsvp_not_going)
+}
 
 /** "HH:mm" — 이벤트 카드 시각 표기(웹 formatTime 미러, 로컬 타임존) */
 private fun formatTime(iso: String): String = isoToLocal(iso)?.let {
@@ -136,7 +140,7 @@ internal fun GroupEventsTab(
                 val (year, month, day) = parts
 
                 Text(
-                    "${month}월 ${day}일 (${DayLabels[dayOfWeek(year, month, day)]})",
+                    formatMonthDayWeekday(year, month, day),
                     style = SgTheme.typography.titleSmall,
                     color = sg.ink,
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -151,7 +155,7 @@ internal fun GroupEventsTab(
                 ) {
                     Text(message, style = SgTheme.typography.bodySmall, color = sg.rust, modifier = Modifier.weight(1f))
                     TextButton(onClick = { onAction(GroupEventsViewModel.Action.DismissActionError) }) {
-                        Text("닫기", color = sg.accent)
+                        Text(stringResource(Res.string.common_close), color = sg.accent)
                     }
                 }
             }
@@ -165,7 +169,7 @@ internal fun GroupEventsTab(
                     Text(uiState.error, style = SgTheme.typography.bodyMedium, color = sg.rust)
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = { onAction(GroupEventsViewModel.Action.Refresh) }) {
-                        Text("다시 시도", color = sg.accent)
+                        Text(stringResource(Res.string.common_retry), color = sg.accent)
                     }
                 }
             }
@@ -176,8 +180,8 @@ internal fun GroupEventsTab(
             }
             selectedEvents.isEmpty() -> item(key = "events-empty") {
                 SgEmptyState(
-                    title = "이 날짜에는 일정이 없습니다",
-                    subtitle = "일정 만들기로 첫 일정을 등록해 보세요.",
+                    title = stringResource(Res.string.events_empty_title),
+                    subtitle = stringResource(Res.string.events_empty_subtitle),
                     modifier = Modifier.fillParentMaxWidth().padding(vertical = 24.dp)
                 )
             }
@@ -201,18 +205,18 @@ internal fun GroupEventsTab(
     deleteTargetEventId?.let { eventId ->
         AlertDialog(
             onDismissRequest = { deleteTargetEventId = null },
-            text = { Text("이 일정을 삭제할까요?") },
+            text = { Text(stringResource(Res.string.events_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     onAction(GroupEventsViewModel.Action.DeleteEvent(eventId))
                     deleteTargetEventId = null
                 }) {
-                    Text("삭제", color = sg.rust)
+                    Text(stringResource(Res.string.common_delete), color = sg.rust)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteTargetEventId = null }) {
-                    Text("취소", color = sg.ink)
+                    Text(stringResource(Res.string.common_cancel), color = sg.ink)
                 }
             }
         )
@@ -244,29 +248,34 @@ private fun CalendarCard(
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { onAction(GroupEventsViewModel.Action.MoveMonth(-1)) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "이전 달", tint = sg.inkSoft)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(Res.string.events_prev_month), tint = sg.inkSoft)
                 }
                 Text(
-                    "${year}년 ${month}월",
+                    formatYearMonth(year, month),
                     style = SgTheme.typography.titleSmall,
                     color = sg.ink,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { onAction(GroupEventsViewModel.Action.MoveMonth(1)) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "다음 달", tint = sg.inkSoft)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(Res.string.events_next_month), tint = sg.inkSoft)
                 }
                 TextButton(onClick = { onAction(GroupEventsViewModel.Action.GoToday) }) {
-                    Text("오늘", color = sg.accent)
+                    Text(stringResource(Res.string.common_today), color = sg.accent)
                 }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { onAction(GroupEventsViewModel.Action.ToggleCreateForm) }) {
-                    Text(if (showCreateForm) "닫기" else "일정 만들기", color = sg.accent, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (showCreateForm) stringResource(Res.string.common_close) else stringResource(Res.string.events_create),
+                        color = sg.accent,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
+            // 웹 DAY_LABELS 미러 — 일=rust, 토=accent 강조는 셀에서 인덱스로 판정
             Row(Modifier.fillMaxWidth()) {
-                DayLabels.forEachIndexed { index, label ->
+                repeat(7) { index ->
                     Text(
-                        label,
+                        dayNameShort(index),
                         style = SgTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = when (index) {
@@ -372,16 +381,20 @@ private fun CreateEventForm(
         val minute = parts[1].trim().toIntOrNull() ?: return null
         return if (hour in 0..23 && minute in 0..59) hour to minute else null
     }
+    // 폼 검증 문구 — onClick(비컴포저블 람다)에서 쓰므로 컴포저블 스코프에서 미리 해석해 캡처
+    val errorStartFormat = stringResource(Res.string.events_error_start_format)
+    val errorEndFormat = stringResource(Res.string.events_error_end_format)
+    val errorEndBeforeStart = stringResource(Res.string.events_error_end_before_start)
 
     SgCard(modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("새 일정 — $selectedDay", style = SgTheme.typography.titleSmall, color = sg.ink, fontWeight = FontWeight.Bold)
-            SgTextField(value = title, onValueChange = { title = it.take(100) }, label = "일정 제목")
+            Text(stringResource(Res.string.events_new_title, selectedDay), style = SgTheme.typography.titleSmall, color = sg.ink, fontWeight = FontWeight.Bold)
+            SgTextField(value = title, onValueChange = { title = it.take(100) }, label = stringResource(Res.string.events_title_label))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 SgTextField(
                     value = startTime,
                     onValueChange = { startTime = it },
-                    label = "시작(HH:MM)",
+                    label = stringResource(Res.string.events_start_label),
                     keyboardType = KeyboardType.Number,
                     modifier = Modifier.weight(1f)
                 )
@@ -389,16 +402,16 @@ private fun CreateEventForm(
                 SgTextField(
                     value = endTime,
                     onValueChange = { endTime = it },
-                    label = "종료(선택)",
+                    label = stringResource(Res.string.events_end_label),
                     keyboardType = KeyboardType.Number,
                     modifier = Modifier.weight(1f)
                 )
             }
-            SgTextField(value = location, onValueChange = { location = it.take(200) }, label = "장소 (선택)")
+            SgTextField(value = location, onValueChange = { location = it.take(200) }, label = stringResource(Res.string.events_location_label))
             SgTextField(
                 value = description,
                 onValueChange = { description = it.take(2000) },
-                label = "설명 (선택)",
+                label = stringResource(Res.string.events_desc_label),
                 singleLine = false,
                 minLines = 3
             )
@@ -406,17 +419,17 @@ private fun CreateEventForm(
                 Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
             }
             SgPrimaryButton(
-                text = "등록",
+                text = stringResource(Res.string.events_submit),
                 onClick = {
                     val start = parseTime(startTime)
                     val end = if (endTime.isBlank()) null else parseTime(endTime)
 
                     formError = when {
-                        start == null -> "시작 시각은 HH:MM 형식으로 입력해 주세요"
-                        endTime.isNotBlank() && end == null -> "종료 시각은 HH:MM 형식으로 입력해 주세요"
+                        start == null -> errorStartFormat
+                        endTime.isNotBlank() && end == null -> errorEndFormat
                         end != null && (end.first < start.first ||
                             (end.first == start.first && end.second < start.second)) ->
-                            "종료 시각은 시작 시각보다 빠를 수 없습니다"
+                            errorEndBeforeStart
                         else -> null
                     }
                     if (formError == null && start != null) {
@@ -470,7 +483,7 @@ private fun EventCard(
                         onClick = onRequestDelete,
                         enabled = !isBusy
                     ) {
-                        Text("삭제", color = sg.rust, style = SgTheme.typography.labelSmall)
+                        Text(stringResource(Res.string.common_delete), color = sg.rust, style = SgTheme.typography.labelSmall)
                     }
                 }
             }
@@ -481,7 +494,8 @@ private fun EventCard(
                 Text(it, style = SgTheme.typography.bodyMedium, color = sg.ink)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RsvpOptions.forEach { (status, label) ->
+                RsvpOptions.forEach { status ->
+                    val label = rsvpLabel(status)
                     val selected = event.myRsvp == status
 
                     if (selected) {
@@ -505,7 +519,7 @@ private fun EventCard(
                 modifier = Modifier.fillMaxWidth().clickable { onAction(GroupEventsViewModel.Action.ToggleAttendees(event.id)) }
             ) {
                 Text(
-                    "참석 ${event.goingCount} · 미정 ${event.maybeCount} · 불참 ${event.notGoingCount} " +
+                    stringResource(Res.string.events_rsvp_counts, event.goingCount, event.maybeCount, event.notGoingCount) + " " +
                         if (isExpanded) "▲" else "▼",
                     style = SgTheme.typography.labelSmall,
                     color = sg.inkSoft
@@ -513,14 +527,14 @@ private fun EventCard(
             }
             if (isExpanded) {
                 when {
-                    attendees == null -> Text("불러오는 중...", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
-                    attendees.isEmpty() -> Text("아직 응답한 멤버가 없습니다.", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+                    attendees == null -> Text(stringResource(Res.string.common_loading), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+                    attendees.isEmpty() -> Text(stringResource(Res.string.events_no_attendees), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
                     else -> attendees.forEach { attendee ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SgAvatar(attendee.name, imageUrl = attendee.profileImg)
                             Text(attendee.name, style = SgTheme.typography.bodySmall, color = sg.ink)
                             Text(
-                                RsvpOptions.first { it.first == attendee.status }.second,
+                                rsvpLabel(attendee.status),
                                 style = SgTheme.typography.labelSmall,
                                 color = sg.inkFaint
                             )
@@ -528,7 +542,7 @@ private fun EventCard(
                     }
                 }
             }
-            Text("${event.authorName}님이 만든 일정", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+            Text(stringResource(Res.string.events_created_by, event.authorName), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
         }
     }
 }

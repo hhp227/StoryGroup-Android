@@ -236,15 +236,15 @@ final class PostDetailViewModel: MviViewModel {
     init(
         groupId: Int64,
         postId: Int64,
-        getPostDetailUseCase: GetPostDetailUseCase,
-        setPostLikedUseCase: SetPostLikedUseCase,
-        createCommentUseCase: CreateCommentUseCase,
-        deleteCommentUseCase: DeleteCommentUseCase,
-        deletePostUseCase: DeletePostUseCase,
-        reportPostUseCase: ReportPostUseCase,
-        reportUserUseCase: ReportUserUseCase,
-        blockUserUseCase: BlockUserUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        getPostDetailUseCase: GetPostDetailUseCase = AppContainer.shared.getPostDetailUseCase,
+        setPostLikedUseCase: SetPostLikedUseCase = AppContainer.shared.setPostLikedUseCase,
+        createCommentUseCase: CreateCommentUseCase = AppContainer.shared.createCommentUseCase,
+        deleteCommentUseCase: DeleteCommentUseCase = AppContainer.shared.deleteCommentUseCase,
+        deletePostUseCase: DeletePostUseCase = AppContainer.shared.deletePostUseCase,
+        reportPostUseCase: ReportPostUseCase = AppContainer.shared.reportPostUseCase,
+        reportUserUseCase: ReportUserUseCase = AppContainer.shared.reportUserUseCase,
+        blockUserUseCase: BlockUserUseCase = AppContainer.shared.blockUserUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.groupId = groupId
         self.postId = postId

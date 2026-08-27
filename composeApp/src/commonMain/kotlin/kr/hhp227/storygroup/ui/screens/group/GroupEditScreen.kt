@@ -34,9 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
 import kr.hhp227.storygroup.ui.components.SgCard
 import kr.hhp227.storygroup.ui.components.SgPrimaryButton
@@ -47,20 +46,20 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
-
-@Composable
-private fun groupEditViewModel(groupId: Long): GroupEditViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel {
-        GroupEditViewModel(
-            groupId = groupId,
-            getGroupUseCase = container.getGroupUseCase,
-            updateGroupUseCase = container.updateGroupUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
-        )
-    }
-}
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.common_save
+import storygroup.composeapp.generated.resources.common_uploading
+import storygroup.composeapp.generated.resources.create_group_name
+import storygroup.composeapp.generated.resources.group_edit_change_image
+import storygroup.composeapp.generated.resources.group_edit_desc
+import storygroup.composeapp.generated.resources.group_edit_title
+import storygroup.composeapp.generated.resources.group_error_load
+import storygroup.composeapp.generated.resources.join_type
+import storygroup.composeapp.generated.resources.join_type_approval_full
+import storygroup.composeapp.generated.resources.join_type_auto_full
 
 /**
  * 그룹 정보 수정 — 설정 탭 "그룹 정보 수정" 행에서 진입하는 풀스크린(계정 설정 패턴,
@@ -72,7 +71,14 @@ fun GroupEditScreen(
     groupId: Long,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: GroupEditViewModel = groupEditViewModel(groupId)
+    viewModel: GroupEditViewModel = screenViewModel {
+        GroupEditViewModel(
+            groupId = groupId,
+            getGroupUseCase = it.getGroupUseCase,
+            updateGroupUseCase = it.updateGroupUseCase,
+            uploadImageUseCase = it.uploadImageUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -97,10 +103,10 @@ fun GroupEditScreen(
         backgroundColor = sg.paper,
         topBar = {
             SgTopBar(
-                title = "그룹 정보 수정",
+                title = stringResource(Res.string.group_edit_title),
                 navigationIcon = {
                     IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                     }
                 }
             )
@@ -118,10 +124,10 @@ fun GroupEditScreen(
                 Modifier.padding(padding).fillMaxSize().padding(vertical = 48.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(uiState.error ?: "그룹 정보를 불러오지 못했습니다.", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                Text(uiState.error ?: stringResource(Res.string.group_error_load), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(GroupEditViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             else -> Column(
@@ -132,12 +138,12 @@ fun GroupEditScreen(
                         SgTextField(
                             value = uiState.name,
                             onValueChange = { onAction(GroupEditViewModel.Action.SetName(it)) },
-                            label = "그룹 이름"
+                            label = stringResource(Res.string.create_group_name)
                         )
                         SgTextField(
                             value = uiState.description,
                             onValueChange = { onAction(GroupEditViewModel.Action.SetDescription(it)) },
-                            label = "설명",
+                            label = stringResource(Res.string.group_edit_desc),
                             singleLine = false,
                             minLines = 3
                         )
@@ -157,7 +163,7 @@ fun GroupEditScreen(
                                 shape = SgTheme.shapes.button
                             ) {
                                 Text(
-                                    if (uiState.isUploadingImage) "업로드 중..." else "대표 이미지 변경",
+                                    if (uiState.isUploadingImage) stringResource(Res.string.common_uploading) else stringResource(Res.string.group_edit_change_image),
                                     color = sg.accent
                                 )
                             }
@@ -165,10 +171,10 @@ fun GroupEditScreen(
                         // 가입 방식 — 라운지는 숨김(웹 !group.isLounge 미러), 문구는 CreateGroupScreen과 동일
                         if (!uiState.isLounge) {
                             Column {
-                                Text("가입 방식", style = SgTheme.typography.labelLarge, color = sg.inkSoft)
+                                Text(stringResource(Res.string.join_type), style = SgTheme.typography.labelLarge, color = sg.inkSoft)
                                 listOf(
-                                    GroupJoinType.AUTO_APPROVE to "자동 승인 — 바로 가입",
-                                    GroupJoinType.APPROVAL_REQUIRED to "승인제 — 신청 후 승인"
+                                    GroupJoinType.AUTO_APPROVE to stringResource(Res.string.join_type_auto_full),
+                                    GroupJoinType.APPROVAL_REQUIRED to stringResource(Res.string.join_type_approval_full)
                                 ).forEach { (type, label) ->
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -194,7 +200,7 @@ fun GroupEditScreen(
                             Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
                         }
                         SgPrimaryButton(
-                            text = "저장",
+                            text = stringResource(Res.string.common_save),
                             onClick = { onAction(GroupEditViewModel.Action.Save) },
                             enabled = uiState.name.isNotBlank() && !uiState.isUploadingImage,
                             isLoading = uiState.isSaving,

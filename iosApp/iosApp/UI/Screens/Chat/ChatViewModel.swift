@@ -156,9 +156,9 @@ final class ChatViewModel: MviViewModel {
     }
 
     init(
-        getGroupChatRoomsUseCase: GetGroupChatRoomsUseCase,
-        getDirectRoomsUseCase: GetDirectRoomsUseCase,
-        observePersonalEventsUseCase: ObservePersonalEventsUseCase
+        getGroupChatRoomsUseCase: GetGroupChatRoomsUseCase = AppContainer.shared.getGroupChatRoomsUseCase,
+        getDirectRoomsUseCase: GetDirectRoomsUseCase = AppContainer.shared.getDirectRoomsUseCase,
+        observePersonalEventsUseCase: ObservePersonalEventsUseCase = AppContainer.shared.observePersonalEventsUseCase
     ) {
         self.getGroupChatRoomsUseCase = getGroupChatRoomsUseCase
         self.getDirectRoomsUseCase = getDirectRoomsUseCase

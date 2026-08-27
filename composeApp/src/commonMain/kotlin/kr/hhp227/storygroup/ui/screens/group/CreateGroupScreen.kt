@@ -38,9 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.shared.domain.model.Group
 import kr.hhp227.storygroup.shared.domain.model.GroupJoinType
@@ -52,18 +51,17 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
-
-@Composable
-private fun createGroupViewModel(): CreateGroupViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "create-group") {
-        CreateGroupViewModel(
-            createGroupUseCase = container.createGroupUseCase,
-            uploadImageUseCase = container.uploadImageUseCase
-        )
-    }
-}
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_create
+import storygroup.composeapp.generated.resources.create_group_add_cover
+import storygroup.composeapp.generated.resources.create_group_desc
+import storygroup.composeapp.generated.resources.create_group_name
+import storygroup.composeapp.generated.resources.groups_create
+import storygroup.composeapp.generated.resources.join_type
+import storygroup.composeapp.generated.resources.join_type_approval_full
+import storygroup.composeapp.generated.resources.join_type_auto_full
 
 /**
  * 그룹 만들기 — 이름/소개/커버 이미지+가입 방식(자동 승인/승인제). NavHost 풀스크린 목적지.
@@ -75,7 +73,12 @@ private fun createGroupViewModel(): CreateGroupViewModel {
 fun CreateGroupScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: CreateGroupViewModel = createGroupViewModel(),
+    viewModel: CreateGroupViewModel = screenViewModel(key = "create-group") {
+        CreateGroupViewModel(
+            createGroupUseCase = it.createGroupUseCase,
+            uploadImageUseCase = it.uploadImageUseCase
+        )
+    },
     groupsViewModel: GroupsViewModel = sessionViewModel {
         GroupsViewModel(it.getMyGroupsPagingDataUseCase)
     }
@@ -104,10 +107,10 @@ fun CreateGroupScreen(
     }
     Column(modifier.fillMaxSize().background(sg.paper).imePadding()) {
         SgTopBar(
-            title = "그룹 만들기",
+            title = stringResource(Res.string.groups_create),
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
@@ -125,28 +128,28 @@ fun CreateGroupScreen(
                     SgTextField(
                         value = name,
                         onValueChange = { if (it.length <= 100) name = it },
-                        label = "그룹 이름",
+                        label = stringResource(Res.string.create_group_name),
                         enabled = !uiState.isSaving
                     )
                     SgTextField(
                         value = description,
                         onValueChange = { if (it.length <= 1000) description = it },
-                        label = "그룹 소개",
+                        label = stringResource(Res.string.create_group_desc),
                         singleLine = false,
                         minLines = 4,
                         enabled = !uiState.isSaving
                     )
                     Column {
                         Text(
-                            "가입 방식",
+                            stringResource(Res.string.join_type),
                             style = SgTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = sg.inkSoft
                         )
-                        JoinTypeRadioRow("자동 승인 — 바로 가입", joinType == GroupJoinType.AUTO_APPROVE) {
+                        JoinTypeRadioRow(stringResource(Res.string.join_type_auto_full), joinType == GroupJoinType.AUTO_APPROVE) {
                             joinType = GroupJoinType.AUTO_APPROVE
                         }
-                        JoinTypeRadioRow("승인제 — 신청 후 승인", joinType == GroupJoinType.APPROVAL_REQUIRED) {
+                        JoinTypeRadioRow(stringResource(Res.string.join_type_approval_full), joinType == GroupJoinType.APPROVAL_REQUIRED) {
                             joinType = GroupJoinType.APPROVAL_REQUIRED
                         }
                     }
@@ -154,7 +157,7 @@ fun CreateGroupScreen(
                         Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
                     }
                     SgPrimaryButton(
-                        text = "만들기",
+                        text = stringResource(Res.string.common_create),
                         onClick = { onAction(CreateGroupViewModel.Action.Submit(name, description, joinType)) },
                         isLoading = uiState.isSaving
                     )
@@ -191,9 +194,9 @@ private fun CoverImagePicker(image: String?, isUploading: Boolean, onClick: () -
             }
         } else if (image == null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = "커버 이미지 추가", tint = sg.inkSoft)
+                Icon(Icons.Default.AddAPhoto, contentDescription = stringResource(Res.string.create_group_add_cover), tint = sg.inkSoft)
                 Spacer(Modifier.height(4.dp))
-                Text("커버 이미지 추가", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
+                Text(stringResource(Res.string.create_group_add_cover), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
             }
         }
     }

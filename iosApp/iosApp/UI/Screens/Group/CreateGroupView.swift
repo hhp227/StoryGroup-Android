@@ -5,7 +5,7 @@ import Shared
 /// GroupsView가 풀스크린 push로 표시(Compose NavHost CreateGroupRoute 미러) — 내비바는 루트 스택 몫.
 /// 그룹 탭과 같은 GroupsViewModel 인스턴스를 그대로 전달받아 성공 시 refresh()한다.
 struct CreateGroupView: View {
-    @StateObject private var viewModel: CreateGroupViewModel
+    @StateObject private var viewModel = CreateGroupViewModel()
 
     /// 갱신용 — 그룹 탭과 같은 인스턴스(GroupsView가 소유). onAction 호출만 하므로 관찰 불필요
     private let groupsViewModel: GroupsViewModel
@@ -122,11 +122,7 @@ struct CreateGroupView: View {
         .buttonStyle(.plain)
     }
 
-    init(container: AppContainer, groupsViewModel: GroupsViewModel) {
-        _viewModel = StateObject(wrappedValue: CreateGroupViewModel(
-            createGroupUseCase: container.createGroupUseCase,
-            uploadImageUseCase: container.uploadImageUseCase
-        ))
+    init(groupsViewModel: GroupsViewModel) {
         self.groupsViewModel = groupsViewModel
     }
 }

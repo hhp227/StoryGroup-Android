@@ -112,9 +112,9 @@ final class GroupEditViewModel: MviViewModel {
 
     init(
         groupId: Int64,
-        getGroupUseCase: GetGroupUseCase,
-        updateGroupUseCase: UpdateGroupUseCase,
-        uploadImageUseCase: UploadImageUseCase
+        getGroupUseCase: GetGroupUseCase = AppContainer.shared.getGroupUseCase,
+        updateGroupUseCase: UpdateGroupUseCase = AppContainer.shared.updateGroupUseCase,
+        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase
     ) {
         self.groupId = groupId
         self.getGroupUseCase = getGroupUseCase

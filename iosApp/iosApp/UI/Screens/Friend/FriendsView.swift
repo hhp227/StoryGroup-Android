@@ -6,7 +6,7 @@ import Shared
 /// 행 탭 → 공개 프로필(웹 /users/[id] 미러) — 액션은 메시지(DM)/해제 버튼 2개.
 /// 계층은 Compose와 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct FriendsView: View {
-    @StateObject private var viewModel: FriendsViewModel
+    @StateObject private var viewModel = FriendsViewModel()
 
     /// 채팅방 풀스크린 push — MainShellView(루트 NavigationStack)로 위임
     let onOpenChatRoom: (ChatRoomRef) -> Void
@@ -18,15 +18,7 @@ struct FriendsView: View {
         FriendsContent(viewModel: viewModel, onOpenChatRoom: onOpenChatRoom, onOpenUserProfile: onOpenUserProfile)
     }
 
-    init(container: AppContainer, onOpenChatRoom: @escaping (ChatRoomRef) -> Void, onOpenUserProfile: @escaping (Int64) -> Void) {
-        _viewModel = StateObject(wrappedValue: FriendsViewModel(
-            getFriendsUseCase: container.getFriendsUseCase,
-            addFriendUseCase: container.addFriendUseCase,
-            removeFriendUseCase: container.removeFriendUseCase,
-            searchUsersUseCase: container.searchUsersUseCase,
-            openDirectRoomUseCase: container.openDirectRoomUseCase,
-            observePersonalEventsUseCase: container.observePersonalEventsUseCase
-        ))
+    init(onOpenChatRoom: @escaping (ChatRoomRef) -> Void, onOpenUserProfile: @escaping (Int64) -> Void) {
         self.onOpenChatRoom = onOpenChatRoom
         self.onOpenUserProfile = onOpenUserProfile
     }

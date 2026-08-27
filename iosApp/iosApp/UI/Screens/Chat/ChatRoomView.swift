@@ -18,9 +18,6 @@ struct ChatRoomView: View {
     /// 상단바 통화 버튼 아이콘 분기용 — DM(nil)=전화, 그룹 방=화상회의(Compose 미러)
     private let groupId: Int64?
 
-    /// 통화 화면(CallView) push의 VM 생성에 쓰인다
-    private let container: AppContainer
-
     let title: String
 
     /// 통화 화면 push — Compose CallRoute(ring=true) 미러(발신=입장+벨울림)
@@ -95,7 +92,7 @@ struct ChatRoomView: View {
     }
 
     private var callDestination: some View {
-        CallView(chatRoomId: chatRoomId, title: title, ring: true, video: callVideo, container: container)
+        CallView(chatRoomId: chatRoomId, title: title, ring: true, video: callVideo)
     }
 
     /// 타인 아바타 탭 → 공개 프로필 시트(그룹 상세 멤버 스트립·게시글 작성자 탭과 같은 진입 규칙)
@@ -103,7 +100,6 @@ struct ChatRoomView: View {
         if let userId = selectedProfileUserId {
             UserProfileView(
                 userId: userId,
-                container: container,
                 onOpenChatRoom: { room in
                     // 이미 이 방이면(멱등 DM 열기가 같은 id를 돌려준다) 또 쌓지 않는다 —
                     // 시트만 닫아 복귀(카카오톡 방식, Compose App.kt 미러)
@@ -124,7 +120,6 @@ struct ChatRoomView: View {
                 chatRoomId: room.chatRoomId,
                 groupId: room.groupId,
                 title: room.title,
-                container: container,
                 chatViewModel: chatViewModel
             )
         }
@@ -667,25 +662,14 @@ struct ChatRoomView: View {
         return "\((Double(size) / (1024 * 1024) * 10).rounded() / 10)MB"
     }
 
-    init(chatRoomId: Int64, groupId: Int64?, title: String, container: AppContainer, chatViewModel: ChatViewModel) {
+    init(chatRoomId: Int64, groupId: Int64?, title: String, chatViewModel: ChatViewModel) {
         _viewModel = StateObject(wrappedValue: ChatRoomViewModel(
             groupId: groupId,
-            chatRoomId: chatRoomId,
-            getChatMessagesUseCase: container.getChatMessagesUseCase,
-            sendChatMessageUseCase: container.sendChatMessageUseCase,
-            markChatMessagesReadUseCase: container.markChatMessagesReadUseCase,
-            uploadChatFileUseCase: container.uploadChatFileUseCase,
-            sendChatTypingUseCase: container.sendChatTypingUseCase,
-            getChatReadPositionsUseCase: container.getChatReadPositionsUseCase,
-            getGroupMembersUseCase: container.getGroupMembersUseCase,
-            getCallRosterUseCase: container.getCallRosterUseCase,
-            observeChatRoomEventsUseCase: container.observeChatRoomEventsUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+            chatRoomId: chatRoomId
         ))
         self.chatViewModel = chatViewModel
         self.chatRoomId = chatRoomId
         self.groupId = groupId
-        self.container = container
         self.title = title
     }
 }

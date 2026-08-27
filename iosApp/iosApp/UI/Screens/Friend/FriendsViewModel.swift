@@ -170,12 +170,12 @@ final class FriendsViewModel: MviViewModel {
     }
 
     init(
-        getFriendsUseCase: GetFriendsUseCase,
-        addFriendUseCase: AddFriendUseCase,
-        removeFriendUseCase: RemoveFriendUseCase,
-        searchUsersUseCase: SearchUsersUseCase,
-        openDirectRoomUseCase: OpenDirectRoomUseCase,
-        observePersonalEventsUseCase: ObservePersonalEventsUseCase
+        getFriendsUseCase: GetFriendsUseCase = AppContainer.shared.getFriendsUseCase,
+        addFriendUseCase: AddFriendUseCase = AppContainer.shared.addFriendUseCase,
+        removeFriendUseCase: RemoveFriendUseCase = AppContainer.shared.removeFriendUseCase,
+        searchUsersUseCase: SearchUsersUseCase = AppContainer.shared.searchUsersUseCase,
+        openDirectRoomUseCase: OpenDirectRoomUseCase = AppContainer.shared.openDirectRoomUseCase,
+        observePersonalEventsUseCase: ObservePersonalEventsUseCase = AppContainer.shared.observePersonalEventsUseCase
     ) {
         self.getFriendsUseCase = getFriendsUseCase
         self.addFriendUseCase = addFriendUseCase

@@ -106,12 +106,12 @@ final class UserProfileViewModel: MviViewModel {
 
     init(
         userId: Int64,
-        getPublicProfileUseCase: GetPublicProfileUseCase,
-        getFriendsUseCase: GetFriendsUseCase,
-        addFriendUseCase: AddFriendUseCase,
-        removeFriendUseCase: RemoveFriendUseCase,
-        openDirectRoomUseCase: OpenDirectRoomUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        getPublicProfileUseCase: GetPublicProfileUseCase = AppContainer.shared.getPublicProfileUseCase,
+        getFriendsUseCase: GetFriendsUseCase = AppContainer.shared.getFriendsUseCase,
+        addFriendUseCase: AddFriendUseCase = AppContainer.shared.addFriendUseCase,
+        removeFriendUseCase: RemoveFriendUseCase = AppContainer.shared.removeFriendUseCase,
+        openDirectRoomUseCase: OpenDirectRoomUseCase = AppContainer.shared.openDirectRoomUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.userId = userId
         self.getPublicProfileUseCase = getPublicProfileUseCase

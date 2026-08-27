@@ -74,7 +74,7 @@ final class GroupReportsViewModel: MviViewModel {
         }
     }
 
-    init(groupId: Int64, getGroupReportsUseCase: GetGroupReportsUseCase, processGroupReportUseCase: ProcessGroupReportUseCase) {
+    init(groupId: Int64, getGroupReportsUseCase: GetGroupReportsUseCase = AppContainer.shared.getGroupReportsUseCase, processGroupReportUseCase: ProcessGroupReportUseCase = AppContainer.shared.processGroupReportUseCase) {
         self.groupId = groupId
         self.getGroupReportsUseCase = getGroupReportsUseCase
         self.processGroupReportUseCase = processGroupReportUseCase

@@ -17,6 +17,17 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.account_error_image_save
+import storygroup.composeapp.generated.resources.account_error_name_required
+import storygroup.composeapp.generated.resources.account_error_password_change
+import storygroup.composeapp.generated.resources.account_error_password_mismatch
+import storygroup.composeapp.generated.resources.account_error_password_required
+import storygroup.composeapp.generated.resources.account_error_password_short
+import storygroup.composeapp.generated.resources.error_save
+import storygroup.composeapp.generated.resources.error_upload_image
+import storygroup.composeapp.generated.resources.profile_error_load
 
 /**
  * 계정 설정 — 웹 설정>프로필(/settings/profile)+비밀번호(/settings/password) 미러.
@@ -59,19 +70,20 @@ class AccountSettingsViewModel(
                     _uiState.update { it.copy(isLoading = false, profile = profile) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: "내 정보를 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: getString(Res.string.profile_error_load)) }
                 }
         }
     }
 
     private fun saveProfile(name: String, bio: String, statusMessage: String) {
         if (_uiState.value.isSaving) return
-        if (name.isBlank()) {
-            _uiState.update { it.copy(saveError = "이름을 입력해주세요.") }
-            return
-        }
-        _uiState.update { it.copy(isSaving = true, saveError = null) }
+
         viewModelScope.launch {
+            if (name.isBlank()) {
+                _uiState.update { it.copy(saveError = getString(Res.string.account_error_name_required)) }
+                return@launch
+            }
+            _uiState.update { it.copy(isSaving = true, saveError = null) }
             runCatching {
                 // 변경 이미지가 없으면 기존 값 그대로 — 빈 문자열은 null로(웹 폼 profileImg || null 미러)
                 updateMyProfileUseCase(
@@ -84,7 +96,7 @@ class AccountSettingsViewModel(
                 _uiState.update { it.copy(isSaving = false, profile = profile, pendingProfileImg = null) }
                 _event.tryEmit(Event.ProfileSaved)
             }.onFailure { e ->
-                _uiState.update { it.copy(isSaving = false, saveError = e.message ?: "저장에 실패했습니다.") }
+                _uiState.update { it.copy(isSaving = false, saveError = e.message ?: getString(Res.string.error_save)) }
             }
         }
     }
@@ -97,7 +109,7 @@ class AccountSettingsViewModel(
             runCatching { uploadImageUseCase(bytes, fileName, contentType) }
                 .onSuccess { url -> applyProfileImage(url) }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isUploadingImage = false, saveError = e.message ?: "이미지 업로드에 실패했습니다.") }
+                    _uiState.update { it.copy(isUploadingImage = false, saveError = e.message ?: getString(Res.string.error_upload_image)) }
                 }
         }
     }
@@ -126,32 +138,33 @@ class AccountSettingsViewModel(
             _event.tryEmit(Event.ProfileSaved)
         }.onFailure { e ->
             // 저장 실패여도 업로드는 살아 있다 — pending으로 남겨 저장 버튼 재시도 경로를 유지한다
-            _uiState.update { it.copy(isUploadingImage = false, pendingProfileImg = url, saveError = e.message ?: "이미지 저장에 실패했습니다.") }
+            _uiState.update { it.copy(isUploadingImage = false, pendingProfileImg = url, saveError = e.message ?: getString(Res.string.account_error_image_save)) }
         }
     }
 
     private fun changePassword(currentPassword: String, newPassword: String, confirmPassword: String) {
         if (_uiState.value.isChangingPassword) return
-        // 클라 검증은 웹 폼 미러 — 서버(8..72, 현재 비밀번호 대조)가 최종 검사한다
-        val validationError = when {
-            currentPassword.isEmpty() || newPassword.isEmpty() -> "비밀번호를 입력해주세요."
-            newPassword.length < 8 -> "새 비밀번호는 8자 이상이어야 합니다."
-            newPassword != confirmPassword -> "새 비밀번호가 서로 일치하지 않습니다."
-            else -> null
-        }
-        if (validationError != null) {
-            _uiState.update { it.copy(passwordError = validationError) }
-            return
-        }
-        _uiState.update { it.copy(isChangingPassword = true, passwordError = null) }
+
         viewModelScope.launch {
+            // 클라 검증은 웹 폼 미러 — 서버(8..72, 현재 비밀번호 대조)가 최종 검사한다
+            val validationError = when {
+                currentPassword.isEmpty() || newPassword.isEmpty() -> getString(Res.string.account_error_password_required)
+                newPassword.length < 8 -> getString(Res.string.account_error_password_short)
+                newPassword != confirmPassword -> getString(Res.string.account_error_password_mismatch)
+                else -> null
+            }
+            if (validationError != null) {
+                _uiState.update { it.copy(passwordError = validationError) }
+                return@launch
+            }
+            _uiState.update { it.copy(isChangingPassword = true, passwordError = null) }
             runCatching { changePasswordUseCase(currentPassword, newPassword) }
                 .onSuccess {
                     _uiState.update { it.copy(isChangingPassword = false) }
                     _event.tryEmit(Event.PasswordChanged)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isChangingPassword = false, passwordError = e.message ?: "비밀번호 변경에 실패했습니다.") }
+                    _uiState.update { it.copy(isChangingPassword = false, passwordError = e.message ?: getString(Res.string.account_error_password_change)) }
                 }
         }
     }

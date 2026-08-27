@@ -19,6 +19,9 @@ import kr.hhp227.storygroup.shared.domain.model.PersonalEvent
 import kr.hhp227.storygroup.shared.domain.model.PersonalEventType
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_unknown
 
 /**
  * 수신 통화 배너(DM·그룹 방) — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받아 표시한다
@@ -44,7 +47,7 @@ class IncomingCallViewModel(
         }
     }
 
-    private fun show(event: PersonalEvent) {
+    private suspend fun show(event: PersonalEvent) {
         val chatRoomId = event.chatRoomId ?: return
 
         dismissJob?.cancel()
@@ -53,7 +56,7 @@ class IncomingCallViewModel(
                 incomingCall = IncomingCall(
                     chatRoomId = chatRoomId,
                     callerId = event.senderId,
-                    callerName = event.senderName ?: "알 수 없음",
+                    callerName = event.senderName ?: getString(Res.string.common_unknown),
                     roomName = event.roomName,
                     video = event.video
                 )

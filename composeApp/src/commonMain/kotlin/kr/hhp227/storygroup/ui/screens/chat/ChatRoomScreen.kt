@@ -83,11 +83,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.ChatMessage
 import kr.hhp227.storygroup.shared.domain.model.GroupMember
 import kr.hhp227.storygroup.shared.domain.model.GroupRole
@@ -105,6 +104,9 @@ import kr.hhp227.storygroup.ui.util.formatChatDate
 import kr.hhp227.storygroup.ui.util.rememberFilePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberImagePickerLauncher
 import kr.hhp227.storygroup.ui.util.rememberVideoCompressor
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 import kotlin.math.roundToInt
 
 /**
@@ -120,7 +122,27 @@ fun ChatRoomScreen(
     title: String,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: ChatRoomViewModel = chatRoomViewModel(chatRoomId, groupId)
+    /** 채팅방 VM — 백스택 엔트리 스코프(그룹 상세 패턴), 화면을 떠나면 소켓 구독도 함께 정리된다.
+     *  viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다 */
+    viewModel: ChatRoomViewModel = rememberVideoCompressor().let { videoCompressor ->
+        screenViewModel(key = "chat-room-$chatRoomId") {
+            ChatRoomViewModel(
+                groupId = groupId,
+                chatRoomId = chatRoomId,
+                getChatMessagesUseCase = it.getChatMessagesUseCase,
+                sendChatMessageUseCase = it.sendChatMessageUseCase,
+                markChatMessagesReadUseCase = it.markChatMessagesReadUseCase,
+                uploadChatFileUseCase = it.uploadChatFileUseCase,
+                sendChatTypingUseCase = it.sendChatTypingUseCase,
+                getChatReadPositionsUseCase = it.getChatReadPositionsUseCase,
+                getCallRosterUseCase = it.getCallRosterUseCase,
+                getGroupMembersUseCase = it.getGroupMembersUseCase,
+                observeChatRoomEventsUseCase = it.observeChatRoomEventsUseCase,
+                getCurrentUserIdUseCase = it.getCurrentUserIdUseCase,
+                videoCompressor = videoCompressor
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -255,7 +277,7 @@ fun ChatRoomScreen(
             title = title,
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", tint = sg.ink)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back), tint = sg.ink)
                 }
             },
             actions = {
@@ -264,7 +286,7 @@ fun ChatRoomScreen(
                     showDrawer = true
                     onAction(ChatRoomViewModel.Action.LoadMembers)
                 }) {
-                    Icon(Icons.Default.Menu, contentDescription = "메뉴", tint = sg.ink)
+                    Icon(Icons.Default.Menu, contentDescription = stringResource(Res.string.common_menu), tint = sg.ink)
                 }
             }
         )
@@ -281,7 +303,7 @@ fun ChatRoomScreen(
                 Icon(Icons.Default.Videocam, contentDescription = null, tint = sg.accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "${uiState.callRoster.joinToString(", ") { it.userName }}님이 통화 중이에요",
+                    stringResource(Res.string.chat_room_call_in_progress, uiState.callRoster.joinToString(", ") { it.userName }),
                     style = SgTheme.typography.bodySmall,
                     color = sg.ink,
                     maxLines = 1,
@@ -289,7 +311,7 @@ fun ChatRoomScreen(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = { onStartCall(true) }) {
-                    Text("참가", style = SgTheme.typography.labelLarge, color = sg.accent)
+                    Text(stringResource(Res.string.chat_room_join), style = SgTheme.typography.labelLarge, color = sg.accent)
                 }
             }
         }
@@ -308,13 +330,13 @@ fun ChatRoomScreen(
                         Text(uiState.error.orEmpty(), style = SgTheme.typography.bodyMedium, color = sg.rust)
                         Spacer(Modifier.height(8.dp))
                         TextButton(onClick = { onAction(ChatRoomViewModel.Action.Refresh) }) {
-                            Text("다시 시도", color = sg.accent)
+                            Text(stringResource(Res.string.common_retry), color = sg.accent)
                         }
                     }
                 uiState.messages.isEmpty() ->
                     SgEmptyState(
-                        title = "메시지가 없습니다",
-                        subtitle = "첫 메시지를 보내보세요.",
+                        title = stringResource(Res.string.chat_room_empty_title),
+                        subtitle = stringResource(Res.string.chat_room_empty_subtitle),
                         icon = Icons.AutoMirrored.Filled.Chat,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -379,7 +401,7 @@ fun ChatRoomScreen(
         // 입력 중 표시 — 입력바 바로 위의 얇은 띠(웹 미러)
         if (uiState.typists.isNotEmpty()) {
             Text(
-                "${uiState.typists.values.joinToString(", ")}님이 입력 중...",
+                stringResource(Res.string.chat_room_typing, uiState.typists.values.joinToString(", ")),
                 style = SgTheme.typography.bodySmall,
                 color = sg.inkSoft,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -393,7 +415,7 @@ fun ChatRoomScreen(
         }
         uiState.compressionProgress?.let { progress ->
             Text(
-                "동영상 압축 중 ${(progress * 100).toInt()}%",
+                stringResource(Res.string.chat_room_compressing, (progress * 100).toInt()),
                 style = SgTheme.typography.labelSmall,
                 color = SgTheme.colors.inkFaint,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
@@ -539,28 +561,28 @@ private fun ChatRoomDrawer(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                if (groupId == null) "1:1 대화" else "그룹 대화",
+                                if (groupId == null) stringResource(Res.string.chat_room_dm_title) else stringResource(Res.string.chat_room_group_title),
                                 style = SgTheme.typography.labelSmall,
                                 color = sg.inkFaint
                             )
                         }
                         IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "닫기", tint = sg.inkSoft)
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.common_close), tint = sg.inkSoft)
                         }
                     }
                     Divider(color = sg.stoneBorder)
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        DrawerSectionTitle("대화상대", countLabel = drawerMemberCount(groupId, uiState))
+                        DrawerSectionTitle(stringResource(Res.string.chat_room_members_section), countLabel = drawerMemberCount(groupId, uiState))
                         DrawerMembers(
                             groupId = groupId,
                             uiState = uiState,
                             onOpenUserProfile = onOpenUserProfile
                         )
                         Divider(color = sg.stoneBorder, modifier = Modifier.padding(vertical = 8.dp))
-                        DrawerSectionTitle("사진", countLabel = if (photos.isEmpty()) null else "${photos.size}장")
+                        DrawerSectionTitle(stringResource(Res.string.common_photo), countLabel = if (photos.isEmpty()) null else pluralStringResource(Res.plurals.count_photos, photos.size, photos.size))
                         if (photos.isEmpty()) {
                             Text(
-                                "주고받은 사진이 없습니다.",
+                                stringResource(Res.string.chat_room_no_photos),
                                 style = SgTheme.typography.bodySmall,
                                 color = sg.inkFaint,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -576,7 +598,7 @@ private fun ChatRoomDrawer(
                                         row.forEach { (messageIndex, url) ->
                                             AsyncImage(
                                                 model = url,
-                                                contentDescription = "사진",
+                                                contentDescription = stringResource(Res.string.common_photo),
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier
                                                     .weight(1f)
@@ -597,8 +619,8 @@ private fun ChatRoomDrawer(
                     Divider(color = sg.stoneBorder)
                     // 통화 — 상단바에서 뺀 진입점을 여기로 옮겼다(+ 첨부 패널에도 그대로 있다)
                     Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DrawerCallButton(Icons.Default.Call, "보이스톡", Modifier.weight(1f)) { onStartCall(false) }
-                        DrawerCallButton(Icons.Default.Videocam, "페이스톡", Modifier.weight(1f)) { onStartCall(true) }
+                        DrawerCallButton(Icons.Default.Call, stringResource(Res.string.call_voice_talk), Modifier.weight(1f)) { onStartCall(false) }
+                        DrawerCallButton(Icons.Default.Videocam, stringResource(Res.string.call_video_talk), Modifier.weight(1f)) { onStartCall(true) }
                     }
                 }
             }
@@ -607,9 +629,10 @@ private fun ChatRoomDrawer(
 }
 
 /** 드로어 대화상대 수 표기 — 그룹 방은 로드된 멤버 수, DM은 항상 2명 */
+@Composable
 private fun drawerMemberCount(groupId: Long?, uiState: ChatRoomViewModel.UiState): String? = when {
-    groupId == null -> "2명"
-    uiState.members != null -> "${uiState.members.size}명"
+    groupId == null -> pluralStringResource(Res.plurals.count_people, 2, 2)
+    uiState.members != null -> pluralStringResource(Res.plurals.count_people, uiState.members.size, uiState.members.size)
     else -> null
 }
 
@@ -663,7 +686,7 @@ private fun DrawerMembers(
             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = sg.accent)
         }
         uiState.members == null -> Text(
-            "대화상대를 불러오지 못했습니다.",
+            stringResource(Res.string.chat_room_members_error),
             style = SgTheme.typography.bodySmall,
             color = sg.rust,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -706,7 +729,7 @@ private fun DrawerMemberRow(
         )
         if (isMe) {
             Spacer(Modifier.width(6.dp))
-            Text("나", style = SgTheme.typography.labelSmall, color = sg.inkFaint)
+            Text(stringResource(Res.string.common_me), style = SgTheme.typography.labelSmall, color = sg.inkFaint)
         }
         // 역할 칩은 그룹 목록·상세와 같은 것(방장/부방장) — 일반 멤버는 칩을 달지 않는다
         if (role != null) {
@@ -730,32 +753,6 @@ private fun DrawerCallButton(icon: ImageVector, label: String, modifier: Modifie
         Icon(icon, contentDescription = label, tint = sg.accent)
         Spacer(Modifier.height(4.dp))
         Text(label, style = SgTheme.typography.labelSmall, color = sg.inkSoft)
-    }
-}
-
-/** 채팅방 VM — 백스택 엔트리 스코프(그룹 상세 패턴), 화면을 떠나면 소켓 구독도 함께 정리된다 */
-@Composable
-private fun chatRoomViewModel(chatRoomId: Long, groupId: Long?): ChatRoomViewModel {
-    val container = LocalAppContainer.current
-    // viewModel{} 블록은 @Composable이 아니라 압축 실행기를 먼저 받아 클로저로 넘긴다
-    val videoCompressor = rememberVideoCompressor()
-
-    return viewModel(key = "chat-room-$chatRoomId") {
-        ChatRoomViewModel(
-            groupId = groupId,
-            chatRoomId = chatRoomId,
-            getChatMessagesUseCase = container.getChatMessagesUseCase,
-            sendChatMessageUseCase = container.sendChatMessageUseCase,
-            markChatMessagesReadUseCase = container.markChatMessagesReadUseCase,
-            uploadChatFileUseCase = container.uploadChatFileUseCase,
-            sendChatTypingUseCase = container.sendChatTypingUseCase,
-            getChatReadPositionsUseCase = container.getChatReadPositionsUseCase,
-            getCallRosterUseCase = container.getCallRosterUseCase,
-            getGroupMembersUseCase = container.getGroupMembersUseCase,
-            observeChatRoomEventsUseCase = container.observeChatRoomEventsUseCase,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase,
-            videoCompressor = videoCompressor
-        )
     }
 }
 
@@ -851,7 +848,7 @@ private fun MessageRow(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            attachment.name ?: "파일",
+                            attachment.name ?: stringResource(Res.string.common_file),
                             style = SgTheme.typography.bodySmall,
                             color = sg.ink,
                             maxLines = 1
@@ -882,7 +879,7 @@ private fun MessageRow(
 @Composable
 private fun ReadCountLabel(readCount: Int, modifier: Modifier = Modifier) {
     Text(
-        if (readCount > 1) "읽음 $readCount" else "읽음",
+        if (readCount > 1) stringResource(Res.string.chat_read_n, readCount) else stringResource(Res.string.chat_read),
         style = SgTheme.typography.labelSmall,
         color = SgTheme.colors.accent,
         modifier = modifier
@@ -941,7 +938,7 @@ private fun PendingAttachmentChip(
             )
         }
         IconButton(onClick = onClear, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "첨부 취소", tint = sg.inkSoft, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.chat_room_attachment_cancel), tint = sg.inkSoft, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -978,7 +975,7 @@ private fun MessageInputBar(
         IconButton(onClick = onToggleAttachments, enabled = !isSending, modifier = Modifier.size(28.dp)) {
             Icon(
                 if (attachmentsOpen) Icons.Default.Close else Icons.Default.Add,
-                contentDescription = if (attachmentsOpen) "첨부 닫기" else "첨부",
+                contentDescription = if (attachmentsOpen) stringResource(Res.string.chat_room_attachments_close) else stringResource(Res.string.chat_room_attachments),
                 tint = sg.inkSoft
             )
         }
@@ -986,7 +983,7 @@ private fun MessageInputBar(
         SgComposerField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = if (hasPendingAttachment) "메시지 (선택)" else "메시지를 입력하세요.",
+            placeholder = if (hasPendingAttachment) stringResource(Res.string.chat_room_input_placeholder_attachment) else stringResource(Res.string.chat_room_input_placeholder),
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onSend, enabled = canSend, modifier = Modifier.size(28.dp)) {
@@ -995,7 +992,7 @@ private fun MessageInputBar(
             } else {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "전송",
+                    contentDescription = stringResource(Res.string.common_send),
                     tint = if (canSend) sg.accent else sg.inkFaint
                 )
             }
@@ -1019,12 +1016,12 @@ private fun AttachmentPanel(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // 패널이 이모지 페이지로 전환된다(닫히지 않음) — 선택은 입력창에 덧붙는다
-        item { AttachmentPanelItem(Icons.Default.EmojiEmotions, "이모지", onPickEmoji, Modifier.fillMaxWidth()) }
-        item { AttachmentPanelItem(Icons.Default.Image, "사진", onPickImage, Modifier.fillMaxWidth()) }
-        item { AttachmentPanelItem(Icons.Default.AttachFile, "파일", onPickFile, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.EmojiEmotions, stringResource(Res.string.chat_room_emoji), onPickEmoji, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.Image, stringResource(Res.string.common_photo), onPickImage, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.AttachFile, stringResource(Res.string.common_file), onPickFile, Modifier.fillMaxWidth()) }
         // 통화 발신과 같은 경로(카톡 미러) — 보이스톡=카메라 OFF·수화구 시작, 페이스톡=영상 통화
-        item { AttachmentPanelItem(Icons.Default.Call, "보이스톡", { onStartCall(false) }, Modifier.fillMaxWidth()) }
-        item { AttachmentPanelItem(Icons.Default.Videocam, "페이스톡", { onStartCall(true) }, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.Call, stringResource(Res.string.call_voice_talk), { onStartCall(false) }, Modifier.fillMaxWidth()) }
+        item { AttachmentPanelItem(Icons.Default.Videocam, stringResource(Res.string.call_video_talk), { onStartCall(true) }, Modifier.fillMaxWidth()) }
     }
 }
 

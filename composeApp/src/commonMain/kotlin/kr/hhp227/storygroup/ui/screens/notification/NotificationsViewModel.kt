@@ -24,6 +24,10 @@ import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseC
 import kr.hhp227.storygroup.shared.domain.usecase.MarkNotificationAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObservePersonalEventsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.notifications_error_mark
+import storygroup.composeapp.generated.resources.notifications_error_mark_all
 
 /**
  * 알림 — 웹 /notifications 미러. 목록은 UiState에 담기는 최신 PagingData(다른 페이징 화면과 동일),
@@ -90,7 +94,7 @@ class NotificationsViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(processingId = null, actionError = e.message ?: "읽음 처리에 실패했습니다.") }
+                    _uiState.update { it.copy(processingId = null, actionError = e.message ?: getString(Res.string.notifications_error_mark)) }
                 }
         }
     }
@@ -109,7 +113,7 @@ class NotificationsViewModel(
                     _event.tryEmit(Event.RefreshList)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isMarkingAll = false, actionError = e.message ?: "전체 읽음 처리에 실패했습니다.") }
+                    _uiState.update { it.copy(isMarkingAll = false, actionError = e.message ?: getString(Res.string.notifications_error_mark_all)) }
                 }
         }
     }

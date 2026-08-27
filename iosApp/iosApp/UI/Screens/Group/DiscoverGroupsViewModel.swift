@@ -94,10 +94,10 @@ final class DiscoverGroupsViewModel: MviViewModel {
     }
 
     init(
-        getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase,
-        joinGroupUseCase: JoinGroupUseCase,
-        joinGroupByCodeUseCase: JoinGroupByCodeUseCase,
-        cancelJoinRequestUseCase: CancelJoinRequestUseCase
+        getDiscoverGroupsPagingDataUseCase: GetDiscoverGroupsPagingDataUseCase = AppContainer.shared.getDiscoverGroupsPagingDataUseCase,
+        joinGroupUseCase: JoinGroupUseCase = AppContainer.shared.joinGroupUseCase,
+        joinGroupByCodeUseCase: JoinGroupByCodeUseCase = AppContainer.shared.joinGroupByCodeUseCase,
+        cancelJoinRequestUseCase: CancelJoinRequestUseCase = AppContainer.shared.cancelJoinRequestUseCase
     ) {
         self.joinGroupUseCase = joinGroupUseCase
         self.joinGroupByCodeUseCase = joinGroupByCodeUseCase

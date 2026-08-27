@@ -40,6 +40,15 @@ import kr.hhp227.storygroup.ui.util.PickedFile
 import kr.hhp227.storygroup.ui.util.VideoCompressor
 import kr.hhp227.storygroup.ui.util.deleteFile
 import kr.hhp227.storygroup.ui.util.readFileBytes
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.chat_room_error_load
+import storygroup.composeapp.generated.resources.chat_room_error_load_older
+import storygroup.composeapp.generated.resources.chat_room_error_send
+import storygroup.composeapp.generated.resources.video_error_compress
+import storygroup.composeapp.generated.resources.video_error_read_info
+import storygroup.composeapp.generated.resources.video_error_too_large
+import storygroup.composeapp.generated.resources.video_error_too_long
 
 /**
  * 채팅방 — 이력은 REST 최신순 오프셋 페이징(웹은 최신 50 고정, 앱은 "이전 메시지" 추가 로드),
@@ -138,7 +147,7 @@ class ChatRoomViewModel(
                     loadReadPositions()
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "메시지를 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.chat_room_error_load)) }
                 }
         }
     }
@@ -166,7 +175,7 @@ class ChatRoomViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoadingOlder = false, actionError = e.message ?: "이전 메시지를 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoadingOlder = false, actionError = e.message ?: getString(Res.string.chat_room_error_load_older)) }
                 }
         }
     }
@@ -178,12 +187,18 @@ class ChatRoomViewModel(
     private fun attachVideo(picked: PickedFile) {
         val filePath = picked.filePath
         if (filePath == null || picked.durationMs == null) {
-            _uiState.update { it.copy(actionError = "동영상 정보를 읽지 못했습니다.") }
+            viewModelScope.launch {
+                _uiState.update { it.copy(actionError = getString(Res.string.video_error_read_info)) }
+            }
             return
         }
         when (val plan = VideoCompressionPlanner.plan(picked.durationMs, picked.sizeBytes, picked.width, picked.height)) {
-            VideoPlan.RejectTooLarge -> _uiState.update { it.copy(actionError = "파일이 너무 큽니다. (최대 500MB)") }
-            VideoPlan.RejectTooLong -> _uiState.update { it.copy(actionError = "동영상은 최대 3분까지 첨부할 수 있습니다.") }
+            VideoPlan.RejectTooLarge -> viewModelScope.launch {
+                _uiState.update { it.copy(actionError = getString(Res.string.video_error_too_large)) }
+            }
+            VideoPlan.RejectTooLong -> viewModelScope.launch {
+                _uiState.update { it.copy(actionError = getString(Res.string.video_error_too_long)) }
+            }
             VideoPlan.SkipAlreadySmall -> {
                 val bytes = readFileBytes(filePath)
                 deleteFile(filePath)
@@ -231,12 +246,12 @@ class ChatRoomViewModel(
                                     compressAndAttach(picked, retryPlan, isRetry = true)
                                 } else {
                                     deleteFile(filePath)
-                                    _uiState.update { it.copy(compressionProgress = null, actionError = "동영상 압축에 실패했습니다.") }
+                                    _uiState.update { it.copy(compressionProgress = null, actionError = getString(Res.string.video_error_compress)) }
                                 }
                             }
                             else -> {
                                 deleteFile(filePath)
-                                _uiState.update { it.copy(compressionProgress = null, actionError = "동영상 압축에 실패했습니다.") }
+                                _uiState.update { it.copy(compressionProgress = null, actionError = getString(Res.string.video_error_compress)) }
                             }
                         }
                     }
@@ -269,7 +284,7 @@ class ChatRoomViewModel(
                 }
                 .onFailure { e ->
                     // 첨부는 유지 — 업로드/전송 실패 시 같은 첨부로 재시도할 수 있다(웹 미러)
-                    _uiState.update { it.copy(isSending = false, actionError = e.message ?: "전송에 실패했습니다.") }
+                    _uiState.update { it.copy(isSending = false, actionError = e.message ?: getString(Res.string.chat_room_error_send)) }
                 }
         }
     }

@@ -25,17 +25,11 @@ struct CallView: View {
         CallContent(viewModel: viewModel, title: title)
     }
 
-    init(chatRoomId: Int64, title: String, ring: Bool, video: Bool, container: AppContainer) {
+    init(chatRoomId: Int64, title: String, ring: Bool, video: Bool) {
         _viewModel = StateObject(wrappedValue: CallViewModel(
             chatRoomId: chatRoomId,
             ring: ring,
-            video: video,
-            observeRtcCallEventsUseCase: container.observeRtcCallEventsUseCase,
-            observeRtcSignalsUseCase: container.observeRtcSignalsUseCase,
-            sendRtcSignalUseCase: container.sendRtcSignalUseCase,
-            sendCallInviteUseCase: container.sendCallInviteUseCase,
-            getIceServersUseCase: container.getIceServersUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
+            video: video
         ))
         self.title = title
     }

@@ -55,7 +55,7 @@ final class BlockedUsersViewModel: MviViewModel {
         }
     }
 
-    init(getBlockedUsersUseCase: GetBlockedUsersUseCase, unblockUserUseCase: UnblockUserUseCase) {
+    init(getBlockedUsersUseCase: GetBlockedUsersUseCase = AppContainer.shared.getBlockedUsersUseCase, unblockUserUseCase: UnblockUserUseCase = AppContainer.shared.unblockUserUseCase) {
         self.getBlockedUsersUseCase = getBlockedUsersUseCase
         self.unblockUserUseCase = unblockUserUseCase
         refresh()

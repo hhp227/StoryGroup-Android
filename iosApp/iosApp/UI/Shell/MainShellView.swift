@@ -48,21 +48,18 @@ struct MainShellView: View {
 
     let onLogout: () -> Void
 
-    /// 화면들이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
-    private let container: AppContainer
-
     /// 프로필 화면과 드로어 헤더가 공유하는 세션 상태 — 공유 소유자(셸)가 선언한다.
     /// 화면 전용 VM(홈/그룹)은 각 화면(HomeView/GroupsView)이 소유한다(Compose default parameter 미러).
-    @StateObject private var profileViewModel: ProfileViewModel
+    @StateObject private var profileViewModel = ProfileViewModel()
 
     /// 종 아이콘 뱃지와 알림 화면이 공유 — Compose sessionNotificationsViewModel 미러
-    @StateObject private var notificationsViewModel: NotificationsViewModel
+    @StateObject private var notificationsViewModel = NotificationsViewModel()
 
     /// 채팅 탭 뱃지·허브·채팅방 진입/이탈 신호가 공유 — Compose sessionChatViewModel 미러
-    @StateObject private var chatViewModel: ChatViewModel
+    @StateObject private var chatViewModel = ChatViewModel()
 
     /// 수신 통화 배너(DM·그룹 방) — 개인 큐 CALL_INVITE를 세션 전역에서 받는다(Compose 미러)
-    @StateObject private var incomingCallViewModel: IncomingCallViewModel
+    @StateObject private var incomingCallViewModel = IncomingCallViewModel()
 
     /// 채팅방 우측 드로어 게시대 — 방이 세션을 열면 아래 오버레이가 내비 컨테이너 밖에서 그린다.
     /// Compose ChatRoomDrawer가 스크림으로 상단바까지 덮는 것의 iOS 등가(수신 콜 배너와 같은 층)
@@ -153,7 +150,6 @@ struct MainShellView: View {
                 current: navigationViewModel.uiState.currentTab,
                 onNavigationAction: navigationViewModel.onAction,
                 pendingResults: navigationViewModel.uiState.pendingResults,
-                container: container,
                 profile: profileViewModel.uiState.profile,
                 notificationsViewModel: notificationsViewModel,
                 chatViewModel: chatViewModel,
@@ -165,7 +161,6 @@ struct MainShellView: View {
                 current: navigationViewModel.uiState.currentTab,
                 onNavigationAction: navigationViewModel.onAction,
                 pendingResults: navigationViewModel.uiState.pendingResults,
-                container: container,
                 profile: profileViewModel.uiState.profile,
                 notificationsViewModel: notificationsViewModel,
                 chatViewModel: chatViewModel,
@@ -185,7 +180,6 @@ struct MainShellView: View {
         case .groupDetail(let groupId):
             GroupDetailView(
                 groupId: groupId,
-                container: container,
                 chatViewModel: chatViewModel,
                 theme: theme,
                 profileViewModel: profileViewModel,
@@ -202,7 +196,6 @@ struct MainShellView: View {
             )
         case .postDetail(let groupId, let postId):
             PostDetailView(
-                container: container,
                 groupId: groupId,
                 postId: postId,
                 chatViewModel: chatViewModel,
@@ -213,14 +206,13 @@ struct MainShellView: View {
                 chatRoomId: chatRoomId,
                 groupId: groupId,
                 title: title,
-                container: container,
                 chatViewModel: chatViewModel
             )
         case .userProfile:
             // 시트로 처리한다(Compose dialog<UserProfileRoute> 미러) — onReceive가 걸러서 여기로는 안 온다
             EmptyView()
         case .createPost(let groupId, let postId):
-            CreatePostView(container: container, groupId: groupId, postId: postId) {
+            CreatePostView(groupId: groupId, postId: postId) {
                 // 성공 시 결과를 publish — 수정이면 상세가, 신규면 피드가 읽어간다(Compose CreatePostScreen
                 // Event.Created 미러). CreatePostView가 스스로 dismiss()해서 닫으므로 여기서
                 // navigateBack은 부르지 않는다(부르면 path가 두 칸 줄어든다).
@@ -233,7 +225,7 @@ struct MainShellView: View {
                 }
             }
         case .groupEdit(let groupId):
-            GroupEditView(groupId: groupId, container: container) {
+            GroupEditView(groupId: groupId) {
                 // 저장 성공 — 상세·목록 갱신 신호 발행 후 복귀(Compose GroupEditScreen onSaved 미러).
                 // GroupEditView는(계정 설정과 달리) 스스로 pop하지 않으므로 여기서 navigateBack까지 부른다.
                 // ⚠️ groupUpdated도 postCreated/postUpdated와 같은 사정 — 오늘 iOS에서 pendingResults를
@@ -246,20 +238,19 @@ struct MainShellView: View {
         case .groupReports(let groupId):
             GroupReportsView(
                 groupId: groupId,
-                container: container,
                 chatViewModel: chatViewModel,
                 profileViewModel: profileViewModel
             )
         case .call(let chatRoomId, let title, let ring, let video):
-            CallView(chatRoomId: chatRoomId, title: title, ring: ring, video: video, container: container)
+            CallView(chatRoomId: chatRoomId, title: title, ring: ring, video: video)
         case .accountSettings:
             // 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다
-            AccountSettingsView(container: container, profileViewModel: profileViewModel)
+            AccountSettingsView(profileViewModel: profileViewModel)
         case .appSettings:
             SGSettingsView(theme: theme)
         case .blockedUsers:
             // 차단 사용자 관리 — 프로필 탭 메뉴 진입(웹 /settings/blocked 미러)
-            BlockedUsersView(container: container)
+            BlockedUsersView()
         case .createGroup, .discoverGroups:
             // ⚠️ CreateGroupView/DiscoverGroupsView는 GroupsViewModel(그룹 탭과 같은 인스턴스)을 요구한다.
             // Kotlin은 sessionViewModel로 어디서든 같은 인스턴스를 돌려받지만 iOS엔 그런 세션 저장소가
@@ -274,7 +265,6 @@ struct MainShellView: View {
                 }
         case .search:
             SearchView(
-                container: container,
                 chatViewModel: chatViewModel,
                 theme: theme,
                 profileViewModel: profileViewModel,
@@ -287,7 +277,6 @@ struct MainShellView: View {
         if let userId = selectedUserId {
             UserProfileView(
                 userId: userId,
-                container: container,
                 onOpenChatRoom: { room in
                     profileFollowUp = .chatRoom(room)
                     selectedUserId = nil
@@ -324,24 +313,7 @@ struct MainShellView: View {
         )
     }
 
-    init(container: AppContainer, theme: SGThemeState, onLogout: @escaping () -> Void) {
-        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(getMyProfileUseCase: container.getMyProfileUseCase))
-        _notificationsViewModel = StateObject(wrappedValue: NotificationsViewModel(
-            getNotificationsPagingDataUseCase: container.getNotificationsPagingDataUseCase,
-            getUnreadNotificationCountUseCase: container.getUnreadNotificationCountUseCase,
-            markNotificationAsReadUseCase: container.markNotificationAsReadUseCase,
-            markAllNotificationsAsReadUseCase: container.markAllNotificationsAsReadUseCase,
-            observePersonalEventsUseCase: container.observePersonalEventsUseCase
-        ))
-        _chatViewModel = StateObject(wrappedValue: ChatViewModel(
-            getGroupChatRoomsUseCase: container.getGroupChatRoomsUseCase,
-            getDirectRoomsUseCase: container.getDirectRoomsUseCase,
-            observePersonalEventsUseCase: container.observePersonalEventsUseCase
-        ))
-        _incomingCallViewModel = StateObject(wrappedValue: IncomingCallViewModel(
-            observePersonalEventsUseCase: container.observePersonalEventsUseCase
-        ))
-        self.container = container
+    init(theme: SGThemeState, onLogout: @escaping () -> Void) {
         self.theme = theme
         self.onLogout = onLogout
     }
@@ -352,9 +324,6 @@ struct MainShellView: View {
 /// 내비바(제목·툴바)는 셸이 루트 NavigationStack 위에서 목적지별로 구성한다.
 struct DestinationView: View {
     let destination: SGDestination
-
-    /// 화면이 자기 ViewModel을 만들 때 쓴다 — Compose LocalAppContainer 미러
-    let container: AppContainer
 
     let profile: Profile?
 
@@ -402,17 +371,16 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView(container: container, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
+            HomeView(chatViewModel: chatViewModel, profileViewModel: profileViewModel)
         case .groups:
             GroupsView(
-                container: container,
                 onOpenGroup: onOpenGroup,
                 refreshRequested: groupsRefreshRequested,
                 onRefreshHandled: onGroupsRefreshHandled
             )
         case .friends:
             // 친구 탭 "메시지" 버튼 → DM 채팅방(groupId=nil), 행 탭 → 공개 프로필(웹 /users/[id] 미러)
-            FriendsView(container: container, onOpenChatRoom: onOpenChatRoom, onOpenUserProfile: onOpenUserProfile)
+            FriendsView(onOpenChatRoom: onOpenChatRoom, onOpenUserProfile: onOpenUserProfile)
         case .chat:
             ChatView(viewModel: chatViewModel, onOpenChatRoom: onOpenChatRoom)
         case .notifications:

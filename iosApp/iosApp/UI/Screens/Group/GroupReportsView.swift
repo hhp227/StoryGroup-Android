@@ -8,8 +8,6 @@ struct GroupReportsView: View {
     let groupId: Int64
 
     // 게시글 상세 push 체인에 필요 — 셸 소유 세션 VM pass-through(GroupDetailView 선례)
-    private let container: AppContainer
-
     private let chatViewModel: ChatViewModel
 
     private let profileViewModel: ProfileViewModel
@@ -207,7 +205,6 @@ struct GroupReportsView: View {
     @ViewBuilder private var postDetailDestination: some View {
         if let postId = selectedPostId {
             PostDetailView(
-                container: container,
                 groupId: groupId,
                 postId: postId,
                 chatViewModel: chatViewModel,
@@ -224,15 +221,10 @@ struct GroupReportsView: View {
         )
     }
 
-    init(groupId: Int64, container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(groupId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         self.groupId = groupId
-        self.container = container
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
-        _groupReportsViewModel = StateObject(wrappedValue: GroupReportsViewModel(
-            groupId: groupId,
-            getGroupReportsUseCase: container.getGroupReportsUseCase,
-            processGroupReportUseCase: container.processGroupReportUseCase
-        ))
+        _groupReportsViewModel = StateObject(wrappedValue: GroupReportsViewModel(groupId: groupId))
     }
 }

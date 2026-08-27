@@ -8,7 +8,7 @@ import class Shared.Group
 /// 상세는 루트 NavigationStack 풀스크린 push(onOpenGroup) — Compose NavHost(GroupDetailRoute) 미러.
 /// 계층은 Compose GroupsScreen과 1:1 — View=상태 소유(VM 선언), Content=구독+UI.
 struct GroupsView: View {
-    @StateObject private var viewModel: GroupsViewModel
+    @StateObject private var viewModel = GroupsViewModel()
 
     let onOpenGroup: (Group) -> Void
 
@@ -17,13 +17,9 @@ struct GroupsView: View {
 
     let onRefreshHandled: () -> Void
 
-    /// 화면이 자기 push 목적지를 만들 때 쓴다 — 그룹 만들기/찾기 화면이 이 인스턴스를 그대로 전달받아 갱신한다
-    private let container: AppContainer
-
     var body: some View {
         GroupsContent(
             viewModel: viewModel,
-            container: container,
             onOpenGroup: onOpenGroup,
             refreshRequested: refreshRequested,
             onRefreshHandled: onRefreshHandled
@@ -31,15 +27,10 @@ struct GroupsView: View {
     }
 
     init(
-        container: AppContainer,
         onOpenGroup: @escaping (Group) -> Void,
         refreshRequested: Bool,
         onRefreshHandled: @escaping () -> Void
     ) {
-        _viewModel = StateObject(wrappedValue: GroupsViewModel(
-            getMyGroupsPagingDataUseCase: container.getMyGroupsPagingDataUseCase
-        ))
-        self.container = container
         self.onOpenGroup = onOpenGroup
         self.refreshRequested = refreshRequested
         self.onRefreshHandled = onRefreshHandled
@@ -48,8 +39,6 @@ struct GroupsView: View {
 
 private struct GroupsContent: View {
     @ObservedObject var viewModel: GroupsViewModel
-
-    let container: AppContainer
 
     let onOpenGroup: (Group) -> Void
 
@@ -138,15 +127,15 @@ private struct GroupsContent: View {
     }
 
     private var createGroupDestination: some View {
-        CreateGroupView(container: container, groupsViewModel: viewModel)
+        CreateGroupView(groupsViewModel: viewModel)
     }
 
     private var discoverGroupsDestination: some View {
-        DiscoverGroupsView(container: container, groupsViewModel: viewModel)
+        DiscoverGroupsView(groupsViewModel: viewModel)
     }
 
     private var pendingGroupsDestination: some View {
-        PendingGroupsView(container: container)
+        PendingGroupsView()
     }
 
     /// 로딩/에러/빈 상태는 Paging LoadState로 그린다(Compose GroupsContent 미러).
@@ -228,7 +217,6 @@ private struct GroupsContent: View {
 
     init(
         viewModel: GroupsViewModel,
-        container: AppContainer,
         onOpenGroup: @escaping (Group) -> Void,
         refreshRequested: Bool,
         onRefreshHandled: @escaping () -> Void
@@ -237,7 +225,6 @@ private struct GroupsContent: View {
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
-        self.container = container
         self.onOpenGroup = onOpenGroup
         self.refreshRequested = refreshRequested
         self.onRefreshHandled = onRefreshHandled

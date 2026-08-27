@@ -25,6 +25,18 @@ import kr.hhp227.storygroup.ui.util.PickedImage
 import kr.hhp227.storygroup.ui.util.VideoCompressor
 import kr.hhp227.storygroup.ui.util.deleteFile
 import kr.hhp227.storygroup.ui.util.readFileBytes
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.create_post_error_create
+import storygroup.composeapp.generated.resources.create_post_error_edit
+import storygroup.composeapp.generated.resources.create_post_error_empty
+import storygroup.composeapp.generated.resources.create_post_error_upload_video
+import storygroup.composeapp.generated.resources.error_upload_image
+import storygroup.composeapp.generated.resources.post_error_load
+import storygroup.composeapp.generated.resources.video_error_compress
+import storygroup.composeapp.generated.resources.video_error_read_info
+import storygroup.composeapp.generated.resources.video_error_too_large
+import storygroup.composeapp.generated.resources.video_error_too_long
 
 /**
  * 게시글 작성 — groupId가 null이면 라운지(홈 피드)에 게시한다(웹 메인 피드 폼 미러).
@@ -72,7 +84,7 @@ class CreatePostViewModel(
                         }
                     }
                     .onFailure { e ->
-                        _uiState.update { it.copy(isLoading = false, error = e.message ?: "게시글을 불러오지 못했습니다.") }
+                        _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.post_error_load)) }
                     }
             }
         }
@@ -112,7 +124,7 @@ class CreatePostViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isUploadingImage = false, error = e.message ?: "이미지 업로드에 실패했습니다.") }
+                    _uiState.update { it.copy(isUploadingImage = false, error = e.message ?: getString(Res.string.error_upload_image)) }
                 }
         }
     }
@@ -121,13 +133,13 @@ class CreatePostViewModel(
         if (_uiState.value.videos.size >= MAX_VIDEOS) return
         val filePath = picked.filePath
         if (filePath == null || picked.durationMs == null) {
-            _uiState.update { it.copy(error = "동영상 정보를 읽지 못했습니다.") }
+            viewModelScope.launch { _uiState.update { it.copy(error = getString(Res.string.video_error_read_info)) } }
             return
         }
         // 올려놓고 서버 거절을 기다리게 하지 않는다 — 판정(§2)은 선택 즉시, 압축은 백그라운드
         when (val plan = VideoCompressionPlanner.plan(picked.durationMs, picked.sizeBytes, picked.width, picked.height)) {
-            VideoPlan.RejectTooLarge -> _uiState.update { it.copy(error = "파일이 너무 큽니다. (최대 500MB)") }
-            VideoPlan.RejectTooLong -> _uiState.update { it.copy(error = "동영상은 최대 3분까지 첨부할 수 있습니다.") }
+            VideoPlan.RejectTooLarge -> viewModelScope.launch { _uiState.update { it.copy(error = getString(Res.string.video_error_too_large)) } }
+            VideoPlan.RejectTooLong -> viewModelScope.launch { _uiState.update { it.copy(error = getString(Res.string.video_error_too_long)) } }
             // 원본이 이미 5MB 이하 — 재인코딩은 시간 낭비+화질 손실(§2-3)
             VideoPlan.SkipAlreadySmall -> uploadVideoBytes(readFileBytes(filePath), picked.fileName, picked.contentType)
             is VideoPlan.Compress -> compressAndUpload(picked, plan, isRetry = false)
@@ -167,12 +179,12 @@ class CreatePostViewModel(
                                     compressAndUpload(picked, retryPlan, isRetry = true)
                                 } else {
                                     deleteFile(filePath)
-                                    _uiState.update { it.copy(compressionProgress = null, error = "동영상 압축에 실패했습니다.") }
+                                    _uiState.update { it.copy(compressionProgress = null, error = getString(Res.string.video_error_compress)) }
                                 }
                             }
                             else -> {
                                 deleteFile(filePath)
-                                _uiState.update { it.copy(compressionProgress = null, error = "동영상 압축에 실패했습니다.") }
+                                _uiState.update { it.copy(compressionProgress = null, error = getString(Res.string.video_error_compress)) }
                             }
                         }
                     }
@@ -191,7 +203,7 @@ class CreatePostViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isUploadingVideo = false, error = e.message ?: "동영상 업로드에 실패했습니다.") }
+                    _uiState.update { it.copy(isUploadingVideo = false, error = e.message ?: getString(Res.string.create_post_error_upload_video)) }
                 }
         }
     }
@@ -203,7 +215,7 @@ class CreatePostViewModel(
         val videos = _uiState.value.videos
         // 본문/첨부 중 하나는 필수 — 백엔드 규칙과 일치(웹 폼의 required={images.length===0} 미러)
         if (text.isBlank() && images.isEmpty() && videos.isEmpty()) {
-            _uiState.update { it.copy(error = "내용을 입력하거나 사진·동영상을 추가해주세요.") }
+            viewModelScope.launch { _uiState.update { it.copy(error = getString(Res.string.create_post_error_empty)) } }
             return
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
@@ -219,7 +231,7 @@ class CreatePostViewModel(
                 _uiState.update { it.copy(isLoading = false) }
                 _event.tryEmit(Event.Created)
             }.onFailure { e ->
-                val fallback = if (postId != null) "게시글 수정에 실패했습니다." else "게시글 작성에 실패했습니다."
+                val fallback = if (postId != null) getString(Res.string.create_post_error_edit) else getString(Res.string.create_post_error_create)
 
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: fallback) }
             }

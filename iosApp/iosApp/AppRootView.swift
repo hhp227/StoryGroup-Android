@@ -2,13 +2,11 @@ import SwiftUI
 
 /// 루트 — Compose App.kt 미러. 테마 계산 후 세션 상태에 따라 인증 플로우/메인 쉘을 라우팅한다.
 struct AppRootView: View {
-    let container: AppContainer
-
     @StateObject private var theme = SGThemeState()
 
-    @StateObject private var loginViewModel: LoginViewModel
+    @StateObject private var loginViewModel = LoginViewModel()
 
-    @StateObject private var networkStatusViewModel: NetworkStatusViewModel
+    @StateObject private var networkStatusViewModel = NetworkStatusViewModel()
 
     @Environment(\.colorScheme) private var systemScheme
 
@@ -27,9 +25,9 @@ struct AppRootView: View {
         ZStack(alignment: .top) {
             Group {
                 if loginViewModel.uiState.isLoggedIn {
-                    MainShellView(container: container, theme: theme, onLogout: { loginViewModel.onAction(.logout) })
+                    MainShellView(theme: theme, onLogout: { loginViewModel.onAction(.logout) })
                 } else {
-                    AuthFlowView(container: container, loginViewModel: loginViewModel)
+                    AuthFlowView(loginViewModel: loginViewModel)
                 }
             }
             if networkStatusViewModel.uiState.networkAlertState.isVisible {
@@ -50,23 +48,10 @@ struct AppRootView: View {
         .preferredColorScheme(theme.nightMode == .system ? nil : (isDark ? .dark : .light))
     }
 
-    init(container: AppContainer) {
-        self.container = container
-        _loginViewModel = StateObject(wrappedValue: LoginViewModel(
-            isLoggedInUseCase: container.isLoggedInUseCase,
-            loginUseCase: container.loginUseCase,
-            logoutUseCase: container.logoutUseCase
-        ))
-        _networkStatusViewModel = StateObject(wrappedValue: NetworkStatusViewModel(
-            observeNetworkAlertStateUseCase: container.observeNetworkAlertStateUseCase
-        ))
-    }
 }
 
 /// 로그인 ↔ 가입 전환 — Compose AuthFlow 미러. 가입 성공 시 안내 문구와 함께 로그인으로 복귀.
 struct AuthFlowView: View {
-    let container: AppContainer
-
     @ObservedObject var loginViewModel: LoginViewModel
 
     @State private var showRegister = false
@@ -76,7 +61,6 @@ struct AuthFlowView: View {
     var body: some View {
         if showRegister {
             RegisterView(
-                container: container,
                 onRegistered: {
                     justRegistered = true
                     showRegister = false

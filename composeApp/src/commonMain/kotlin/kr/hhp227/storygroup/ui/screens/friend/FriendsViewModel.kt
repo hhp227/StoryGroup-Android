@@ -24,6 +24,13 @@ import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SearchUsersUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.friends_error_add
+import storygroup.composeapp.generated.resources.friends_error_load
+import storygroup.composeapp.generated.resources.friends_error_open_dm
+import storygroup.composeapp.generated.resources.friends_error_remove
+import storygroup.composeapp.generated.resources.search_error_failed
 
 /**
  * 친구 탭 — 웹 /search(친구 목록 기본 화면+검색 결과 토글, 카카오톡 친구 탭 패턴) 미러.
@@ -72,7 +79,7 @@ class FriendsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "친구 목록을 불러오지 못했습니다.")
+                        it.copy(isLoading = false, error = e.message ?: getString(Res.string.friends_error_load))
                     }
                 }
         }
@@ -96,7 +103,7 @@ class FriendsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isSearching = false, searchError = e.message ?: "검색에 실패했습니다.")
+                        it.copy(isSearching = false, searchError = e.message ?: getString(Res.string.search_error_failed))
                     }
                 }
         }
@@ -126,7 +133,7 @@ class FriendsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingUserId = null, actionError = e.message ?: "친구 등록에 실패했습니다.")
+                        it.copy(processingUserId = null, actionError = e.message ?: getString(Res.string.friends_error_add))
                     }
                 }
         }
@@ -149,7 +156,7 @@ class FriendsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(processingUserId = null, actionError = e.message ?: "친구 해제에 실패했습니다.")
+                        it.copy(processingUserId = null, actionError = e.message ?: getString(Res.string.friends_error_remove))
                     }
                 }
         }
@@ -169,7 +176,7 @@ class FriendsViewModel(
                 }
                 .onFailure { e ->
                     // 차단 관계(403 BLOCKED) 등 — 목록 상단에 표시된다
-                    _uiState.update { it.copy(isOpeningDm = false, actionError = e.message ?: "DM을 열지 못했습니다.") }
+                    _uiState.update { it.copy(isOpeningDm = false, actionError = e.message ?: getString(Res.string.friends_error_open_dm)) }
                 }
         }
     }

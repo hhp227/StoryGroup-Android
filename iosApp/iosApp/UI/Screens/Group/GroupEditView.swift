@@ -146,13 +146,8 @@ struct GroupEditView: View {
         .buttonStyle(.plain)
     }
 
-    init(groupId: Int64, container: AppContainer, onSaved: @escaping () -> Void) {
-        _viewModel = StateObject(wrappedValue: GroupEditViewModel(
-            groupId: groupId,
-            getGroupUseCase: container.getGroupUseCase,
-            updateGroupUseCase: container.updateGroupUseCase,
-            uploadImageUseCase: container.uploadImageUseCase
-        ))
+    init(groupId: Int64, onSaved: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: GroupEditViewModel(groupId: groupId))
         self.onSaved = onSaved
     }
 }

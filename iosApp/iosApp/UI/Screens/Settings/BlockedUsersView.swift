@@ -4,7 +4,7 @@ import Shared
 /// 차단 사용자 관리 — composeApp BlockedUsersScreen.kt와 1:1 미러(웹 /settings/blocked:
 /// 아바타+이름+차단일+해제 버튼). 진입점은 셸 프로필 탭 메뉴(MainShellView push).
 struct BlockedUsersView: View {
-    @StateObject private var blockedUsersViewModel: BlockedUsersViewModel
+    @StateObject private var blockedUsersViewModel = BlockedUsersViewModel()
 
     @Environment(\.sgColors) private var colors
 
@@ -96,12 +96,5 @@ struct BlockedUsersView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-    }
-
-    init(container: AppContainer) {
-        _blockedUsersViewModel = StateObject(wrappedValue: BlockedUsersViewModel(
-            getBlockedUsersUseCase: container.getBlockedUsersUseCase,
-            unblockUserUseCase: container.unblockUserUseCase
-        ))
     }
 }

@@ -13,6 +13,10 @@ import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.shared.domain.usecase.CancelJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyJoinRequestedGroupsUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.pending_error_load
+import storygroup.composeapp.generated.resources.request_cancel_failed
 
 /**
  * 가입 신청중 화면 — 레거시 JoinRequestGroupFragment 미러(내 그룹 안 섹션에서 독립 화면으로 분리).
@@ -41,7 +45,7 @@ class PendingGroupsViewModel(
             runCatching { getMyJoinRequestedGroupsUseCase() }
                 .onSuccess { groups -> _uiState.update { it.copy(isLoading = false, groups = groups) } }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: "가입 신청중 그룹을 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: getString(Res.string.pending_error_load)) }
                 }
         }
     }
@@ -62,7 +66,7 @@ class PendingGroupsViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(cancelingGroupId = null, cancelError = e.message ?: "신청 취소에 실패했습니다.") }
+                    _uiState.update { it.copy(cancelingGroupId = null, cancelError = e.message ?: getString(Res.string.request_cancel_failed)) }
                 }
         }
     }

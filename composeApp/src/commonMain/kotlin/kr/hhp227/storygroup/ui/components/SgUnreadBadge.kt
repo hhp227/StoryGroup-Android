@@ -10,6 +10,9 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.nav_notifications
 
 /** 미읽음 수 뱃지 — 0이면 그리지 않고, 99 초과는 "99+"(레거시 BadgeDrawable 관행) */
 @Composable
@@ -30,7 +33,7 @@ fun SgUnreadBadge(count: Long, modifier: Modifier = Modifier) {
 fun SgBellAction(unreadCount: Long, onClick: () -> Unit) {
     IconButton(onClick = onClick) {
         BadgedBox(badge = { SgUnreadBadge(unreadCount) }) {
-            Icon(Icons.Default.Notifications, contentDescription = "알림")
+            Icon(Icons.Default.Notifications, contentDescription = stringResource(Res.string.nav_notifications))
         }
     }
 }

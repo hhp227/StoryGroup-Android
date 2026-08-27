@@ -19,6 +19,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetPublicProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.user_error_dm
+import storygroup.composeapp.generated.resources.user_error_friend
+import storygroup.composeapp.generated.resources.user_error_load
 
 /**
  * 공개 프로필 — 웹 /users/[userId] 미러. 본인이면 액션이 "프로필 수정"뿐이고,
@@ -61,7 +66,7 @@ class UserProfileViewModel(
                     _uiState.update { it.copy(isLoading = false, profile = profile) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: "프로필을 불러오지 못했습니다.") }
+                    _uiState.update { it.copy(isLoading = false, loadError = e.message ?: getString(Res.string.user_error_load)) }
                 }
         }
     }
@@ -91,7 +96,7 @@ class UserProfileViewModel(
                     _uiState.update { it.copy(isBusy = false, isFriend = !isFriend) }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(isBusy = false, actionError = e.message ?: "친구 처리에 실패했습니다.") }
+                    _uiState.update { it.copy(isBusy = false, actionError = e.message ?: getString(Res.string.user_error_friend)) }
                 }
         }
     }
@@ -111,7 +116,7 @@ class UserProfileViewModel(
                 }
                 .onFailure { e ->
                     // 차단 관계(403 BLOCKED) 등 — 인라인 문구로 노출
-                    _uiState.update { it.copy(isOpeningDm = false, actionError = e.message ?: "DM을 시작하지 못했습니다.") }
+                    _uiState.update { it.copy(isOpeningDm = false, actionError = e.message ?: getString(Res.string.user_error_dm)) }
                 }
         }
     }

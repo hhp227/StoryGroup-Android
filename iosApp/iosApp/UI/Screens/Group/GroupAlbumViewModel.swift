@@ -16,7 +16,7 @@ final class GroupAlbumViewModel: MviViewModel {
 
     func onAction(_ action: Never) {}
 
-    init(groupId: Int64, getGroupPhotosPagingDataUseCase: GetGroupPhotosPagingDataUseCase) {
+    init(groupId: Int64, getGroupPhotosPagingDataUseCase: GetGroupPhotosPagingDataUseCase = AppContainer.shared.getGroupPhotosPagingDataUseCase) {
         self.groupId = groupId
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다

@@ -28,9 +28,6 @@ struct GroupDetailView: View {
 
     @StateObject private var groupSettingsViewModel: GroupSettingsViewModel
 
-    /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
-    private let container: AppContainer
-
     /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
     private let chatViewModel: ChatViewModel
 
@@ -54,7 +51,6 @@ struct GroupDetailView: View {
             groupMembersViewModel: groupMembersViewModel,
             groupEventsViewModel: groupEventsViewModel,
             groupSettingsViewModel: groupSettingsViewModel,
-            container: container,
             chatViewModel: chatViewModel,
             theme: theme,
             profileViewModel: profileViewModel,
@@ -65,57 +61,18 @@ struct GroupDetailView: View {
 
     init(
         groupId: Int64,
-        container: AppContainer,
         chatViewModel: ChatViewModel,
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
         onGroupClosed: @escaping () -> Void,
         onGroupUpdated: @escaping () -> Void
     ) {
-        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(
-            groupId: groupId,
-            getGroupUseCase: container.getGroupUseCase,
-            getGroupDefaultChatRoomUseCase: container.getGroupDefaultChatRoomUseCase
-        ))
-        _groupFeedViewModel = StateObject(wrappedValue: GroupFeedViewModel(
-            groupId: groupId,
-            getGroupPostsPagingDataUseCase: container.getGroupPostsPagingDataUseCase,
-            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
-            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
-            togglePostLikeUseCase: container.togglePostLikeUseCase
-        ))
-        _groupAlbumViewModel = StateObject(wrappedValue: GroupAlbumViewModel(
-            groupId: groupId,
-            getGroupPhotosPagingDataUseCase: container.getGroupPhotosPagingDataUseCase
-        ))
-        _groupMembersViewModel = StateObject(wrappedValue: GroupMembersViewModel(
-            groupId: groupId,
-            getGroupMembersUseCase: container.getGroupMembersUseCase,
-            getJoinRequestsUseCase: container.getJoinRequestsUseCase,
-            approveJoinRequestUseCase: container.approveJoinRequestUseCase,
-            rejectJoinRequestUseCase: container.rejectJoinRequestUseCase,
-            createGroupInviteUseCase: container.createGroupInviteUseCase,
-            getBlockedUsersUseCase: container.getBlockedUsersUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
-        _groupEventsViewModel = StateObject(wrappedValue: GroupEventsViewModel(
-            groupId: groupId,
-            getGroupEventsUseCase: container.getGroupEventsUseCase,
-            getEventDetailUseCase: container.getEventDetailUseCase,
-            createEventUseCase: container.createEventUseCase,
-            deleteEventUseCase: container.deleteEventUseCase,
-            rsvpEventUseCase: container.rsvpEventUseCase,
-            cancelEventRsvpUseCase: container.cancelEventRsvpUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
-        _groupSettingsViewModel = StateObject(wrappedValue: GroupSettingsViewModel(
-            groupId: groupId,
-            getGroupUseCase: container.getGroupUseCase,
-            deleteGroupUseCase: container.deleteGroupUseCase,
-            leaveGroupUseCase: container.leaveGroupUseCase
-        ))
-        self.container = container
+        _viewModel = StateObject(wrappedValue: GroupDetailViewModel(groupId: groupId))
+        _groupFeedViewModel = StateObject(wrappedValue: GroupFeedViewModel(groupId: groupId))
+        _groupAlbumViewModel = StateObject(wrappedValue: GroupAlbumViewModel(groupId: groupId))
+        _groupMembersViewModel = StateObject(wrappedValue: GroupMembersViewModel(groupId: groupId))
+        _groupEventsViewModel = StateObject(wrappedValue: GroupEventsViewModel(groupId: groupId))
+        _groupSettingsViewModel = StateObject(wrappedValue: GroupSettingsViewModel(groupId: groupId))
         self.chatViewModel = chatViewModel
         self.theme = theme
         self.profileViewModel = profileViewModel
@@ -136,8 +93,6 @@ private struct GroupDetailContent: View {
     @ObservedObject var groupEventsViewModel: GroupEventsViewModel
 
     @ObservedObject var groupSettingsViewModel: GroupSettingsViewModel
-
-    let container: AppContainer
 
     /// DM 채팅방 push에 넘길 허브 세션 VM(셸 소유) — 진입/이탈 신호용
     let chatViewModel: ChatViewModel
@@ -469,7 +424,6 @@ private struct GroupDetailContent: View {
         case 1: GroupAlbumTab(
             photoItems: photoLazyPagingItems,
             groupId: viewModel.groupId,
-            container: container,
             chatViewModel: chatViewModel,
             profileViewModel: profileViewModel
         )
@@ -558,7 +512,6 @@ private struct GroupDetailContent: View {
                         // 차단한 사람은 멤버 탭에서도 빠져야 해서 재진입 시 .refresh가 다시 걸린다
                         NavigationLink {
                             PostDetailView(
-                                container: container,
                                 groupId: post.groupId,
                                 postId: post.id,
                                 chatViewModel: chatViewModel,
@@ -742,7 +695,6 @@ private struct GroupDetailContent: View {
                 chatRoomId: room.chatRoomId,
                 groupId: room.groupId,
                 title: room.title,
-                container: container,
                 chatViewModel: chatViewModel
             )
         }
@@ -751,7 +703,7 @@ private struct GroupDetailContent: View {
     private var createPostDestination: some View {
         // 성공 시 그룹 피드·앨범을 첫 페이지부터 다시 읽는다(Compose GroupDetailScreen
         // LaunchedEffect(refreshRequested) 미러 — 프레젠터가 직접 paging 스트림을 무효화한다)
-        CreatePostView(container: container, groupId: viewModel.groupId) {
+        CreatePostView(groupId: viewModel.groupId) {
             lazyPagingItems.refresh()
             photoLazyPagingItems.refresh()
         }
@@ -760,7 +712,7 @@ private struct GroupDetailContent: View {
     /// 그룹 정보 수정 — 저장 성공 시 pop+상세·설정 탭 refresh+목록 갱신 신호(Compose NavResult.GroupUpdated
     /// pendingResults 미러)
     private var groupEditDestination: some View {
-        GroupEditView(groupId: viewModel.groupId, container: container) {
+        GroupEditView(groupId: viewModel.groupId) {
             showGroupEdit = false
             viewModel.onAction(.refresh)
             groupSettingsViewModel.onAction(.refresh)
@@ -770,7 +722,7 @@ private struct GroupDetailContent: View {
 
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다(셸 선례)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel)
     }
 
     private var appSettingsDestination: some View {
@@ -781,7 +733,6 @@ private struct GroupDetailContent: View {
     private var groupReportsDestination: some View {
         GroupReportsView(
             groupId: viewModel.groupId,
-            container: container,
             chatViewModel: chatViewModel,
             profileViewModel: profileViewModel
         )
@@ -792,7 +743,6 @@ private struct GroupDetailContent: View {
         if let userId = selectedProfileUserId {
             UserProfileView(
                 userId: userId,
-                container: container,
                 onOpenChatRoom: { room in
                     profileFollowUp = .chatRoom(room)
                     selectedProfileUserId = nil
@@ -830,7 +780,6 @@ private struct GroupDetailContent: View {
         groupMembersViewModel: GroupMembersViewModel,
         groupEventsViewModel: GroupEventsViewModel,
         groupSettingsViewModel: GroupSettingsViewModel,
-        container: AppContainer,
         chatViewModel: ChatViewModel,
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
@@ -849,7 +798,6 @@ private struct GroupDetailContent: View {
         self.groupMembersViewModel = groupMembersViewModel
         self.groupEventsViewModel = groupEventsViewModel
         self.groupSettingsViewModel = groupSettingsViewModel
-        self.container = container
         self.chatViewModel = chatViewModel
         self.theme = theme
         self.profileViewModel = profileViewModel

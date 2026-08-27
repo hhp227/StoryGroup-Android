@@ -28,6 +28,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetDiscoverGroupsPagingDataUse
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.discover_error_join_code
+import storygroup.composeapp.generated.resources.group_join_failed
+import storygroup.composeapp.generated.resources.request_cancel_failed
 
 /**
  * 그룹 찾기 — 검색어/정렬이 바뀔 때만 새 Pager를 구독하는 표준 Paging3 검색 패턴
@@ -83,7 +88,7 @@ class DiscoverGroupsViewModel(
                     if (result.status == JoinResult.JOINED) _event.tryEmit(Event.Joined)
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: "가입에 실패했습니다.") }
+                    _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: getString(Res.string.group_join_failed)) }
                 }
         }
     }
@@ -108,7 +113,7 @@ class DiscoverGroupsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isJoiningByCode = false, joinByCodeError = e.message ?: "초대 코드 가입에 실패했습니다.")
+                        it.copy(isJoiningByCode = false, joinByCodeError = e.message ?: getString(Res.string.discover_error_join_code))
                     }
                 }
         }
@@ -129,7 +134,7 @@ class DiscoverGroupsViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: "신청 취소에 실패했습니다.") }
+                    _uiState.update { it.copy(joiningGroupId = null, error = e.message ?: getString(Res.string.request_cancel_failed)) }
                 }
         }
     }

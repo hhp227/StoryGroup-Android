@@ -33,9 +33,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.DiscoverGroup
 import kr.hhp227.storygroup.ui.components.SgEmptyState
 import kr.hhp227.storygroup.ui.components.SgPullRefreshBox
@@ -43,18 +42,17 @@ import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun pendingGroupsViewModel(): PendingGroupsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "pending-groups") {
-        PendingGroupsViewModel(
-            getMyJoinRequestedGroupsUseCase = container.getMyJoinRequestedGroupsUseCase,
-            cancelJoinRequestUseCase = container.cancelJoinRequestUseCase
-        )
-    }
-}
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_retry
+import storygroup.composeapp.generated.resources.count_members_full
+import storygroup.composeapp.generated.resources.groups_pending
+import storygroup.composeapp.generated.resources.pending_empty_subtitle
+import storygroup.composeapp.generated.resources.pending_empty_title
+import storygroup.composeapp.generated.resources.request_cancel
+import storygroup.composeapp.generated.resources.two_part_dot
 
 /**
  * 가입 신청중 — 레거시 JoinRequestGroupFragment 미러(진입 스트립 가운데 칸에서 진입).
@@ -66,7 +64,12 @@ private fun pendingGroupsViewModel(): PendingGroupsViewModel {
 fun PendingGroupsScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: PendingGroupsViewModel = pendingGroupsViewModel()
+    viewModel: PendingGroupsViewModel = screenViewModel(key = "pending-groups") {
+        PendingGroupsViewModel(
+            getMyJoinRequestedGroupsUseCase = it.getMyJoinRequestedGroupsUseCase,
+            cancelJoinRequestUseCase = it.cancelJoinRequestUseCase
+        )
+    }
 ) {
     PendingGroupsContent(
         viewModel = viewModel,
@@ -87,10 +90,10 @@ private fun PendingGroupsContent(
 
     Column(modifier.fillMaxSize().background(sg.paper)) {
         SgTopBar(
-            title = "가입 신청중",
+            title = stringResource(Res.string.groups_pending),
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
@@ -122,14 +125,14 @@ private fun PendingGroupsContent(
                             Text(uiState.loadError!!, style = SgTheme.typography.bodyMedium, color = sg.rust)
                             Spacer(Modifier.height(8.dp))
                             TextButton(onClick = { onAction(PendingGroupsViewModel.Action.Refresh) }) {
-                                Text("다시 시도", color = sg.accent)
+                                Text(stringResource(Res.string.common_retry), color = sg.accent)
                             }
                         }
                     }
                     uiState.groups.isEmpty() -> item(key = "pending-empty") {
                         SgEmptyState(
-                            title = "가입 신청중인 그룹이 없습니다",
-                            subtitle = "그룹 찾기에서 승인제 그룹에 가입을 신청해보세요.",
+                            title = stringResource(Res.string.pending_empty_title),
+                            subtitle = stringResource(Res.string.pending_empty_subtitle),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp)
                         )
                     }
@@ -196,7 +199,11 @@ private fun PendingGroupRow(
             )
             // 그룹 찾기 목록 행과 동일한 요약 정보 미러(DiscoverGroupsScreen)
             Text(
-                "멤버 ${group.memberCount}명 · ${joinTypeLabel(group.joinType)}",
+                stringResource(
+                    Res.string.two_part_dot,
+                    pluralStringResource(Res.plurals.count_members_full, group.memberCount.toInt(), group.memberCount),
+                    joinTypeLabel(group.joinType)
+                ),
                 style = SgTheme.typography.bodySmall,
                 color = sg.inkSoft,
                 maxLines = 1,
@@ -212,7 +219,7 @@ private fun PendingGroupRow(
             )
         } else {
             TextButton(onClick = onCancel, enabled = cancelEnabled) {
-                Text("신청 취소", color = sg.rust)
+                Text(stringResource(Res.string.request_cancel), color = sg.rust)
             }
         }
     }

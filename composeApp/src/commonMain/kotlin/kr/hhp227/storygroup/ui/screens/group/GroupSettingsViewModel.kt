@@ -17,6 +17,10 @@ import kr.hhp227.storygroup.shared.domain.usecase.DeleteGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LeaveGroupUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_error_process
+import storygroup.composeapp.generated.resources.group_error_load
 
 /**
  * 설정 탭 — 레거시 SettingsFragment(item_settings.xml) 미러의 메뉴 리스트(탭별 VM 분리).
@@ -57,7 +61,7 @@ class GroupSettingsViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "그룹 정보를 불러오지 못했습니다.")
+                        it.copy(isLoading = false, error = e.message ?: getString(Res.string.group_error_load))
                     }
                 }
         }
@@ -76,7 +80,7 @@ class GroupSettingsViewModel(
                 }
                 .onFailure { e ->
                     // OWNER 나가기 거부("그룹 삭제를 이용하세요") 등 서버 문구를 그대로 보여준다
-                    _uiState.update { it.copy(isClosing = false, closeError = e.message ?: "처리에 실패했습니다.") }
+                    _uiState.update { it.copy(isClosing = false, closeError = e.message ?: getString(Res.string.common_error_process)) }
                 }
         }
     }

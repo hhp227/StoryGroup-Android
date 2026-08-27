@@ -11,9 +11,6 @@ private enum ProfileFollowUp {
 /// 본문·이미지·좋아요·댓글(답글 포함). 삭제·차단 성공은 화면을 닫기만 하고,
 /// 목록 정리는 피드 VM이 삭제·차단 알림을 받아 스냅샷에서 처리한다(전체 재조회를 피한다).
 struct PostDetailView: View {
-    // 수정 화면을 push할 때 다시 필요하다
-    private let container: AppContainer
-
     private let groupId: Int64
 
     private let postId: Int64
@@ -138,7 +135,7 @@ struct PostDetailView: View {
     }
 
     private var editDestination: some View {
-        CreatePostView(container: container, groupId: groupId, postId: postId) {
+        CreatePostView(groupId: groupId, postId: postId) {
             // 수정하고 돌아오면 바뀐 본문을 보여줘야 한다.
             // 목록은 갱신 신호를 받지 않는다 — 수정 알림(ObservePostUpdatesUseCase)을 받은 목록 VM이
             // 자기 스냅샷에서 그 항목만 갈아끼운다(refresh를 태우면 첫 페이지부터 전체 재조회가 된다)
@@ -150,7 +147,6 @@ struct PostDetailView: View {
         if let authorId = selectedAuthorId {
             UserProfileView(
                 userId: authorId,
-                container: container,
                 onOpenChatRoom: { room in
                     profileFollowUp = .chatRoom(room)
                     selectedAuthorId = nil
@@ -169,7 +165,6 @@ struct PostDetailView: View {
                 chatRoomId: room.chatRoomId,
                 groupId: room.groupId,
                 title: room.title,
-                container: container,
                 chatViewModel: chatViewModel
             )
         }
@@ -177,7 +172,7 @@ struct PostDetailView: View {
 
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(container: container, profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel)
     }
 
     /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
@@ -495,25 +490,12 @@ struct PostDetailView: View {
         .background(colors.paper)
     }
     
-    init(container: AppContainer, groupId: Int64, postId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
-        self.container = container
+    init(groupId: Int64, postId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         self.groupId = groupId
         self.postId = postId
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
-        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(
-            groupId: groupId,
-            postId: postId,
-            getPostDetailUseCase: container.getPostDetailUseCase,
-            setPostLikedUseCase: container.setPostLikedUseCase,
-            createCommentUseCase: container.createCommentUseCase,
-            deleteCommentUseCase: container.deleteCommentUseCase,
-            deletePostUseCase: container.deletePostUseCase,
-            reportPostUseCase: container.reportPostUseCase,
-            reportUserUseCase: container.reportUserUseCase,
-            blockUserUseCase: container.blockUserUseCase,
-            getCurrentUserIdUseCase: container.getCurrentUserIdUseCase
-        ))
+        _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(groupId: groupId, postId: postId))
     }
 }
 

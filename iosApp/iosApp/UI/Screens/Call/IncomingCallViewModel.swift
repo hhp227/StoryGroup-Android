@@ -45,7 +45,7 @@ final class IncomingCallViewModel: MviViewModel {
         uiState.incomingCall = nil
     }
 
-    init(observePersonalEventsUseCase: ObservePersonalEventsUseCase) {
+    init(observePersonalEventsUseCase: ObservePersonalEventsUseCase = AppContainer.shared.observePersonalEventsUseCase) {
         // 구독 수명 = 세션 VM(셸) 수명 — 로그아웃으로 셸이 내려가면 함께 정리된다
         KotlinFlowPublisher<PersonalEvent> { onEach in
             observePersonalEventsUseCase.eventsFlow().subscribe(onEach: onEach)

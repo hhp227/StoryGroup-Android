@@ -17,6 +17,11 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
+import org.jetbrains.compose.resources.getString
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.error_save
+import storygroup.composeapp.generated.resources.error_upload_image
+import storygroup.composeapp.generated.resources.group_error_load
 
 /**
  * 그룹 정보 수정 — 웹 /groups/[id]/settings 폼 미러(설정 탭 "그룹 정보 수정" 행에서 진입하는
@@ -69,7 +74,7 @@ class GroupEditViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "그룹 정보를 불러오지 못했습니다.")
+                        it.copy(isLoading = false, error = e.message ?: getString(Res.string.group_error_load))
                     }
                 }
         }
@@ -87,7 +92,7 @@ class GroupEditViewModel(
                 }
                 .onFailure { e ->
                     _uiState.update {
-                        it.copy(isUploadingImage = false, saveError = e.message ?: "이미지 업로드에 실패했습니다.")
+                        it.copy(isUploadingImage = false, saveError = e.message ?: getString(Res.string.error_upload_image))
                     }
                 }
         }
@@ -114,7 +119,7 @@ class GroupEditViewModel(
                 // 성공 문구 없이 바로 닫는다 — 화면이 onSaved로 결과 신호+pop을 요청한다
                 _event.tryEmit(Event.Saved)
             }.onFailure { e ->
-                _uiState.update { it.copy(isSaving = false, saveError = e.message ?: "저장에 실패했습니다.") }
+                _uiState.update { it.copy(isSaving = false, saveError = e.message ?: getString(Res.string.error_save)) }
             }
         }
     }

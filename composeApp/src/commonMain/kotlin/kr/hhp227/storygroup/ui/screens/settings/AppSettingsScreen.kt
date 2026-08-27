@@ -31,6 +31,20 @@ import kr.hhp227.storygroup.ui.theme.NavStyle
 import kr.hhp227.storygroup.ui.theme.NightMode
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.theme.ThemeState
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.app_settings_display_mode
+import storygroup.composeapp.generated.resources.app_settings_mode_dark
+import storygroup.composeapp.generated.resources.app_settings_mode_light
+import storygroup.composeapp.generated.resources.app_settings_mode_system
+import storygroup.composeapp.generated.resources.app_settings_mood_vibrant
+import storygroup.composeapp.generated.resources.app_settings_mood_warm
+import storygroup.composeapp.generated.resources.app_settings_nav_drawer
+import storygroup.composeapp.generated.resources.app_settings_nav_style
+import storygroup.composeapp.generated.resources.app_settings_nav_tabs
+import storygroup.composeapp.generated.resources.app_settings_theme_mood
+import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.profile_app_settings
 
 /** 앱 설정(테마) — 무드/화면 모드/내비게이션 스타일. 쉘 위를 덮는 전체 화면 */
 @Composable
@@ -39,10 +53,10 @@ fun AppSettingsScreen(themeState: ThemeState, onBack: () -> Unit) {
         backgroundColor = SgTheme.colors.paper,
         topBar = {
             SgTopBar(
-                title = "앱 설정",
+                title = stringResource(Res.string.profile_app_settings),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                     }
                 }
             )
@@ -56,18 +70,18 @@ fun AppSettingsScreen(themeState: ThemeState, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            SgSectionTitle("테마 무드")
-            RadioRow("다정함 (웜)", themeState.mood == Mood.WARM) { themeState.mood = Mood.WARM }
-            RadioRow("캐주얼 (비비드)", themeState.mood == Mood.VIBRANT) { themeState.mood = Mood.VIBRANT }
+            SgSectionTitle(stringResource(Res.string.app_settings_theme_mood))
+            RadioRow(stringResource(Res.string.app_settings_mood_warm), themeState.mood == Mood.WARM) { themeState.mood = Mood.WARM }
+            RadioRow(stringResource(Res.string.app_settings_mood_vibrant), themeState.mood == Mood.VIBRANT) { themeState.mood = Mood.VIBRANT }
             Spacer(Modifier.height(24.dp))
-            SgSectionTitle("화면 모드")
-            RadioRow("시스템 설정", themeState.nightMode == NightMode.SYSTEM) { themeState.nightMode = NightMode.SYSTEM }
-            RadioRow("라이트", themeState.nightMode == NightMode.LIGHT) { themeState.nightMode = NightMode.LIGHT }
-            RadioRow("다크", themeState.nightMode == NightMode.DARK) { themeState.nightMode = NightMode.DARK }
+            SgSectionTitle(stringResource(Res.string.app_settings_display_mode))
+            RadioRow(stringResource(Res.string.app_settings_mode_system), themeState.nightMode == NightMode.SYSTEM) { themeState.nightMode = NightMode.SYSTEM }
+            RadioRow(stringResource(Res.string.app_settings_mode_light), themeState.nightMode == NightMode.LIGHT) { themeState.nightMode = NightMode.LIGHT }
+            RadioRow(stringResource(Res.string.app_settings_mode_dark), themeState.nightMode == NightMode.DARK) { themeState.nightMode = NightMode.DARK }
             Spacer(Modifier.height(24.dp))
-            SgSectionTitle("내비게이션 스타일")
-            RadioRow("기본 (탭 — 넓은 화면은 레일)", themeState.navStyle == NavStyle.TABS) { themeState.navStyle = NavStyle.TABS }
-            RadioRow("레거시 (드로어)", themeState.navStyle == NavStyle.DRAWER) { themeState.navStyle = NavStyle.DRAWER }
+            SgSectionTitle(stringResource(Res.string.app_settings_nav_style))
+            RadioRow(stringResource(Res.string.app_settings_nav_tabs), themeState.navStyle == NavStyle.TABS) { themeState.navStyle = NavStyle.TABS }
+            RadioRow(stringResource(Res.string.app_settings_nav_drawer), themeState.navStyle == NavStyle.DRAWER) { themeState.navStyle = NavStyle.DRAWER }
         }
     }
 }

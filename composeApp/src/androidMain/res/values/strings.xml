@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">StoryGroup</string>
+    <string name="screen_share">Screen sharing</string>
+    <string name="screen_share_active">Sharing your screen</string>
 </resources>

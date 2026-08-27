@@ -32,8 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.ui.components.SgTopBar
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
@@ -43,28 +42,26 @@ import kr.hhp227.storygroup.ui.rtc.rememberRtcMediaSessionFactory
 import kr.hhp227.storygroup.ui.rtc.rememberRtcPermissionsRequester
 import kr.hhp227.storygroup.ui.rtc.rememberRtcScreenCaptureRequester
 import kr.hhp227.storygroup.ui.theme.SgTheme
-
-@Composable
-private fun callViewModel(chatRoomId: Long, ring: Boolean, video: Boolean): CallViewModel {
-    val container = LocalAppContainer.current
-    // 플랫폼 미디어 팩토리 — Android는 applicationContext 캡처라 VM 보관이 안전, Desktop은 null 생성
-    val rtcMediaSessionFactory = rememberRtcMediaSessionFactory()
-
-    return viewModel(key = "call-$chatRoomId") {
-        CallViewModel(
-            chatRoomId = chatRoomId,
-            ring = ring,
-            video = video,
-            observeRtcCallEventsUseCase = container.observeRtcCallEventsUseCase,
-            observeRtcSignalsUseCase = container.observeRtcSignalsUseCase,
-            sendRtcSignalUseCase = container.sendRtcSignalUseCase,
-            getIceServersUseCase = container.getIceServersUseCase,
-            sendCallInviteUseCase = container.sendCallInviteUseCase,
-            rtcMediaSessionFactory = rtcMediaSessionFactory,
-            getCurrentUserIdUseCase = container.getCurrentUserIdUseCase
-        )
-    }
-}
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.call_cam_off
+import storygroup.composeapp.generated.resources.call_cam_on
+import storygroup.composeapp.generated.resources.call_connecting
+import storygroup.composeapp.generated.resources.call_ended_no_answer
+import storygroup.composeapp.generated.resources.call_hang_up
+import storygroup.composeapp.generated.resources.call_in_progress
+import storygroup.composeapp.generated.resources.call_mic_off
+import storygroup.composeapp.generated.resources.call_mic_on
+import storygroup.composeapp.generated.resources.call_no_av_notice
+import storygroup.composeapp.generated.resources.call_no_participants
+import storygroup.composeapp.generated.resources.call_reconnecting
+import storygroup.composeapp.generated.resources.call_screen_share
+import storygroup.composeapp.generated.resources.call_screen_share_stop
+import storygroup.composeapp.generated.resources.call_speaker_off
+import storygroup.composeapp.generated.resources.call_speaker_on
+import storygroup.composeapp.generated.resources.call_switch_camera
+import storygroup.composeapp.generated.resources.call_waiting_answer
+import storygroup.composeapp.generated.resources.common_back
 
 /**
  * 방 통화 — DM 1:1과 그룹 방 공용(페이스톡 미러). 진입 즉시 권한을 물어 통화에 입장한다
@@ -81,7 +78,23 @@ fun CallScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
     // 라우트(백스택 엔트리) 스코프 — pop되면 구독(=통화)도 함께 정리된다
-    viewModel: CallViewModel = callViewModel(chatRoomId, ring, video)
+    // 플랫폼 미디어 팩토리 — Android는 applicationContext 캡처라 VM 보관이 안전, Desktop은 null 생성
+    viewModel: CallViewModel = rememberRtcMediaSessionFactory().let { rtcMediaSessionFactory ->
+        screenViewModel(key = "call-$chatRoomId") {
+            CallViewModel(
+                chatRoomId = chatRoomId,
+                ring = ring,
+                video = video,
+                observeRtcCallEventsUseCase = it.observeRtcCallEventsUseCase,
+                observeRtcSignalsUseCase = it.observeRtcSignalsUseCase,
+                sendRtcSignalUseCase = it.sendRtcSignalUseCase,
+                getIceServersUseCase = it.getIceServersUseCase,
+                sendCallInviteUseCase = it.sendCallInviteUseCase,
+                rtcMediaSessionFactory = rtcMediaSessionFactory,
+                getCurrentUserIdUseCase = it.getCurrentUserIdUseCase
+            )
+        }
+    },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -111,7 +124,7 @@ fun CallScreen(
             navigationIcon = {
                 // 뒤로가기도 끊기와 동일 — 통화를 정리하고 나간다
                 IconButton(onClick = { onAction(CallViewModel.Action.HangUp) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
@@ -122,12 +135,12 @@ fun CallScreen(
             Text(
                 when {
                     // 발신 무응답 — 잠깐 보여준 뒤 VM이 Ended로 pop한다
-                    uiState.isNoAnswer -> "응답이 없어 통화를 종료합니다."
-                    !uiState.call.isInCall -> "연결 중…"
-                    !uiState.call.isConnected -> "재연결 중…"
-                    uiState.isAloneInCall && uiState.isRinging -> "응답을 기다리는 중…"
-                    uiState.isAloneInCall -> "아직 다른 참여자가 없습니다."
-                    else -> "통화 중"
+                    uiState.isNoAnswer -> stringResource(Res.string.call_ended_no_answer)
+                    !uiState.call.isInCall -> stringResource(Res.string.call_connecting)
+                    !uiState.call.isConnected -> stringResource(Res.string.call_reconnecting)
+                    uiState.isAloneInCall && uiState.isRinging -> stringResource(Res.string.call_waiting_answer)
+                    uiState.isAloneInCall -> stringResource(Res.string.call_no_participants)
+                    else -> stringResource(Res.string.call_in_progress)
                 },
                 style = SgTheme.typography.bodyMedium,
                 color = sg.inkSoft
@@ -136,7 +149,7 @@ fun CallScreen(
             if (uiState.call.isInCall && !uiState.call.isMediaActive) {
                 // 권한 거부(Android)·미지원 플랫폼(Desktop) — 명단만 실시간으로 표시된다
                 Text(
-                    "카메라·마이크 없이 참여 중입니다.",
+                    stringResource(Res.string.call_no_av_notice),
                     style = SgTheme.typography.bodySmall,
                     color = sg.inkFaint
                 )
@@ -151,13 +164,13 @@ fun CallScreen(
             if (uiState.call.isMediaActive) {
                 RtcCallToggleButton(
                     icon = if (uiState.call.micOn) Icons.Default.Mic else Icons.Default.MicOff,
-                    contentDescription = if (uiState.call.micOn) "마이크 끄기" else "마이크 켜기",
+                    contentDescription = if (uiState.call.micOn) stringResource(Res.string.call_mic_off) else stringResource(Res.string.call_mic_on),
                     active = uiState.call.micOn,
                     onClick = { onAction(CallViewModel.Action.ToggleMic) }
                 )
                 RtcCallToggleButton(
                     icon = if (uiState.call.camOn) Icons.Default.Videocam else Icons.Default.VideocamOff,
-                    contentDescription = if (uiState.call.camOn) "카메라 끄기" else "카메라 켜기",
+                    contentDescription = if (uiState.call.camOn) stringResource(Res.string.call_cam_off) else stringResource(Res.string.call_cam_on),
                     active = uiState.call.camOn,
                     onClick = { onAction(CallViewModel.Action.ToggleCam) }
                 )
@@ -165,7 +178,7 @@ fun CallScreen(
                 if (uiState.call.localVideo != null && !uiState.call.sharing) {
                     RtcCallToggleButton(
                         icon = Icons.Default.Cameraswitch,
-                        contentDescription = "카메라 전환",
+                        contentDescription = stringResource(Res.string.call_switch_camera),
                         active = true,
                         onClick = { onAction(CallViewModel.Action.SwitchCamera) }
                     )
@@ -173,7 +186,7 @@ fun CallScreen(
                 // 스피커폰 — 영상통화라 기본 ON, 끄면 수화구·이어폰 경로(웹엔 없는 모바일 전용)
                 RtcCallToggleButton(
                     icon = if (uiState.call.speakerOn) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                    contentDescription = if (uiState.call.speakerOn) "스피커 끄기" else "스피커 켜기",
+                    contentDescription = if (uiState.call.speakerOn) stringResource(Res.string.call_speaker_off) else stringResource(Res.string.call_speaker_on),
                     active = uiState.call.speakerOn,
                     onClick = { onAction(CallViewModel.Action.ToggleSpeaker) }
                 )
@@ -181,7 +194,7 @@ fun CallScreen(
                 if (uiState.call.localVideo != null) {
                     RtcCallToggleButton(
                         icon = if (uiState.call.sharing) Icons.AutoMirrored.Filled.StopScreenShare else Icons.AutoMirrored.Filled.ScreenShare,
-                        contentDescription = if (uiState.call.sharing) "화면 공유 중지" else "화면 공유",
+                        contentDescription = if (uiState.call.sharing) stringResource(Res.string.call_screen_share_stop) else stringResource(Res.string.call_screen_share),
                         active = uiState.call.sharing,
                         onClick = {
                             if (uiState.call.sharing) onAction(CallViewModel.Action.StopScreenShare)
@@ -194,7 +207,7 @@ fun CallScreen(
                 onClick = { onAction(CallViewModel.Action.HangUp) },
                 modifier = Modifier.background(sg.rust, CircleShape)
             ) {
-                Icon(Icons.Default.CallEnd, contentDescription = "통화 끊기", tint = sg.onAccent)
+                Icon(Icons.Default.CallEnd, contentDescription = stringResource(Res.string.call_hang_up), tint = sg.onAccent)
             }
         }
     }

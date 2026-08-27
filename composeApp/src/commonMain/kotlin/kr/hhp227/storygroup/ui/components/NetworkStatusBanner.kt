@@ -16,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.shared.domain.model.NetworkAlertState
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.network_offline
+import storygroup.composeapp.generated.resources.network_recovered
 
 /** 네트워크 연결 배너 — 오프라인=rust, 복구=moss. iosApp NetworkStatusBannerView.swift와 1:1 미러 */
 @Composable
@@ -42,7 +46,11 @@ fun NetworkStatusBanner(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
-                text = networkAlertState.message,
+                // shared의 message는 한국어 고정이라 표시 문구는 상태로부터 로컬라이즈한다
+                text = stringResource(
+                    if (networkAlertState.isConnected) Res.string.network_recovered
+                    else Res.string.network_offline
+                ),
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)

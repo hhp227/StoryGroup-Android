@@ -104,11 +104,11 @@ final class NotificationsViewModel: MviViewModel {
     }
 
     init(
-        getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase,
-        getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase,
-        markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
-        markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
-        observePersonalEventsUseCase: ObservePersonalEventsUseCase
+        getNotificationsPagingDataUseCase: GetNotificationsPagingDataUseCase = AppContainer.shared.getNotificationsPagingDataUseCase,
+        getUnreadNotificationCountUseCase: GetUnreadNotificationCountUseCase = AppContainer.shared.getUnreadNotificationCountUseCase,
+        markNotificationAsReadUseCase: MarkNotificationAsReadUseCase = AppContainer.shared.markNotificationAsReadUseCase,
+        markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase = AppContainer.shared.markAllNotificationsAsReadUseCase,
+        observePersonalEventsUseCase: ObservePersonalEventsUseCase = AppContainer.shared.observePersonalEventsUseCase
     ) {
         self.getUnreadNotificationCountUseCase = getUnreadNotificationCountUseCase
         self.markNotificationAsReadUseCase = markNotificationAsReadUseCase

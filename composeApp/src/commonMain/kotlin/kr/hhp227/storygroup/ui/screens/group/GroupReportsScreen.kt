@@ -34,8 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.hhp227.storygroup.di.LocalAppContainer
+import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.shared.domain.model.PostReport
 import kr.hhp227.storygroup.shared.domain.model.ReportStatus
 import kr.hhp227.storygroup.ui.components.SgCard
@@ -45,20 +44,8 @@ import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
 import kr.hhp227.storygroup.ui.theme.SgTheme
 import kr.hhp227.storygroup.ui.util.formatRelativeTime
-
-/** 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴) */
-@Composable
-private fun groupReportsViewModel(groupId: Long): GroupReportsViewModel {
-    val container = LocalAppContainer.current
-
-    return viewModel(key = "group-reports-$groupId") {
-        GroupReportsViewModel(
-            groupId = groupId,
-            getGroupReportsUseCase = container.getGroupReportsUseCase,
-            processGroupReportUseCase = container.processGroupReportUseCase
-        )
-    }
-}
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.*
 
 /**
  * 그룹 신고함(모더레이터 전용) — 웹 /groups/[id]/reports 미러. 진입점은 그룹 설정 탭
@@ -70,7 +57,14 @@ fun GroupReportsScreen(
     groupId: Long,
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
-    viewModel: GroupReportsViewModel = groupReportsViewModel(groupId)
+    // 백스택 엔트리 스코프 VM — 화면이 default parameter로 선언(GroupDetail 패턴)
+    viewModel: GroupReportsViewModel = screenViewModel(key = "group-reports-$groupId") {
+        GroupReportsViewModel(
+            groupId = groupId,
+            getGroupReportsUseCase = it.getGroupReportsUseCase,
+            processGroupReportUseCase = it.processGroupReportUseCase
+        )
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
@@ -78,15 +72,15 @@ fun GroupReportsScreen(
 
     Column(modifier.fillMaxSize()) {
         SgTopBar(
-            title = "신고함",
+            title = stringResource(Res.string.group_reports_title),
             navigationIcon = {
                 IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
         )
         Text(
-            "멤버가 신고한 게시글입니다. 확인/기각은 처리 기록이며, 게시글 삭제 등 조치는 게시글에서 직접 합니다.",
+            stringResource(Res.string.group_reports_desc),
             style = SgTheme.typography.bodySmall,
             color = sg.inkFaint,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -96,12 +90,12 @@ fun GroupReportsScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterChip(
-                label = "대기중",
+                label = stringResource(Res.string.report_status_pending),
                 active = uiState.filter == ReportStatus.PENDING,
                 onClick = { onAction(GroupReportsViewModel.Action.SetFilter(ReportStatus.PENDING)) }
             )
             FilterChip(
-                label = "전체",
+                label = stringResource(Res.string.group_reports_all),
                 active = uiState.filter == null,
                 onClick = { onAction(GroupReportsViewModel.Action.SetFilter(null)) }
             )
@@ -117,15 +111,15 @@ fun GroupReportsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(uiState.loadError ?: "신고 목록을 불러오지 못했습니다.", style = SgTheme.typography.bodyMedium, color = sg.rust)
+                Text(uiState.loadError ?: stringResource(Res.string.group_reports_error_load), style = SgTheme.typography.bodyMedium, color = sg.rust)
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onAction(GroupReportsViewModel.Action.Refresh) }) {
-                    Text("다시 시도", color = sg.accent)
+                    Text(stringResource(Res.string.common_retry), color = sg.accent)
                 }
             }
             reports.isEmpty() -> SgEmptyState(
-                title = if (uiState.filter == ReportStatus.PENDING) "대기중인 신고가 없습니다." else "신고 내역이 없습니다.",
-                subtitle = "멤버가 게시글을 신고하면 여기로 접수됩니다.",
+                title = if (uiState.filter == ReportStatus.PENDING) stringResource(Res.string.group_reports_empty_pending) else stringResource(Res.string.group_reports_empty_all),
+                subtitle = stringResource(Res.string.group_reports_empty_subtitle),
                 modifier = Modifier.fillMaxSize()
             )
             else -> LazyColumn(
@@ -170,9 +164,9 @@ private fun ReportCard(
         ReportStatus.DISMISSED -> sg.inkFaint
     }
     val statusLabel = when (report.status) {
-        ReportStatus.PENDING -> "대기중"
-        ReportStatus.RESOLVED -> "확인됨"
-        ReportStatus.DISMISSED -> "기각됨"
+        ReportStatus.PENDING -> stringResource(Res.string.report_status_pending)
+        ReportStatus.RESOLVED -> stringResource(Res.string.report_status_resolved)
+        ReportStatus.DISMISSED -> stringResource(Res.string.report_status_dismissed)
     }
 
     SgCard(modifier = Modifier.fillMaxWidth()) {
@@ -181,7 +175,7 @@ private fun ReportCard(
                 StatusBadge(label = statusLabel, color = statusColor)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "${formatRelativeTime(report.createdAt)} · ${report.reporterName}님 신고",
+                    stringResource(Res.string.group_reports_reported_by, formatRelativeTime(report.createdAt), report.reporterName),
                     style = SgTheme.typography.labelSmall,
                     color = sg.inkFaint
                 )
@@ -190,15 +184,15 @@ private fun ReportCard(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenPost),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text("${report.postAuthorName}님의 게시글", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
+                Text(stringResource(Res.string.post_by, report.postAuthorName), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
                 Text(
-                    report.postTextPreview.ifEmpty { "(본문 없이 첨부만 있는 게시글)" },
+                    report.postTextPreview.ifEmpty { stringResource(Res.string.group_reports_no_text) },
                     style = SgTheme.typography.bodyMedium,
                     color = sg.ink
                 )
             }
             if (!report.reason.isNullOrBlank()) {
-                Text("신고 사유: ${report.reason}", style = SgTheme.typography.bodySmall, color = sg.inkSoft)
+                Text(stringResource(Res.string.group_reports_reason, report.reason.orEmpty()), style = SgTheme.typography.bodySmall, color = sg.inkSoft)
             }
             if (report.status == ReportStatus.PENDING) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -208,10 +202,10 @@ private fun ReportCard(
                         shape = SgTheme.shapes.button,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = sg.inkSoft)
                     ) {
-                        Text("확인 처리", style = SgTheme.typography.labelLarge)
+                        Text(stringResource(Res.string.group_reports_resolve), style = SgTheme.typography.labelLarge)
                     }
                     TextButton(onClick = { onProcess(ReportStatus.DISMISSED) }, enabled = !isBusy) {
-                        Text("기각", style = SgTheme.typography.labelLarge, color = sg.inkSoft)
+                        Text(stringResource(Res.string.group_reports_dismiss), style = SgTheme.typography.labelLarge, color = sg.inkSoft)
                     }
                 }
             }

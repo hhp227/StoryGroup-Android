@@ -1,0 +1,497 @@
+<resources>
+    <!-- 공통 액션/라벨 -->
+    <string name="common_retry">Retry</string>
+    <string name="common_back">Back</string>
+    <string name="common_close">Close</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_save">Save</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_ok">OK</string>
+    <string name="common_search">Search</string>
+    <string name="common_loading">Loading...</string>
+    <string name="common_send">Send</string>
+    <string name="common_menu">Menu</string>
+    <string name="common_more">More</string>
+    <string name="common_photo">Photo</string>
+    <string name="common_file">File</string>
+    <string name="common_message">Message</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_today">Today</string>
+    <string name="common_me">Me</string>
+    <string name="common_unknown">Unknown</string>
+    <string name="common_profile">Profile</string>
+    <string name="common_report">Report</string>
+    <string name="common_block">Block</string>
+    <string name="common_join">Join</string>
+    <string name="common_approve">Approve</string>
+    <string name="common_reject">Decline</string>
+    <string name="common_create">Create</string>
+    <string name="common_uploading">Uploading...</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_error_process">The request could not be completed.</string>
+    <string name="settings">Settings</string>
+    <string name="two_part_dot">%1$s · %2$s</string>
+
+    <!-- 내비게이션 탭 -->
+    <string name="nav_home">Home</string>
+    <string name="nav_groups">Groups</string>
+    <string name="nav_friends">Friends</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_notifications">Notifications</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- 네트워크 배너 -->
+    <string name="network_offline">Your internet connection is unstable.</string>
+    <string name="network_recovered">Your internet connection has been restored.</string>
+
+    <!-- 시간/날짜 -->
+    <string name="time_just_now">Just now</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <string-array name="month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+    <string-array name="day_names_short">
+        <item>Sun</item>
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+    </string-array>
+    <string-array name="day_names_full">
+        <item>Sunday</item>
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+    </string-array>
+    <!-- %1$s=연, %2$s=월 이름, %3$s=일, %4$s=요일(전체) -->
+    <string name="date_chat_format">%4$s, %2$s %3$s, %1$s</string>
+    <!-- %1$s=연, %2$s=월 이름 -->
+    <string name="date_year_month">%2$s %1$s</string>
+    <!-- %1$s=월 이름, %2$s=일, %3$s=요일(축약) -->
+    <string name="date_month_day_weekday">%1$s %2$s (%3$s)</string>
+
+    <!-- 게시글 카드/공통 -->
+    <string name="post_notice_badge">Notice</string>
+    <string name="post_like">Like</string>
+    <string name="post_unlike">Unlike</string>
+    <string name="post_comment">Comment</string>
+    <string name="post_share">Share</string>
+    <plurals name="likes_n">
+        <item quantity="one">%1$d Like</item>
+        <item quantity="other">%1$d Likes</item>
+    </plurals>
+    <plurals name="comments_n">
+        <item quantity="one">%1$d Comment</item>
+        <item quantity="other">%1$d Comments</item>
+    </plurals>
+    <string name="video_play">Play video</string>
+    <plurals name="count_photos">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <plurals name="count_people">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <plurals name="count_members_full">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+
+    <!-- 통화/RTC -->
+    <string name="call_kind_video">Video call</string>
+    <string name="call_voice_talk">Voice call</string>
+    <string name="call_video_talk">Video call</string>
+    <!-- %1$s=방 이름, %2$s=발신자, %3$s=통화 종류 -->
+    <string name="call_banner_incoming_room">%1$s — %3$s from %2$s</string>
+    <!-- %1$s=발신자, %2$s=통화 종류 -->
+    <string name="call_banner_incoming">%2$s from %1$s</string>
+    <string name="call_accept">Accept</string>
+    <string name="call_ended_no_answer">Ending the call because there was no answer.</string>
+    <string name="call_connecting">Connecting…</string>
+    <string name="call_reconnecting">Reconnecting…</string>
+    <string name="call_waiting_answer">Waiting for an answer…</string>
+    <string name="call_no_participants">No one else has joined yet.</string>
+    <string name="call_in_progress">In call</string>
+    <string name="call_no_av_notice">You are in this call without a camera or microphone.</string>
+    <string name="call_mic_off">Mute microphone</string>
+    <string name="call_mic_on">Unmute microphone</string>
+    <string name="call_cam_off">Turn camera off</string>
+    <string name="call_cam_on">Turn camera on</string>
+    <string name="call_switch_camera">Switch camera</string>
+    <string name="call_speaker_off">Turn speaker off</string>
+    <string name="call_speaker_on">Turn speaker on</string>
+    <string name="call_screen_share">Share screen</string>
+    <string name="call_screen_share_stop">Stop sharing</string>
+    <string name="call_hang_up">End call</string>
+
+    <!-- 인증 -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Log in with your email and password.</string>
+    <string name="login_registered_notice">Your account is ready. Please log in.</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_name">Name</string>
+    <string name="login_in_progress">Logging in...</string>
+    <string name="login_action">Log in</string>
+    <string name="login_no_account">New here?</string>
+    <string name="login_error">Login failed.</string>
+    <string name="register_title">A place for people who do things together</string>
+    <string name="register_subtitle">Join StoryGroup and create your own group.</string>
+    <string name="register_in_progress">Signing up...</string>
+    <string name="register_action">Sign up</string>
+    <string name="register_has_account">Already have an account?</string>
+    <string name="register_error">Sign-up failed.</string>
+
+    <!-- 채팅 목록 -->
+    <string name="chat_empty_title">No chat rooms</string>
+    <string name="chat_empty_subtitle">Join a group or send a message to a friend.</string>
+    <string name="chat_section_group">Group chats</string>
+    <string name="chat_section_dm">Direct messages</string>
+    <string name="chat_no_messages_yet">No messages yet</string>
+    <string name="chat_error_load">Could not load chat rooms.</string>
+
+    <!-- 채팅방 -->
+    <string name="chat_room_call_in_progress">%1$s is on a call</string>
+    <string name="chat_room_join">Join</string>
+    <string name="chat_room_empty_title">No messages</string>
+    <string name="chat_room_empty_subtitle">Send the first message.</string>
+    <string name="chat_room_typing">%1$s is typing...</string>
+    <string name="chat_room_compressing">Compressing video %1$d%</string>
+    <string name="chat_room_dm_title">Direct chat</string>
+    <string name="chat_room_group_title">Group chat</string>
+    <string name="chat_room_members_section">Participants</string>
+    <string name="chat_room_no_photos">No photos shared yet.</string>
+    <string name="chat_room_members_error">Could not load participants.</string>
+    <string name="chat_read">Read</string>
+    <string name="chat_read_n">Read %1$d</string>
+    <string name="chat_room_attachment_cancel">Remove attachment</string>
+    <string name="chat_room_attachments_close">Close attachments</string>
+    <string name="chat_room_attachments">Attach</string>
+    <string name="chat_room_input_placeholder_attachment">Message (optional)</string>
+    <string name="chat_room_input_placeholder">Type a message.</string>
+    <string name="chat_room_emoji">Emoji</string>
+    <string name="chat_room_error_load">Could not load messages.</string>
+    <string name="chat_room_error_load_older">Could not load older messages.</string>
+    <string name="chat_room_error_send">Could not send the message.</string>
+
+    <!-- 동영상 첨부 공통 -->
+    <string name="video_error_read_info">Could not read the video file.</string>
+    <string name="video_error_too_large">The file is too large. (500MB max)</string>
+    <string name="video_error_too_long">Videos can be up to 3 minutes long.</string>
+    <string name="video_error_compress">Video compression failed.</string>
+
+    <!-- 친구 -->
+    <string name="friends_empty_title">No friends yet</string>
+    <string name="friends_empty_subtitle">Use the search above to find people and add them as friends.</string>
+    <string name="friends_search_placeholder">Search people by name</string>
+    <string name="friends_search_scope_note">Only people who share a group with you appear in results.</string>
+    <string name="friends_remove">Remove friend</string>
+    <string name="friends_add">Add friend</string>
+    <string name="friends_remove_short">Remove</string>
+    <string name="friends_remove_confirm">Remove %1$s from your friends?</string>
+    <string name="friends_error_load">Could not load your friends.</string>
+    <string name="friends_error_add">Could not add this friend.</string>
+    <string name="friends_error_remove">Could not remove this friend.</string>
+    <string name="friends_error_open_dm">Could not open the conversation.</string>
+
+    <!-- 검색 -->
+    <string name="search_no_results">No results</string>
+    <string name="search_error_failed">Search failed.</string>
+    <string name="search_empty_title">Find anything</string>
+    <string name="search_empty_subtitle">Search groups, posts, files, messages, and people.</string>
+    <string name="search_placeholder">Search groups, posts, files, messages</string>
+    <string name="search_try_again">Try a different search term.</string>
+    <string name="search_section_users">People</string>
+    <string name="search_section_posts">Posts</string>
+    <string name="search_section_files">Files</string>
+    <string name="search_section_messages">Messages</string>
+
+    <!-- 그룹 목록 -->
+    <string name="groups_list_load_failed">Could not load your groups.</string>
+    <string name="groups_empty_title">No groups yet</string>
+    <string name="groups_empty_subtitle">Create a new group or join one from Discover.</string>
+    <string name="groups_discover">Discover groups</string>
+    <string name="groups_pending">Pending requests</string>
+    <string name="groups_create">Create group</string>
+    <string name="role_owner">Owner</string>
+    <string name="role_admin">Admin</string>
+    <string name="role_member">Member</string>
+
+    <!-- 그룹 만들기/수정 -->
+    <string name="create_group_name">Group name</string>
+    <string name="create_group_desc">Group description</string>
+    <string name="join_type">Join method</string>
+    <string name="join_type_auto_full">Auto-approve — join instantly</string>
+    <string name="join_type_approval_full">Approval required — request to join</string>
+    <string name="join_type_auto">Auto-approve</string>
+    <string name="join_type_approval">Approval required</string>
+    <string name="create_group_add_cover">Add cover image</string>
+    <string name="create_group_error_name">Enter a group name.</string>
+    <string name="create_group_error_create">Could not create the group.</string>
+    <string name="group_edit_title">Edit group info</string>
+    <string name="group_edit_desc">Description</string>
+    <string name="group_edit_change_image">Change cover image</string>
+    <string name="group_error_load">Could not load group info.</string>
+    <string name="error_upload_image">Image upload failed.</string>
+    <string name="error_save">Could not save.</string>
+
+    <!-- 그룹 탐색 -->
+    <string name="discover_search_placeholder">Search groups</string>
+    <string name="discover_sort_recent">Newest</string>
+    <string name="discover_sort_popular">Popular</string>
+    <string name="discover_join_by_code">Join with invite code</string>
+    <string name="group_load_failed">Could not load groups.</string>
+    <string name="discover_empty_title">No groups found</string>
+    <string name="discover_empty_subtitle">Try a different search term.</string>
+    <string name="discover_code_hint">Enter the 8-character invite code you received to join right away.</string>
+    <string name="discover_invite_code">Invite code</string>
+    <string name="membership_joined">Joined</string>
+    <string name="membership_requested">Requested</string>
+    <string name="membership_request">Request</string>
+    <string name="request_cancel">Cancel request</string>
+    <string name="group_join_failed">Could not join the group.</string>
+    <string name="discover_error_join_code">Could not join with this invite code.</string>
+    <string name="request_cancel_failed">Could not cancel the request.</string>
+    <string name="pending_empty_title">No pending join requests</string>
+    <string name="pending_empty_subtitle">Request to join an approval-based group from Discover.</string>
+    <string name="pending_error_load">Could not load pending groups.</string>
+
+    <!-- 그룹 상세 -->
+    <string name="tab_feed">Feed</string>
+    <string name="tab_album">Album</string>
+    <string name="tab_events">Events</string>
+    <string name="tab_members">Members</string>
+    <string name="feed_error_load">Could not load the feed.</string>
+    <string name="feed_empty_title">No stories yet</string>
+    <string name="feed_empty_subtitle">Share the first story.</string>
+    <string name="group_invite_create">Create invite code</string>
+    <string name="group_detail_members_n">Members %1$d</string>
+    <string name="group_invite_hint">Anyone with this code can join right away without approval.</string>
+    <string name="group_invite_max_uses">Max uses (blank for unlimited)</string>
+    <string name="group_invite_validity">Valid days (blank for no expiry)</string>
+    <string name="group_invite_max_uses_label">Up to %1$d uses</string>
+    <string name="group_invite_valid_until">Valid until %1$s</string>
+    <string name="group_invite_no_limit">No usage limit</string>
+    <string name="copied">Copied</string>
+    <string name="copy_code">Copy code</string>
+    <plurals name="group_join_requests_n">
+        <item quantity="one">%1$d join request</item>
+        <item quantity="other">%1$d join requests</item>
+    </plurals>
+    <string name="group_requested_at">Requested %1$s</string>
+    <string name="group_members_error_load">Could not load members.</string>
+    <string name="approve_failed">Could not approve the request.</string>
+    <string name="reject_failed">Could not decline the request.</string>
+    <string name="invite_create_failed">Could not create an invite code.</string>
+
+    <!-- 그룹 앨범 -->
+    <string name="album_error_load">Could not load photos.</string>
+    <string name="album_empty_title">No photos yet</string>
+    <string name="album_empty_subtitle">Photos and videos from posts are collected here.</string>
+    <string name="album_photo_by">Photo by %1$s</string>
+    <string name="album_video_by">Video by %1$s</string>
+
+    <!-- 그룹 일정 -->
+    <string name="rsvp_going">Going</string>
+    <string name="rsvp_maybe">Maybe</string>
+    <string name="rsvp_not_going">Not going</string>
+    <string name="events_empty_title">No events on this day</string>
+    <string name="events_empty_subtitle">Use New event to add the first one.</string>
+    <string name="events_delete_confirm">Delete this event?</string>
+    <string name="events_prev_month">Previous month</string>
+    <string name="events_next_month">Next month</string>
+    <string name="events_create">New event</string>
+    <string name="events_new_title">New event — %1$s</string>
+    <string name="events_title_label">Event title</string>
+    <string name="events_start_label">Start (HH:MM)</string>
+    <string name="events_end_label">End (optional)</string>
+    <string name="events_location_label">Location (optional)</string>
+    <string name="events_desc_label">Description (optional)</string>
+    <string name="events_submit">Add</string>
+    <string name="events_error_start_format">Enter the start time in HH:MM format</string>
+    <string name="events_error_end_format">Enter the end time in HH:MM format</string>
+    <string name="events_error_end_before_start">The end time cannot be earlier than the start time</string>
+    <string name="events_rsvp_counts">Going %1$d · Maybe %2$d · Not going %3$d</string>
+    <string name="events_no_attendees">No members have responded yet.</string>
+    <string name="events_created_by">Created by %1$s</string>
+    <string name="events_error_load">Could not load events.</string>
+    <string name="events_error_create">Could not create the event.</string>
+    <string name="events_error_delete">Could not delete the event.</string>
+    <string name="events_error_rsvp">Could not save your response.</string>
+
+    <!-- 그룹 설정 -->
+    <string name="app_share_text">StoryGroup — stories together with your groups\n%1$s</string>
+    <string name="group_settings_user_section">User settings</string>
+    <string name="group_settings_group_section">Group settings</string>
+    <string name="group_reports_title">Reports</string>
+    <string name="group_delete">Delete group</string>
+    <string name="group_leave">Leave group</string>
+    <string name="app_info_section">App info</string>
+    <string name="share_app">Share</string>
+    <string name="group_delete_confirm">Really delete this group? All posts, chats, and files will be gone.</string>
+    <string name="group_leave_confirm">Really leave? You will no longer be able to take part in this group\'s posts and chats.</string>
+    <string name="group_leave_action">Leave</string>
+
+    <!-- 그룹 신고함 -->
+    <string name="group_reports_desc">Posts reported by members. Reviewing or dismissing is only a record — take action such as deleting from the post itself.</string>
+    <string name="report_status_pending">Pending</string>
+    <string name="group_reports_all">All</string>
+    <string name="group_reports_error_load">Could not load reports.</string>
+    <string name="group_reports_empty_pending">No pending reports.</string>
+    <string name="group_reports_empty_all">No reports.</string>
+    <string name="group_reports_empty_subtitle">Reports from members show up here.</string>
+    <string name="report_status_resolved">Reviewed</string>
+    <string name="report_status_dismissed">Dismissed</string>
+    <!-- %1$s=상대 시각, %2$s=신고자 이름 -->
+    <string name="group_reports_reported_by">%1$s · Reported by %2$s</string>
+    <string name="post_by">Post by %1$s</string>
+    <string name="group_reports_no_text">(Attachment-only post with no text)</string>
+    <string name="group_reports_reason">Reason: %1$s</string>
+    <string name="group_reports_resolve">Mark reviewed</string>
+    <string name="group_reports_dismiss">Dismiss</string>
+    <string name="group_reports_error_action">Could not process the report.</string>
+
+    <!-- 홈 -->
+    <string name="home_title">Our Stories</string>
+
+    <!-- 알림 -->
+    <string name="notifications_unread_n">%1$d unread</string>
+    <string name="notifications_mark_all">Mark all as read</string>
+    <string name="notifications_error_load">Could not load notifications.</string>
+    <string name="notifications_empty_title">No notifications</string>
+    <string name="notifications_empty_subtitle">New updates will show up here.</string>
+    <string name="notifications_mark_read">Read</string>
+    <string name="notification_type_new_post">New post</string>
+    <string name="notification_type_mention">Mention</string>
+    <string name="notification_type_chat">Chat message</string>
+    <string name="notification_type_meeting">Meeting started</string>
+    <string name="notification_type_invite">Invite</string>
+    <string name="notification_type_join_request">Join request</string>
+    <string name="notification_type_join_approved">Join approved</string>
+    <string name="notification_type_join_rejected">Join declined</string>
+    <string name="notifications_error_mark">Could not mark as read.</string>
+    <string name="notifications_error_mark_all">Could not mark all as read.</string>
+
+    <!-- 글쓰기 -->
+    <string name="create_post_title">New post</string>
+    <string name="create_post_title_edit">Edit post</string>
+    <string name="create_post_submit">Post</string>
+    <string name="create_post_placeholder">What would you like to share?</string>
+    <string name="create_post_add_photo">Add photo</string>
+    <string name="create_post_add_video">Add video</string>
+    <string name="create_post_compressing">Compressing %1$d%</string>
+    <string name="create_post_error_upload_video">Video upload failed.</string>
+    <string name="create_post_error_empty">Write something or add a photo or video.</string>
+    <string name="create_post_error_edit">Could not update the post.</string>
+    <string name="create_post_error_create">Could not publish the post.</string>
+
+    <!-- 게시글 상세 -->
+    <string name="post_detail_title">Post</string>
+    <string name="post_error_load">Could not load the post.</string>
+    <string name="post_error_like">Could not update the like.</string>
+    <string name="post_report_action">Report</string>
+    <string name="post_block_action">Block</string>
+    <string name="block_user_confirm">Block %1$s?\nTheir posts and comments will be hidden from you, and direct messages will be blocked.</string>
+    <string name="post_detail_report_post_title">Report post</string>
+    <string name="post_detail_report_user_title">Report user</string>
+    <string name="post_detail_block_user_title">Block user</string>
+    <string name="report_post_confirm">Report this post?\nGroup moderators will review the report.</string>
+    <string name="report_user_confirm">Report %1$s?\nAdministrators will review the report.</string>
+    <string name="post_reply">Reply</string>
+    <string name="post_reply_to">Replying to %1$s</string>
+    <string name="post_reply_cancel">Cancel reply</string>
+    <string name="post_comment_placeholder">Write a comment.</string>
+    <string name="post_error_comment_empty">Enter a comment.</string>
+    <string name="post_error_comment_submit">Could not post the comment.</string>
+    <string name="post_error_comment_delete">Could not delete the comment.</string>
+    <string name="post_error_delete">Could not delete the post.</string>
+    <string name="report_submitted">Your report has been submitted.</string>
+    <string name="report_error">Could not submit the report.</string>
+    <string name="block_done">Blocked.</string>
+    <string name="block_error">Could not block this user.</string>
+
+    <!-- 프로필/설정 -->
+    <string name="profile_error_load">Could not load your info.</string>
+    <string name="profile_account_settings">Account settings</string>
+    <string name="profile_app_settings">App settings</string>
+    <string name="profile_blocked_users">Blocked users</string>
+    <string name="profile_terms">Terms of Service</string>
+    <string name="profile_privacy">Privacy Policy</string>
+    <string name="profile_logout">Log out</string>
+    <string name="account_change_photo">Change profile photo</string>
+    <string name="account_status_message">Status message</string>
+    <string name="account_bio">Bio</string>
+    <string name="account_saved">Saved.</string>
+    <string name="account_change_password">Change password</string>
+    <string name="account_current_password">Current password</string>
+    <string name="account_new_password">New password (8+ characters)</string>
+    <string name="account_confirm_password">Confirm new password</string>
+    <string name="account_password_changed">Your password has been changed. Other devices will need to log in again.</string>
+    <string name="account_error_name_required">Enter your name.</string>
+    <string name="account_error_image_save">Could not save the image.</string>
+    <string name="account_error_password_required">Enter your password.</string>
+    <string name="account_error_password_short">The new password must be at least 8 characters.</string>
+    <string name="account_error_password_mismatch">The new passwords do not match.</string>
+    <string name="account_error_password_change">Could not change the password.</string>
+    <string name="app_settings_theme_mood">Theme mood</string>
+    <string name="app_settings_mood_warm">Cozy (warm)</string>
+    <string name="app_settings_mood_vibrant">Casual (vivid)</string>
+    <string name="app_settings_display_mode">Display mode</string>
+    <string name="app_settings_mode_system">System default</string>
+    <string name="app_settings_mode_light">Light</string>
+    <string name="app_settings_mode_dark">Dark</string>
+    <string name="app_settings_nav_style">Navigation style</string>
+    <string name="app_settings_nav_tabs">Default (tabs — rail on wide screens)</string>
+    <string name="app_settings_nav_drawer">Legacy (drawer)</string>
+    <string name="blocked_error_load">Could not load blocked users.</string>
+    <string name="blocked_empty_title">No blocked users.</string>
+    <string name="blocked_empty_subtitle">Blocking hides that person\'s posts, comments, and chats from you, and neither of you can send direct messages.</string>
+    <string name="blocked_at">Blocked %1$s</string>
+    <string name="unblock">Unblock</string>
+    <string name="blocked_error_unblock">Could not unblock this user.</string>
+
+    <!-- 공개 프로필 -->
+    <string name="user_error_load">Could not load this profile.</string>
+    <string name="user_joined">Joined %1$s</string>
+    <string name="user_edit_profile">Edit profile</string>
+    <string name="user_error_friend">Could not update your friends.</string>
+    <string name="user_error_dm">Could not start the conversation.</string>
+
+    <!-- 데스크톱(JVM) -->
+    <string name="video_open_browser_failed">Could not open the browser. Copy the address and open it yourself.</string>
+    <string name="video_playing_in_browser">Playing in your browser.</string>
+    <string name="video_open_in_browser">Open in browser</string>
+    <string name="share_copied">Copied to clipboard</string>
+    <string name="picker_file">Choose a file</string>
+    <string name="picker_video">Choose a video</string>
+    <string name="picker_image">Choose an image</string>
+</resources>

@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import kr.hhp227.storygroup.shared.domain.model.RtcCallPeer
 import kr.hhp227.storygroup.ui.components.SgAvatar
 import kr.hhp227.storygroup.ui.theme.SgTheme
+import org.jetbrains.compose.resources.stringResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.common_me
 
 /**
  * 통화 비디오 그리드 — 로스터(PEERS) 기준 타일 2열, 회의 상세와 DM 통화 화면이 공유한다.
@@ -74,7 +77,7 @@ private fun RtcPeerTile(
             SgAvatar(name = peer.userName, size = 48.dp)
         }
         Text(
-            if (isMe) "나" else peer.userName,
+            if (isMe) stringResource(Res.string.common_me) else peer.userName,
             style = SgTheme.typography.labelSmall,
             color = Color.White,
             maxLines = 1,

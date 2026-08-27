@@ -347,16 +347,16 @@ final class ChatRoomViewModel: MviViewModel {
     init(
         groupId: Int64?,
         chatRoomId: Int64,
-        getChatMessagesUseCase: GetChatMessagesUseCase,
-        sendChatMessageUseCase: SendChatMessageUseCase,
-        markChatMessagesReadUseCase: MarkChatMessagesReadUseCase,
-        uploadChatFileUseCase: UploadChatFileUseCase,
-        sendChatTypingUseCase: SendChatTypingUseCase,
-        getChatReadPositionsUseCase: GetChatReadPositionsUseCase,
-        getGroupMembersUseCase: GetGroupMembersUseCase,
-        getCallRosterUseCase: GetCallRosterUseCase,
-        observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase,
-        getCurrentUserIdUseCase: GetCurrentUserIdUseCase
+        getChatMessagesUseCase: GetChatMessagesUseCase = AppContainer.shared.getChatMessagesUseCase,
+        sendChatMessageUseCase: SendChatMessageUseCase = AppContainer.shared.sendChatMessageUseCase,
+        markChatMessagesReadUseCase: MarkChatMessagesReadUseCase = AppContainer.shared.markChatMessagesReadUseCase,
+        uploadChatFileUseCase: UploadChatFileUseCase = AppContainer.shared.uploadChatFileUseCase,
+        sendChatTypingUseCase: SendChatTypingUseCase = AppContainer.shared.sendChatTypingUseCase,
+        getChatReadPositionsUseCase: GetChatReadPositionsUseCase = AppContainer.shared.getChatReadPositionsUseCase,
+        getGroupMembersUseCase: GetGroupMembersUseCase = AppContainer.shared.getGroupMembersUseCase,
+        getCallRosterUseCase: GetCallRosterUseCase = AppContainer.shared.getCallRosterUseCase,
+        observeChatRoomEventsUseCase: ObserveChatRoomEventsUseCase = AppContainer.shared.observeChatRoomEventsUseCase,
+        getCurrentUserIdUseCase: GetCurrentUserIdUseCase = AppContainer.shared.getCurrentUserIdUseCase
     ) {
         self.groupId = groupId
         self.chatRoomId = chatRoomId

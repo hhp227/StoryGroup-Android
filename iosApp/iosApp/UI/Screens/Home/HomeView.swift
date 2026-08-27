@@ -7,10 +7,7 @@ import Shared
 /// ZStack 안이라 탭 전환에도 살아있고, 로그아웃 시 MainShellView와 함께 소멸한다.
 /// VM lazy 생성(StateObject)과 페이징 구독 분리는 GroupDetailView와 동일한 2계층 구조.
 struct HomeView: View {
-    @StateObject private var homeViewModel: HomeViewModel
-
-    /// 글쓰기 화면(CreatePostView)의 VM 생성에 쓰인다
-    private let container: AppContainer
+    @StateObject private var homeViewModel = HomeViewModel()
 
     /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
     private let chatViewModel: ChatViewModel
@@ -18,18 +15,10 @@ struct HomeView: View {
     private let profileViewModel: ProfileViewModel
 
     var body: some View {
-        HomeContent(viewModel: homeViewModel, container: container, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
+        HomeContent(viewModel: homeViewModel, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
     }
 
-    init(container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
-        _homeViewModel = StateObject(wrappedValue: HomeViewModel(
-            getLoungePostsPagingDataUseCase: container.getLoungePostsPagingDataUseCase,
-            observePostUpdatesUseCase: container.observePostUpdatesUseCase,
-            observeUserBlocksUseCase: container.observeUserBlocksUseCase,
-            observePostDeletionsUseCase: container.observePostDeletionsUseCase,
-            togglePostLikeUseCase: container.togglePostLikeUseCase
-        ))
-        self.container = container
+    init(chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
     }
@@ -39,8 +28,6 @@ struct HomeView: View {
 /// 헤더 사진이 비치고, 스크롤하면 시스템이 배경·타이틀 전환을 처리한다.
 private struct HomeContent: View {
     @ObservedObject var viewModel: HomeViewModel
-
-    let container: AppContainer
 
     /// 게시글 상세→작성자 프로필 체인이 쓴다(Task 9 PostDetailView 호출부) — 이 태스크에서는 전달만
     let chatViewModel: ChatViewModel
@@ -130,7 +117,7 @@ private struct HomeContent: View {
 
     private var createPostDestination: some View {
         // 성공 시 라운지 피드를 첫 페이지부터 다시 읽는다 — Compose HomeScreen refreshRequested 미러
-        CreatePostView(container: container, groupId: nil) {
+        CreatePostView(groupId: nil) {
             viewModel.onAction(.refresh)
         }
     }
@@ -193,7 +180,6 @@ private struct HomeContent: View {
                         // 이 VM이 스냅샷에서 그 글을 걷어낸다(전체 재조회 없음)
                         NavigationLink {
                             PostDetailView(
-                                container: container,
                                 groupId: post.groupId,
                                 postId: post.id,
                                 chatViewModel: chatViewModel,
@@ -219,13 +205,12 @@ private struct HomeContent: View {
         }
     }
 
-    init(viewModel: HomeViewModel, container: AppContainer, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(viewModel: HomeViewModel, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
 
         self.viewModel = viewModel
-        self.container = container
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())

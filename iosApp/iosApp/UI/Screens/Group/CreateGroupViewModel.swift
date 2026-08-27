@@ -73,8 +73,8 @@ final class CreateGroupViewModel: MviViewModel {
     }
 
     init(
-        createGroupUseCase: CreateGroupUseCase,
-        uploadImageUseCase: UploadImageUseCase
+        createGroupUseCase: CreateGroupUseCase = AppContainer.shared.createGroupUseCase,
+        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase
     ) {
         self.createGroupUseCase = createGroupUseCase
         self.uploadImageUseCase = uploadImageUseCase

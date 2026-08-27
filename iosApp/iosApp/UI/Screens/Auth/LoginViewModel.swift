@@ -46,9 +46,9 @@ final class LoginViewModel: MviViewModel {
     }
 
     init(
-        isLoggedInUseCase: IsLoggedInUseCase,
-        loginUseCase: LoginUseCase,
-        logoutUseCase: LogoutUseCase
+        isLoggedInUseCase: IsLoggedInUseCase = AppContainer.shared.isLoggedInUseCase,
+        loginUseCase: LoginUseCase = AppContainer.shared.loginUseCase,
+        logoutUseCase: LogoutUseCase = AppContainer.shared.logoutUseCase
     ) {
         self.loginUseCase = loginUseCase
         self.logoutUseCase = logoutUseCase
