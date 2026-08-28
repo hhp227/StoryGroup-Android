@@ -131,6 +131,49 @@ struct MainShellView: View {
                     .padding(.top, 8)
                 }
             }
+            // 세션 진입 1회 — composeApp onSessionStart 미러. 이 셸은 로그인 상태에서만 만들어지므로
+            // 여기가 곧 "로그인된 상태에서의 토큰 등록" 시점이다(미로그인 중 도착한 토큰의 재시도 지점)
+            .task { PushRegistrar.registerCurrentToken() }
+            // 푸시 탭 라우팅 소비 — composeApp SessionContent의 LaunchedEffect(pendingDeepLink) 미러.
+            // @Published는 새 구독자에게 현재 값을 즉시 흘려보내므로, 셸이 뜨기 전에 도착한 탭
+            // (콜드 스타트·로그인 전 탭)도 여기서 한 번에 소비된다 — .task에서 또 읽으면 이중 push가 된다
+            .onReceive(PendingPushRoute.shared.$route) { route in
+                guard let route = route else { return }
+                // 비우기와 이동을 둘 다 다음 런루프로 미룬다. (1) @Published는 willSet 시점에 발행돼
+                // 여기서 다시 대입하면 재진입이고, (2) 구독 시점 리플레이(콜드 스타트)는 뷰 그래프
+                // 업데이트 트랜잭션 안에서 동기로 전달돼 그 자리에서 push하면 path 변경이
+                // "Modifying state during view update"가 된다(경고 또는 push 유실).
+                // 비우기가 발행하는 nil은 위 guard가 걸러낸다
+                DispatchQueue.main.async {
+                    PendingPushRoute.shared.route = nil
+                    openPushRoute(route)
+                }
+            }
+            .onReceive(PendingPushRoute.shared.$openNotifications) { requested in
+                guard requested else { return }
+                // 위와 같은 이유로 탭 전환도 트랜잭션 밖에서 한다
+                DispatchQueue.main.async {
+                    PendingPushRoute.shared.openNotifications = false
+                    // 라우팅 정보가 없는 알림은 알림 탭으로(설계 §9 폴백) — 탭 전환은 상태라 VM이 소유한다
+                    navigationViewModel.onAction(.selectTab(destination: .notifications))
+                }
+            }
+    }
+
+    /// 푸시가 지정한 Route → NavigationAction. 이 셸의 push는 전부 NavigationViewModel을 거치므로
+    /// (event → path.append) 알림 탭 진입도 화면 내부 진입과 완전히 같은 경로를 탄다.
+    /// PendingPushRoute가 만드는 목적지는 아래 셋뿐이다(설계 §9) — 나머지는 도달 불가
+    private func openPushRoute(_ route: Route) {
+        switch route {
+        case .chatRoom(let chatRoomId, let groupId, let title):
+            navigationViewModel.onAction(.navigateToChatRoom(chatRoomId: chatRoomId, groupId: groupId, title: title))
+        case .postDetail(let groupId, let postId):
+            navigationViewModel.onAction(.navigateToPostDetail(groupId: groupId, postId: postId))
+        case .groupDetail(let groupId):
+            navigationViewModel.onAction(.navigateToGroupDetail(groupId: groupId))
+        default:
+            break
+        }
     }
 
     /// 루트 내비게이션 컨테이너 — 셸(탭바 포함) 전체가 루트 콘텐츠라 상세 push 시 하단 탭까지 덮는다.

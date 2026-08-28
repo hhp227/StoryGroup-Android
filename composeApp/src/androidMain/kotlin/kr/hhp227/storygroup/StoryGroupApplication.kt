@@ -1,6 +1,10 @@
 package kr.hhp227.storygroup
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import kr.hhp227.storygroup.push.StoryGroupMessagingService
 import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.shared.data.source.AndroidNetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.storage.SharedPreferencesTokenStorage
@@ -20,5 +24,16 @@ class StoryGroupApplication : Application() {
             imageCompressor = AndroidImageCompressor(this),
             networkStatusDataSource = AndroidNetworkStatusDataSource(this)
         )
+
+        // 푸시 채널 — 서비스(StoryGroupMessagingService)가 kind별로 나눠 쓴다(API 26+, minSdk 24라 가드 필요)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(
+                NotificationChannel(StoryGroupMessagingService.CHANNEL_CHAT, "채팅", NotificationManager.IMPORTANCE_HIGH)
+            )
+            notificationManager.createNotificationChannel(
+                NotificationChannel(StoryGroupMessagingService.CHANNEL_NOTIFICATION, "알림", NotificationManager.IMPORTANCE_DEFAULT)
+            )
+        }
     }
 }

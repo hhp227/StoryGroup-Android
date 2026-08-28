@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 백그라운드 푸시 알림 표시(API 33+ 런타임 권한) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 회의 영상 통화(WebRTC) — 카메라/마이크는 통화 참가 시 런타임 권한으로 요청한다 -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -26,6 +28,7 @@
              ime 인셋으로 전달되어 화면의 imePadding이 소화한다(작성 화면 상단바 고정) -->
         <activity
             android:exported="true"
+            android:launchMode="singleTask"
             android:name="kr.hhp227.storygroup.MainActivity"
             android:theme="@style/Theme.StoryGroup.Splash"
             android:windowSoftInputMode="adjustResize">
@@ -39,6 +42,14 @@
             android:name="kr.hhp227.storygroup.ui.rtc.ScreenShareService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+        <!-- 백그라운드 푸시 알림 수신 — data-only FCM 메시지(설계 §4) -->
+        <service
+            android:name="kr.hhp227.storygroup.push.StoryGroupMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

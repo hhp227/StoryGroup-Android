@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B33300CBB26009BCB1F /* Paging */; };
 		0A8D2B37300CBB26009BCB1F /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B36300CBB26009BCB1F /* WebRTC */; };
+		0A8D2B3A300CBB26009BCB1F /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 0A8D2B39300CBB26009BCB1F /* FirebaseMessaging */; };
 		A1010002AABBCCDDEEFF0002 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011002AABBCCDDEEFF0002 /* iOSApp.swift */; };
 		A1010004AABBCCDDEEFF0004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011004AABBCCDDEEFF0004 /* Assets.xcassets */; };
 		A1010005AABBCCDDEEFF0005 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1011005AABBCCDDEEFF0005 /* Preview Assets.xcassets */; };
@@ -92,6 +93,9 @@
 		A1010053AABBCCDDEEFF0053 /* NavigationEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011053AABBCCDDEEFF0053 /* NavigationEvent.swift */; };
 		A1010054AABBCCDDEEFF0054 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011054AABBCCDDEEFF0054 /* NavigationViewModel.swift */; };
 		A1010055AABBCCDDEEFF0055 /* NavigationStackCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011055AABBCCDDEEFF0055 /* NavigationStackCompat.swift */; };
+		A1010062AABBCCDDEEFF0062 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011062AABBCCDDEEFF0062 /* AppDelegate.swift */; };
+		A1010063AABBCCDDEEFF0063 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011063AABBCCDDEEFF0063 /* PushRegistrar.swift */; };
+		A1010064AABBCCDDEEFF0064 /* PendingPushRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011064AABBCCDDEEFF0064 /* PendingPushRoute.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -180,6 +184,10 @@
 		A1011053AABBCCDDEEFF0053 /* NavigationEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationEvent.swift; sourceTree = "<group>"; };
 		A1011054AABBCCDDEEFF0054 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
 		A1011055AABBCCDDEEFF0055 /* NavigationStackCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationStackCompat.swift; sourceTree = "<group>"; };
+		A1011062AABBCCDDEEFF0062 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1011063AABBCCDDEEFF0063 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
+		A1011064AABBCCDDEEFF0064 /* PendingPushRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPushRoute.swift; sourceTree = "<group>"; };
+		A1011065AABBCCDDEEFF0065 /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -190,6 +198,7 @@
 			files = (
 				0A8D2B34300CBB26009BCB1F /* Paging in Frameworks */,
 				0A8D2B37300CBB26009BCB1F /* WebRTC in Frameworks */,
+				0A8D2B3A300CBB26009BCB1F /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,9 +211,11 @@
 				A1011002AABBCCDDEEFF0002 /* iOSApp.swift */,
 				A101100BAABBCCDDEEFF000B /* AppRootView.swift */,
 				A1013000AABBCCDDEEFF0000 /* DI */,
+				A1013016AABBCCDDEEFF0016 /* Push */,
 				A1013001AABBCCDDEEFF0001 /* UI */,
 				A1011004AABBCCDDEEFF0004 /* Assets.xcassets */,
 				A1011006AABBCCDDEEFF0006 /* Info.plist */,
+				A1011065AABBCCDDEEFF0065 /* iosApp.entitlements */,
 				A1012000AABBCCDDEEFF0000 /* Preview Content */,
 			);
 			path = iosApp;
@@ -232,6 +243,16 @@
 				A1011009AABBCCDDEEFF0009 /* AppContainer.swift */,
 			);
 			path = DI;
+			sourceTree = "<group>";
+		};
+		A1013016AABBCCDDEEFF0016 /* Push */ = {
+			isa = PBXGroup;
+			children = (
+				A1011062AABBCCDDEEFF0062 /* AppDelegate.swift */,
+				A1011064AABBCCDDEEFF0064 /* PendingPushRoute.swift */,
+				A1011063AABBCCDDEEFF0063 /* PushRegistrar.swift */,
+			);
+			path = Push;
 			sourceTree = "<group>";
 		};
 		A1013001AABBCCDDEEFF0001 /* UI */ = {
@@ -516,6 +537,7 @@
 			packageProductDependencies = (
 				0A8D2B33300CBB26009BCB1F /* Paging */,
 				0A8D2B36300CBB26009BCB1F /* WebRTC */,
+				0A8D2B39300CBB26009BCB1F /* FirebaseMessaging */,
 			);
 			productName = iosApp;
 			productReference = FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */;
@@ -548,6 +570,7 @@
 			packageReferences = (
 				0A8D2B32300CBB26009BCB1F /* XCRemoteSwiftPackageReference "Jetpack-Paging-for-SwiftUI" */,
 				0A8D2B35300CBB26009BCB1F /* XCRemoteSwiftPackageReference "WebRTC" */,
+				0A8D2B38300CBB26009BCB1F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = 7332ACCB08708982CBFABD2D /* Products */;
 			projectDirPath = "";
@@ -678,6 +701,9 @@
 				A1010053AABBCCDDEEFF0053 /* NavigationEvent.swift in Sources */,
 				A1010054AABBCCDDEEFF0054 /* NavigationViewModel.swift in Sources */,
 				A1010055AABBCCDDEEFF0055 /* NavigationStackCompat.swift in Sources */,
+				A1010062AABBCCDDEEFF0062 /* AppDelegate.swift in Sources */,
+				A1010063AABBCCDDEEFF0063 /* PushRegistrar.swift in Sources */,
+				A1010064AABBCCDDEEFF0064 /* PendingPushRoute.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -811,6 +837,7 @@
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
@@ -849,6 +876,7 @@
 				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
@@ -921,6 +949,14 @@
 				minimumVersion = 120.0.0;
 			};
 		};
+		0A8D2B38300CBB26009BCB1F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -933,6 +969,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0A8D2B35300CBB26009BCB1F /* XCRemoteSwiftPackageReference "WebRTC" */;
 			productName = WebRTC;
+		};
+		0A8D2B39300CBB26009BCB1F /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0A8D2B38300CBB26009BCB1F /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

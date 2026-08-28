@@ -25,7 +25,11 @@ struct AppRootView: View {
         ZStack(alignment: .top) {
             Group {
                 if loginViewModel.uiState.isLoggedIn {
-                    MainShellView(theme: theme, onLogout: { loginViewModel.onAction(.logout) })
+                    MainShellView(theme: theme, onLogout: {
+                        // 토큰 해제는 best effort — 실패해도 로그아웃은 진행한다(설계 §10)
+                        PushRegistrar.unregisterCurrentToken()
+                        loginViewModel.onAction(.logout)
+                    })
                 } else {
                     AuthFlowView(loginViewModel: loginViewModel)
                 }
