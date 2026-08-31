@@ -12,6 +12,14 @@ struct AccountSettingsView: View {
     /// onAction 호출만 하므로 관찰(@ObservedObject)은 불필요
     private let profileViewModel: ProfileViewModel
 
+    /// 탈퇴 성공 콜백 — 호출부가 기존 로그아웃 경로(AppRootView.swift의 MainShellView onLogout:
+    /// PushRegistrar.unregisterCurrentToken()+LoginViewModel.Action.logout)로 이어 붙인다.
+    /// Compose AccountSettingsScreen의 onAccountDeleted 파라미터 미러. 이 화면을 push하는
+    /// 4개 호출부(MainShellView 셸 진입점, GroupDetailView/PostDetailView/SearchView의 "본인
+    /// 프로필→계정 설정" 체인) 전부가 각자의 onLogout 또는 그 릴레이를 명시적으로 채운다 —
+    /// 기본값을 두지 않아 새 호출부가 생기면 컴파일이 깨져 배선 누락을 강제로 잡는다
+    private let onAccountDeleted: () -> Void
+
     @Environment(\.sgColors) private var colors
 
     @State private var name = ""
@@ -35,12 +43,45 @@ struct AccountSettingsView: View {
 
     @State private var showImagePicker = false
 
+    /// 탈퇴 확인 다이얼로그 — 레거시 그룹 삭제/나가기 확인 다이얼로그 관용구 미러
+    @State private var confirmingDelete = false
+
+    @State private var deletePassword = ""
+
+    /// 이번에 다이얼로그를 연 뒤 실제로 제출한 적이 있을 때만 VM 에러를 보여준다 — 취소 후 재오픈 시
+    /// 직전 실패 문구(예: "현재 비밀번호가 올바르지 않습니다")가 입력 전인데 먼저 보이는 문제 방지.
+    /// VM은 화면(push)보다 오래 살 수 있어 에러가 자연 소멸하지 않으므로 화면 로컬로 게이트.
+    @State private var deleteAttempted = false
+
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(colors.paper)
+            .overlay {
+                if confirmingDelete {
+                    DeleteAccountDialog(
+                        password: $deletePassword,
+                        isLoading: accountSettingsViewModel.uiState.isDeletingAccount,
+                        // 이번 오픈에서 한 번이라도 제출했을 때만 VM 에러를 노출(위 deleteAttempted 주석 참고)
+                        error: deleteAttempted ? accountSettingsViewModel.uiState.deleteAccountError : nil,
+                        onDismiss: {
+                            confirmingDelete = false
+                            deletePassword = ""
+                            deleteAttempted = false
+                        },
+                        onConfirm: {
+                            deleteAttempted = true
+                            accountSettingsViewModel.onAction(.deleteAccount(password: deletePassword))
+                        }
+                    )
+                }
+            }
             .navigationTitle("계정 설정")
             .navigationBarTitleDisplayMode(.inline)
+            // 삭제 인플라이트 중 back으로 pop되면 서버는 탈퇴됐는데 .onReceive(event)가 사라져
+            // accountDeleted를 못 받아 로그아웃이 안 걸린다(좀비 세션) — 백 버튼만 차단.
+            // ⚠️ 스와이프백(엣지 팬 제스처)은 이 modifier로 안 막힌다 — Mac에서 실기기로 별도 확인 필요
+            .navigationBarBackButtonHidden(accountSettingsViewModel.uiState.isDeletingAccount)
             // 호출 화면이 투명 바(커버 펼침) 상태로 push해도 이 화면은 기본 내비바 — 복귀 시엔 호출 화면이 재적용
             .navigationBarScrim(visible: true)
             .onReceive(accountSettingsViewModel.$uiState.map(\.profile)) { profile in
@@ -62,6 +103,11 @@ struct AccountSettingsView: View {
                     currentPassword = ""
                     newPassword = ""
                     confirmPassword = ""
+                case .accountDeleted:
+                    confirmingDelete = false
+                    deletePassword = ""
+                    deleteAttempted = false
+                    onAccountDeleted()
                 }
             }
             .sheet(isPresented: $showImagePicker) {
@@ -89,8 +135,28 @@ struct AccountSettingsView: View {
                 VStack(spacing: 12) {
                     profileCard
                     passwordCard
+                    deleteAccountRow
                 }
                 .padding(16)
+            }
+        }
+    }
+
+    /// 설정 목록 끝 — 회원 탈퇴(위험색 행, 탭하면 확인 다이얼로그)
+    private var deleteAccountRow: some View {
+        SGCard {
+            HStack {
+                Text("회원 탈퇴").font(.body).foregroundColor(colors.rust)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !accountSettingsViewModel.uiState.isDeletingAccount else { return }
+                // 새로 여는 참이니 직전(취소된) 시도의 잔존 에러는 숨긴다
+                deleteAttempted = false
+                confirmingDelete = true
             }
         }
     }
@@ -199,7 +265,83 @@ struct AccountSettingsView: View {
         }
     }
 
-    init(profileViewModel: ProfileViewModel) {
+    init(profileViewModel: ProfileViewModel, onAccountDeleted: @escaping () -> Void) {
         self.profileViewModel = profileViewModel
+        self.onAccountDeleted = onAccountDeleted
+    }
+}
+
+/// 회원 탈퇴 확인 다이얼로그 — PostDetailView의 ActionConfirmDialog(신고·차단) 관용구 미러
+/// + 본인 확인용 비밀번호 필드. 성공하면 accountDeleted 이벤트로 화면이 닫고 로그아웃 흐름으로 넘어간다.
+private struct DeleteAccountDialog: View {
+    @Binding var password: String
+
+    let isLoading: Bool
+
+    let error: String?
+
+    let onDismiss: () -> Void
+
+    let onConfirm: () -> Void
+
+    @Environment(\.sgColors) private var colors
+
+    private var canConfirm: Bool {
+        !isLoading && !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            SGCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("회원 탈퇴").font(.headline).foregroundColor(colors.ink)
+                    Text("정말 탈퇴하시겠어요? 되돌릴 수 없으며, 작성한 게시글·댓글·채팅은 '탈퇴한 사용자'로 남습니다.")
+                        .font(.subheadline)
+                        .foregroundColor(colors.ink)
+                    SGTextField(label: "현재 비밀번호", text: $password, isSecure: true, enabled: !isLoading)
+                    if let error {
+                        Text(error).font(.caption).foregroundColor(colors.rust)
+                    }
+                    HStack(spacing: 8) {
+                        Button(action: onDismiss) {
+                            Text("취소")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                // SGPrimaryButton과 같은 높이로 나란히 맞춘다
+                                .frame(height: 48)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
+                                        .stroke(colors.stoneBorder, lineWidth: 1)
+                                )
+                                .foregroundColor(colors.ink)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isLoading)
+                        Button(action: onConfirm) {
+                            HStack(spacing: 8) {
+                                if isLoading {
+                                    ProgressView().progressViewStyle(CircularProgressViewStyle(tint: colors.inkFaint))
+                                }
+                                Text("탈퇴").font(.system(size: 16, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(
+                                RoundedRectangle(cornerRadius: colors.radiusButton ?? 24, style: .continuous)
+                                    .fill(canConfirm ? colors.rust : colors.rust.opacity(0.4))
+                            )
+                            .foregroundColor(colors.onAccent)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canConfirm)
+                    }
+                }
+                .padding(16)
+            }
+            .padding(24)
+        }
     }
 }

@@ -17,9 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
@@ -38,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import kr.hhp227.storygroup.di.screenViewModel
 import kr.hhp227.storygroup.di.sessionViewModel
 import kr.hhp227.storygroup.ui.components.SgAvatar
@@ -57,12 +61,16 @@ import storygroup.composeapp.generated.resources.account_change_password
 import storygroup.composeapp.generated.resources.account_change_photo
 import storygroup.composeapp.generated.resources.account_confirm_password
 import storygroup.composeapp.generated.resources.account_current_password
+import storygroup.composeapp.generated.resources.account_delete_account
+import storygroup.composeapp.generated.resources.account_delete_action
+import storygroup.composeapp.generated.resources.account_delete_confirm
 import storygroup.composeapp.generated.resources.account_new_password
 import storygroup.composeapp.generated.resources.account_password_changed
 import storygroup.composeapp.generated.resources.account_saved
 import storygroup.composeapp.generated.resources.account_status_message
 import storygroup.composeapp.generated.resources.auth_name
 import storygroup.composeapp.generated.resources.common_back
+import storygroup.composeapp.generated.resources.common_cancel
 import storygroup.composeapp.generated.resources.common_profile
 import storygroup.composeapp.generated.resources.common_retry
 import storygroup.composeapp.generated.resources.common_save
@@ -78,12 +86,15 @@ import storygroup.composeapp.generated.resources.profile_account_settings
 fun AccountSettingsScreen(
     modifier: Modifier = Modifier,
     onNavigationAction: (NavigationAction) -> Unit = sessionNavigationViewModel()::onAction,
+    // 탈퇴 성공 콜백 — 호출부가 기존 로그아웃 경로(App.kt onLogout: onSessionEnd+LoginViewModel.Action.Logout)로 이어 붙인다
+    onAccountDeleted: () -> Unit = {},
     viewModel: AccountSettingsViewModel = screenViewModel {
         AccountSettingsViewModel(
             getMyProfileUseCase = it.getMyProfileUseCase,
             updateMyProfileUseCase = it.updateMyProfileUseCase,
             changePasswordUseCase = it.changePasswordUseCase,
-            uploadImageUseCase = it.uploadImageUseCase
+            uploadImageUseCase = it.uploadImageUseCase,
+            deleteAccountUseCase = it.deleteAccountUseCase
         )
     },
     // 저장 성공 반영용 — 프로필 탭/드로어 헤더와 같은 세션 스코프 인스턴스
@@ -104,6 +115,13 @@ fun AccountSettingsScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var profileSaved by remember { mutableStateOf(false) }
     var passwordChanged by remember { mutableStateOf(false) }
+    // 탈퇴 확인 다이얼로그 — 레거시 그룹 삭제/나가기 CloseConfirmDialog 관용구 미러
+    var confirmingDelete by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
+    // 이번에 다이얼로그를 연 뒤 실제로 제출한 적이 있을 때만 VM 에러를 보여준다 — 취소 후 재오픈 시
+    // 직전 실패 문구(예: "현재 비밀번호가 올바르지 않습니다")가 입력 전인데 먼저 보이는 문제 방지.
+    // VM은 세션 스코프(uiState)가 다이얼로그보다 오래 살아 에러가 자연 소멸하지 않으므로 화면 로컬로 게이트.
+    var deleteAttempted by remember { mutableStateOf(false) }
     val pickProfileImage = rememberImagePickerLauncher { picked ->
         onAction(AccountSettingsViewModel.Action.ChangeProfileImage(picked.bytes, picked.fileName, picked.contentType))
     }
@@ -131,6 +149,12 @@ fun AccountSettingsScreen(
                     newPassword = ""
                     confirmPassword = ""
                 }
+                AccountSettingsViewModel.Event.AccountDeleted -> {
+                    confirmingDelete = false
+                    deletePassword = ""
+                    deleteAttempted = false
+                    onAccountDeleted()
+                }
             }
         }
     }
@@ -138,7 +162,13 @@ fun AccountSettingsScreen(
         SgTopBar(
             title = stringResource(Res.string.profile_account_settings),
             navigationIcon = {
-                IconButton(onClick = { onNavigationAction(NavigationAction.NavigateBack) }) {
+                // 탈퇴 요청 in-flight 중 pop되면 백스택 스코프 VM이 취소돼 Event.AccountDeleted를
+                // 놓친다(서버는 삭제됐는데 로그아웃 미발화) — iosApp navigationBarBackButtonHidden 미러.
+                // 시스템 백/스와이프 제스처 잔여는 iOS 스와이프백과 동일하게 수용 리스크로 남겨둔다.
+                IconButton(
+                    onClick = { onNavigationAction(NavigationAction.NavigateBack) },
+                    enabled = !uiState.isDeletingAccount
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
                 }
             }
@@ -307,6 +337,113 @@ fun AccountSettingsScreen(
                             },
                             isLoading = uiState.isChangingPassword
                         )
+                    }
+                }
+                // 설정 목록 끝 — 회원 탈퇴(위험색 행, 탭하면 확인 다이얼로그)
+                SgCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !uiState.isDeletingAccount) {
+                                // 새로 여는 참이니 직전(취소된) 시도의 잔존 에러는 숨긴다
+                                deleteAttempted = false
+                                confirmingDelete = true
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(Res.string.account_delete_account),
+                            style = SgTheme.typography.bodyLarge,
+                            color = sg.rust,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+    if (confirmingDelete) {
+        DeleteAccountDialog(
+            password = deletePassword,
+            onPasswordChange = { deletePassword = it },
+            isLoading = uiState.isDeletingAccount,
+            // 이번 오픈에서 한 번이라도 제출했을 때만 VM 에러를 노출(위 deleteAttempted 주석 참고)
+            error = uiState.deleteAccountError.takeIf { deleteAttempted },
+            onDismiss = {
+                confirmingDelete = false
+                deletePassword = ""
+                deleteAttempted = false
+            },
+            onConfirm = {
+                deleteAttempted = true
+                onAction(AccountSettingsViewModel.Action.DeleteAccount(deletePassword))
+            }
+        )
+    }
+}
+
+/**
+ * 회원 탈퇴 확인 다이얼로그 — GroupSettingsTab CloseConfirmDialog(삭제/나가기) 관용구 미러
+ * + 본인 확인용 비밀번호 필드. 성공하면 Event.AccountDeleted로 화면이 닫고 로그아웃 흐름으로 넘어간다.
+ */
+@Composable
+private fun DeleteAccountDialog(
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sg = SgTheme.colors
+
+    Dialog(onDismissRequest = onDismiss) {
+        SgCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    stringResource(Res.string.account_delete_account),
+                    style = SgTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = sg.ink
+                )
+                Text(stringResource(Res.string.account_delete_confirm), style = SgTheme.typography.bodyMedium, color = sg.ink)
+                SgTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = stringResource(Res.string.account_current_password),
+                    isPassword = true,
+                    enabled = !isLoading
+                )
+                error?.let {
+                    Text(it, style = SgTheme.typography.bodySmall, color = sg.rust)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        enabled = !isLoading,
+                        shape = SgTheme.shapes.button,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(Res.string.common_cancel), color = sg.ink)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        enabled = !isLoading && password.isNotBlank(),
+                        shape = SgTheme.shapes.button,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = sg.rust,
+                            contentColor = sg.onAccent,
+                            disabledBackgroundColor = sg.rust.copy(alpha = 0.4f),
+                            disabledContentColor = sg.inkFaint
+                        )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = sg.inkFaint)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(stringResource(Res.string.account_delete_action), fontWeight = FontWeight.Bold)
                     }
                 }
             }

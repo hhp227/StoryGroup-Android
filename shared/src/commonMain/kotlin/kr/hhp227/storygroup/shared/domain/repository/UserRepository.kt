@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kr.hhp227.storygroup.shared.domain.model.BlockedUser
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.shared.domain.model.PublicProfile
+import kr.hhp227.storygroup.shared.domain.model.PushPreferences
 
 interface UserRepository {
     suspend fun getMyProfile(): Result<Profile>
@@ -24,6 +25,12 @@ interface UserRepository {
      * 현재 액세스 토큰 만료(30분) 후에는 재로그인이 필요하다(다른 기기 세션 차단 목적).
      */
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
+
+    /**
+     * 회원 탈퇴 — DELETE /api/users/me(비밀번호 재확인). 성공 시 호출측이 기존 로그아웃 플로우로
+     * 세션을 정리한다. 비밀번호 불일치(400)·소유 그룹이 있는 경우(409) 서버 메시지를 그대로 보여준다.
+     */
+    suspend fun deleteAccount(password: String): Result<Unit>
 
     /**
      * 사용자 신고 — POST /api/users/{userId}/report. 접수는 앱 운영자의 신고 관리로 간다
@@ -64,4 +71,16 @@ interface UserRepository {
      * 404(없는 사용자)는 예외로 떨어져 화면 로드 에러 문구가 된다
      */
     suspend fun getPublicProfile(userId: Long): Result<PublicProfile>
+
+    /**
+     * 푸시 종류별 on/off 조회 — GET /api/users/me/push-preferences. 계정 단위라 모든 기기 공통,
+     * 다른 기기에서 바꾼 값은 다음 진입 로드 때 반영된다.
+     */
+    suspend fun getPushPreferences(): Result<PushPreferences>
+
+    /**
+     * 푸시 종류별 on/off 저장 — PUT /api/users/me/push-preferences(전체 교체: 두 플래그 모두 보낸다).
+     * 인앱 실시간·뱃지·알림 목록은 불변, OS 푸시 발송만 서버가 걸러낸다. 실패 시 서버 메시지를 그대로 보여준다.
+     */
+    suspend fun updatePushPreferences(chatEnabled: Boolean, activityEnabled: Boolean): Result<Unit>
 }

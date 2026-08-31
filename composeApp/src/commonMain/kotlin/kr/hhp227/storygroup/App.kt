@@ -198,6 +198,8 @@ private fun SessionContent(
                     AppNavHost(
                         navController = navController,
                         themeState = themeState,
+                        // AccountSettings(회원 탈퇴 성공) 목적지까지 전달 — shell과 동일하게 onLogout을 그대로 캡처
+                        onLogout = onLogout,
                         modifier = m
                     )
                 }

@@ -43,6 +43,10 @@ struct GroupDetailView: View {
     /// 그룹 정보 수정 저장 성공 — 목록 카드의 이름·커버 갱신 신호(pop은 하지 않는다)
     private let onGroupUpdated: () -> Void
 
+    /// 설정 탭 "내 프로필"/멤버 시트 "프로필 수정"→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 —
+    /// 호출부 2곳(MainShellView는 onLogout 직접, SearchView는 자신의 릴레이)이 채운다
+    private let onAccountDeleted: () -> Void
+
     var body: some View {
         GroupDetailContent(
             viewModel: viewModel,
@@ -55,7 +59,8 @@ struct GroupDetailView: View {
             theme: theme,
             profileViewModel: profileViewModel,
             onGroupClosed: onGroupClosed,
-            onGroupUpdated: onGroupUpdated
+            onGroupUpdated: onGroupUpdated,
+            onAccountDeleted: onAccountDeleted
         )
     }
 
@@ -65,7 +70,8 @@ struct GroupDetailView: View {
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
         onGroupClosed: @escaping () -> Void,
-        onGroupUpdated: @escaping () -> Void
+        onGroupUpdated: @escaping () -> Void,
+        onAccountDeleted: @escaping () -> Void
     ) {
         _viewModel = StateObject(wrappedValue: GroupDetailViewModel(groupId: groupId))
         _groupFeedViewModel = StateObject(wrappedValue: GroupFeedViewModel(groupId: groupId))
@@ -78,6 +84,7 @@ struct GroupDetailView: View {
         self.profileViewModel = profileViewModel
         self.onGroupClosed = onGroupClosed
         self.onGroupUpdated = onGroupUpdated
+        self.onAccountDeleted = onAccountDeleted
     }
 }
 
@@ -108,6 +115,9 @@ private struct GroupDetailContent: View {
 
     /// 그룹 정보 수정 저장 성공 — 목록 카드의 이름·커버 갱신 신호(pop은 하지 않는다)
     let onGroupUpdated: () -> Void
+
+    /// 설정 탭 "내 프로필"/멤버 시트 "프로필 수정"→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 — GroupDetailView가 전달만
+    let onAccountDeleted: () -> Void
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -425,7 +435,8 @@ private struct GroupDetailContent: View {
             photoItems: photoLazyPagingItems,
             groupId: viewModel.groupId,
             chatViewModel: chatViewModel,
-            profileViewModel: profileViewModel
+            profileViewModel: profileViewModel,
+            onAccountDeleted: onAccountDeleted
         )
         case 2: GroupEventsTab(viewModel: groupEventsViewModel, canModerate: viewModel.uiState.canModerate)
         case 3: membersTab
@@ -515,7 +526,8 @@ private struct GroupDetailContent: View {
                                 groupId: post.groupId,
                                 postId: post.id,
                                 chatViewModel: chatViewModel,
-                                profileViewModel: profileViewModel
+                                profileViewModel: profileViewModel,
+                                onAccountDeleted: onAccountDeleted
                             )
                         } label: {
                             SGPostCard(
@@ -720,9 +732,10 @@ private struct GroupDetailContent: View {
         }
     }
 
-    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다(셸 선례)
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다(셸 선례).
+    /// 회원 탈퇴 성공은 호출부가 준 onAccountDeleted로 이어 붙인다(설정 탭 "내 프로필"의 정규 진입점)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel, onAccountDeleted: onAccountDeleted)
     }
 
     private var appSettingsDestination: some View {
@@ -734,7 +747,8 @@ private struct GroupDetailContent: View {
         GroupReportsView(
             groupId: viewModel.groupId,
             chatViewModel: chatViewModel,
-            profileViewModel: profileViewModel
+            profileViewModel: profileViewModel,
+            onAccountDeleted: onAccountDeleted
         )
     }
 
@@ -784,7 +798,8 @@ private struct GroupDetailContent: View {
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
         onGroupClosed: @escaping () -> Void,
-        onGroupUpdated: @escaping () -> Void
+        onGroupUpdated: @escaping () -> Void,
+        onAccountDeleted: @escaping () -> Void
     ) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: feedViewModel.uiState.map { it.pagingData }.distinctUntilChanged())
@@ -803,6 +818,7 @@ private struct GroupDetailContent: View {
         self.profileViewModel = profileViewModel
         self.onGroupClosed = onGroupClosed
         self.onGroupUpdated = onGroupUpdated
+        self.onAccountDeleted = onAccountDeleted
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
         _photoLazyPagingItems = StateObject(wrappedValue: photosPublisher.collectAsLazyPagingItems())
     }

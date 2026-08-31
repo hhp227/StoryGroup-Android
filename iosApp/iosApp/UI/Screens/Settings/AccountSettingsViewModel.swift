@@ -9,6 +9,8 @@ import Shared
 /// 실패 시에만 pendingProfileImg로 남겨 저장 버튼이 함께 전송한다
 /// (변경 없으면 기존 profileImg를 그대로 보내 유지 — PATCH 전체 교체 계약).
 /// 성공은 Event 일회성 발화 — 화면이 안내 문구와 세션 ProfileViewModel 갱신을 처리한다.
+/// 회원 탈퇴(deleteAccount)는 세션 정리에 관여하지 않는다 — Event.accountDeleted만 발화하고
+/// 로그아웃(세션 정리·푸시 토큰 해제)은 화면 호출부가 기존 onLogout 경로로 이어서 처리한다.
 final class AccountSettingsViewModel: MviViewModel {
     @Published private(set) var uiState = UiState()
 
@@ -22,6 +24,8 @@ final class AccountSettingsViewModel: MviViewModel {
 
     private let uploadImageUseCase: UploadImageUseCase
 
+    private let deleteAccountUseCase: DeleteAccountUseCase
+
     func onAction(_ action: Action) {
         switch action {
         case .load:
@@ -32,6 +36,8 @@ final class AccountSettingsViewModel: MviViewModel {
             changePassword(currentPassword: currentPassword, newPassword: newPassword, confirmPassword: confirmPassword)
         case .changeProfileImage(let data, let fileName, let contentType):
             changeProfileImage(data: data, fileName: fileName, contentType: contentType)
+        case .deleteAccount(let password):
+            deleteAccount(password: password)
         }
     }
 
@@ -163,16 +169,38 @@ final class AccountSettingsViewModel: MviViewModel {
         }
     }
 
+    /// 회원 탈퇴 — 성공 시 Event.accountDeleted만 발화하고 세션 정리(로그아웃)는 화면 호출부가
+    /// 기존 onLogout 경로로 이어서 처리한다(이 VM은 세션에 관여하지 않는다).
+    /// 실패 시 서버 한국어 안내(400 현재 비밀번호 불일치/409 미삭제 그룹 존재)를 그대로 노출한다.
+    private func deleteAccount(password: String) {
+        if uiState.isDeletingAccount { return }
+
+        uiState.isDeletingAccount = true
+        uiState.deleteAccountError = nil
+        Task { @MainActor in
+            do {
+                try await deleteAccountUseCase.invoke(password: password)
+                uiState.isDeletingAccount = false
+                event.send(.accountDeleted)
+            } catch {
+                uiState.isDeletingAccount = false
+                uiState.deleteAccountError = error.kotlinMessage(fallback: "회원 탈퇴에 실패했습니다.")
+            }
+        }
+    }
+
     init(
         getMyProfileUseCase: GetMyProfileUseCase = AppContainer.shared.getMyProfileUseCase,
         updateMyProfileUseCase: UpdateMyProfileUseCase = AppContainer.shared.updateMyProfileUseCase,
         changePasswordUseCase: ChangePasswordUseCase = AppContainer.shared.changePasswordUseCase,
-        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase
+        uploadImageUseCase: UploadImageUseCase = AppContainer.shared.uploadImageUseCase,
+        deleteAccountUseCase: DeleteAccountUseCase = AppContainer.shared.deleteAccountUseCase
     ) {
         self.getMyProfileUseCase = getMyProfileUseCase
         self.updateMyProfileUseCase = updateMyProfileUseCase
         self.changePasswordUseCase = changePasswordUseCase
         self.uploadImageUseCase = uploadImageUseCase
+        self.deleteAccountUseCase = deleteAccountUseCase
         load()
     }
 
@@ -188,6 +216,8 @@ final class AccountSettingsViewModel: MviViewModel {
         // 업로드는 됐지만 아직 저장 전인 이미지 URL — 화면 아바타는 이 값을 우선 표시
         var pendingProfileImg: String? = nil
         var isUploadingImage = false
+        var isDeletingAccount = false
+        var deleteAccountError: String? = nil
 
         var displayedProfileImg: String? { pendingProfileImg ?? profile?.profileImg }
     }
@@ -197,10 +227,13 @@ final class AccountSettingsViewModel: MviViewModel {
         case saveProfile(name: String, bio: String, statusMessage: String)
         case changePassword(currentPassword: String, newPassword: String, confirmPassword: String)
         case changeProfileImage(data: Data, fileName: String, contentType: String)
+        case deleteAccount(password: String)
     }
 
     enum Event {
         case profileSaved
         case passwordChanged
+        // 호출부가 받아 기존 로그아웃 흐름(세션 정리·로그인 화면 복귀)을 태운다
+        case accountDeleted
     }
 }

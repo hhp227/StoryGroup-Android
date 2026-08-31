@@ -13,12 +13,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.model.Profile
 import kr.hhp227.storygroup.shared.domain.usecase.ChangePasswordUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeleteAccountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 import org.jetbrains.compose.resources.getString
 import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.account_error_delete_account
 import storygroup.composeapp.generated.resources.account_error_image_save
 import storygroup.composeapp.generated.resources.account_error_name_required
 import storygroup.composeapp.generated.resources.account_error_password_change
@@ -36,13 +38,16 @@ import storygroup.composeapp.generated.resources.profile_error_load
  * 실패 시에만 pendingProfileImg로 남겨 저장 버튼이 함께 전송한다
  * (변경 없으면 기존 profileImg를 그대로 보내 유지 — PATCH 전체 교체 계약).
  * 성공은 Event 일회성 발화 — 화면이 안내 문구와 세션 ProfileViewModel 갱신을 처리한다.
+ * 회원 탈퇴(deleteAccount)는 세션 정리에 관여하지 않는다 — Event.AccountDeleted만 발화하고
+ * 로그아웃(세션 정리·푸시 토큰 해제)은 화면 호출부가 기존 onLogout 경로로 이어서 처리한다.
  * iosApp AccountSettingsViewModel.swift와 1:1 미러
  */
 class AccountSettingsViewModel(
     private val getMyProfileUseCase: GetMyProfileUseCase,
     private val updateMyProfileUseCase: UpdateMyProfileUseCase,
     private val changePasswordUseCase: ChangePasswordUseCase,
-    private val uploadImageUseCase: UploadImageUseCase
+    private val uploadImageUseCase: UploadImageUseCase,
+    private val deleteAccountUseCase: DeleteAccountUseCase
 ) : ViewModel(), MviViewModel<AccountSettingsViewModel.UiState, AccountSettingsViewModel.Action, AccountSettingsViewModel.Event> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -57,6 +62,7 @@ class AccountSettingsViewModel(
             is Action.ChangePassword ->
                 changePassword(action.currentPassword, action.newPassword, action.confirmPassword)
             is Action.ChangeProfileImage -> changeProfileImage(action.bytes, action.fileName, action.contentType)
+            is Action.DeleteAccount -> deleteAccount(action.password)
         }
     }
 
@@ -169,6 +175,29 @@ class AccountSettingsViewModel(
         }
     }
 
+    /**
+     * 회원 탈퇴 — 성공 시 Event.AccountDeleted만 발화하고 세션 정리(로그아웃)는 화면 호출부가
+     * 기존 onLogout 경로로 이어서 처리한다(설계 §6, 이 VM은 세션에 관여하지 않는다).
+     * 실패 시 서버 한국어 안내(400 현재 비밀번호 불일치/409 미삭제 그룹 존재)를 그대로 노출한다.
+     */
+    private fun deleteAccount(password: String) {
+        if (_uiState.value.isDeletingAccount) return
+
+        _uiState.update { it.copy(isDeletingAccount = true, deleteAccountError = null) }
+        viewModelScope.launch {
+            runCatching { deleteAccountUseCase(password) }
+                .onSuccess {
+                    _uiState.update { it.copy(isDeletingAccount = false) }
+                    _event.tryEmit(Event.AccountDeleted)
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(isDeletingAccount = false, deleteAccountError = e.message ?: getString(Res.string.account_error_delete_account))
+                    }
+                }
+        }
+    }
+
     init {
         load()
     }
@@ -184,7 +213,9 @@ class AccountSettingsViewModel(
         val passwordError: String? = null,
         // 업로드는 됐지만 아직 저장 전인 이미지 URL — 화면 아바타는 이 값을 우선 표시
         val pendingProfileImg: String? = null,
-        val isUploadingImage: Boolean = false
+        val isUploadingImage: Boolean = false,
+        val isDeletingAccount: Boolean = false,
+        val deleteAccountError: String? = null
     ) {
         val displayedProfileImg: String? get() = pendingProfileImg ?: profile?.profileImg
     }
@@ -198,10 +229,13 @@ class AccountSettingsViewModel(
             val confirmPassword: String
         ) : Action
         class ChangeProfileImage(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
+        data class DeleteAccount(val password: String) : Action
     }
 
     sealed interface Event {
         data object ProfileSaved : Event
         data object PasswordChanged : Event
+        // 호출부가 받아 기존 로그아웃 흐름(세션 정리·로그인 화면 복귀)을 태운다(설계 §6)
+        data object AccountDeleted : Event
     }
 }

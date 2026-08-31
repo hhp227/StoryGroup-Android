@@ -30,6 +30,10 @@ struct SearchView: View {
     /// NavResult.groupsChanged를 publish한다(TabShellView/DrawerShellView가 소비)
     let onGroupsRefreshNeeded: () -> Void
 
+    /// 검색 결과(그룹/게시글)→상세→작성자(본인) 프로필→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 —
+    /// MainShellView(유일 호출부)가 쥔 onLogout을 그대로 넘긴다
+    let onAccountDeleted: () -> Void
+
     @StateObject private var searchViewModel = SearchViewModel()
 
     @State private var queryText = ""
@@ -382,7 +386,8 @@ struct SearchView: View {
                     selectedGroupId = nil
                     onGroupsRefreshNeeded()
                 },
-                onGroupUpdated: { onGroupsRefreshNeeded() }
+                onGroupUpdated: { onGroupsRefreshNeeded() },
+                onAccountDeleted: onAccountDeleted
             )
         }
     }
@@ -393,7 +398,8 @@ struct SearchView: View {
                 groupId: post.groupId,
                 postId: post.postId,
                 chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                onAccountDeleted: onAccountDeleted
             )
         }
     }
@@ -427,7 +433,7 @@ struct SearchView: View {
 
     /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel, onAccountDeleted: onAccountDeleted)
     }
 
     /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
@@ -473,11 +479,13 @@ struct SearchView: View {
         chatViewModel: ChatViewModel,
         theme: SGThemeState,
         profileViewModel: ProfileViewModel,
-        onGroupsRefreshNeeded: @escaping () -> Void
+        onGroupsRefreshNeeded: @escaping () -> Void,
+        onAccountDeleted: @escaping () -> Void
     ) {
         self.chatViewModel = chatViewModel
         self.theme = theme
         self.profileViewModel = profileViewModel
         self.onGroupsRefreshNeeded = onGroupsRefreshNeeded
+        self.onAccountDeleted = onAccountDeleted
     }
 }

@@ -453,6 +453,10 @@
     <string name="account_error_password_short">새 비밀번호는 8자 이상이어야 합니다.</string>
     <string name="account_error_password_mismatch">새 비밀번호가 서로 일치하지 않습니다.</string>
     <string name="account_error_password_change">비밀번호 변경에 실패했습니다.</string>
+    <string name="account_delete_account">회원 탈퇴</string>
+    <string name="account_delete_confirm">정말 탈퇴하시겠어요? 되돌릴 수 없으며, 작성한 게시글·댓글·채팅은 \'탈퇴한 사용자\'로 남습니다.</string>
+    <string name="account_delete_action">탈퇴</string>
+    <string name="account_error_delete_account">회원 탈퇴에 실패했습니다.</string>
     <string name="app_settings_theme_mood">테마 무드</string>
     <string name="app_settings_mood_warm">다정함 (웜)</string>
     <string name="app_settings_mood_vibrant">캐주얼 (비비드)</string>
@@ -463,6 +467,14 @@
     <string name="app_settings_nav_style">내비게이션 스타일</string>
     <string name="app_settings_nav_tabs">기본 (탭 — 넓은 화면은 레일)</string>
     <string name="app_settings_nav_drawer">레거시 (드로어)</string>
+    <string name="app_settings_notifications">알림</string>
+    <string name="app_settings_push_chat">채팅 알림</string>
+    <string name="app_settings_push_chat_desc">그룹 채팅·DM 메시지 푸시</string>
+    <string name="app_settings_push_activity">활동 알림</string>
+    <string name="app_settings_push_activity_desc">댓글·좋아요·공지 등 푸시</string>
+    <string name="app_settings_push_hint">끄면 이 계정의 모든 기기에서 해당 푸시 알림이 오지 않습니다. 앱 안의 알림 목록과 배지는 그대로입니다.</string>
+    <string name="app_settings_push_error_load">알림 설정을 불러오지 못했습니다.</string>
+    <string name="app_settings_push_error_save">알림 설정을 저장하지 못했습니다.</string>
     <string name="blocked_error_load">차단 목록을 불러오지 못했습니다.</string>
     <string name="blocked_empty_title">차단한 사용자가 없습니다.</string>
     <string name="blocked_empty_subtitle">차단하면 그 사용자의 게시글·댓글·채팅이 내 화면에서 숨겨지고, 서로 DM을 보낼 수 없습니다.</string>

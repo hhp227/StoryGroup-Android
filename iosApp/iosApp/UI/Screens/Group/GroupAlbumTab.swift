@@ -17,6 +17,10 @@ struct GroupAlbumTab: View {
 
     let profileViewModel: ProfileViewModel
 
+    /// 셀 탭→게시글 상세→작성자(본인) 프로필→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 —
+    /// GroupDetailView가 자신이 받은 onAccountDeleted를 그대로 넘긴다(호출부 유일 1곳이라 기본값 없음)
+    let onAccountDeleted: () -> Void
+
     @Environment(\.sgColors) private var colors
 
     private static let columns = [
@@ -91,7 +95,8 @@ struct GroupAlbumTab: View {
                     groupId: groupId,
                     postId: photo.postId,
                     chatViewModel: chatViewModel,
-                    profileViewModel: profileViewModel
+                    profileViewModel: profileViewModel,
+                    onAccountDeleted: onAccountDeleted
                 )
             }
         } label: {

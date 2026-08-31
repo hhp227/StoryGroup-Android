@@ -56,6 +56,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreateLoungePostUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.CreatePostUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.DeleteAccountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeleteCommentUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeleteEventUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.DeleteGroupUseCase
@@ -90,6 +91,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.GetMyJoinRequestedGroupsUseCas
 import kr.hhp227.storygroup.shared.domain.usecase.GetMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetNotificationsPagingDataUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetPublicProfileUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.GetPushPreferencesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.GetUnreadNotificationCountUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
@@ -128,6 +130,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.UnblockUserUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UnregisterPushTokenUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UpdatePushPreferencesUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadImageUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadVideoUseCase
@@ -263,4 +266,11 @@ class AppContainer(
 
     val registerPushTokenUseCase = RegisterPushTokenUseCase(pushTokenRepository)
     val unregisterPushTokenUseCase = UnregisterPushTokenUseCase(pushTokenRepository)
+
+    // 회원 탈퇴 — 설정 > 계정 관리(웹 /settings/account 미러)
+    val deleteAccountUseCase = DeleteAccountUseCase(userRepository)
+
+    // 푸시 종류별 on/off — 앱 설정 화면(AppSettingsScreen / SGSettingsView)
+    val getPushPreferencesUseCase = GetPushPreferencesUseCase(userRepository)
+    val updatePushPreferencesUseCase = UpdatePushPreferencesUseCase(userRepository)
 }

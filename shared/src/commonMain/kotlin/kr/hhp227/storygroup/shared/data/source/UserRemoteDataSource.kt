@@ -6,26 +6,33 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kr.hhp227.storygroup.shared.data.network.dto.BlockedUserResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ChangePasswordRequest
+import kr.hhp227.storygroup.shared.data.network.dto.DeleteAccountRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ProfileResponse
 import kr.hhp227.storygroup.shared.data.network.dto.PublicProfileResponse
+import kr.hhp227.storygroup.shared.data.network.dto.PushPreferencesResponse
 import kr.hhp227.storygroup.shared.data.network.dto.ReportUserRequest
 import kr.hhp227.storygroup.shared.data.network.dto.UpdateProfileRequest
+import kr.hhp227.storygroup.shared.data.network.dto.UpdatePushPreferencesRequest
 
 /** 사용자 원격 소스 — 전송·DTO만 담당, 예외는 그대로 던진다(Result 래핑·도메인 매핑은 리포지토리 몫) */
 interface UserRemoteDataSource {
     suspend fun getMyProfile(): ProfileResponse
     suspend fun updateMyProfile(name: String, profileImg: String?, bio: String?, statusMessage: String?): ProfileResponse
     suspend fun changePassword(currentPassword: String, newPassword: String)
+    suspend fun deleteAccount(password: String)
     suspend fun reportUser(userId: Long, reason: String?)
     suspend fun blockUser(userId: Long)
     suspend fun unblockUser(userId: Long)
     suspend fun getBlockedUsers(): List<BlockedUserResponse>
     suspend fun getPublicProfile(userId: Long): PublicProfileResponse
+    suspend fun getPushPreferences(): PushPreferencesResponse
+    suspend fun updatePushPreferences(chatEnabled: Boolean, activityEnabled: Boolean)
 }
 
 class UserRemoteDataSourceImpl(private val client: HttpClient) : UserRemoteDataSource {
@@ -42,6 +49,13 @@ class UserRemoteDataSourceImpl(private val client: HttpClient) : UserRemoteDataS
         client.patch("/api/users/me/password") {
             contentType(ContentType.Application.Json)
             setBody(ChangePasswordRequest(currentPassword, newPassword))
+        }
+    }
+
+    override suspend fun deleteAccount(password: String) {
+        client.delete("/api/users/me") {
+            contentType(ContentType.Application.Json)
+            setBody(DeleteAccountRequest(password))
         }
     }
 
@@ -65,4 +79,14 @@ class UserRemoteDataSourceImpl(private val client: HttpClient) : UserRemoteDataS
 
     override suspend fun getPublicProfile(userId: Long): PublicProfileResponse =
         client.get("/api/users/$userId").body()
+
+    override suspend fun getPushPreferences(): PushPreferencesResponse =
+        client.get("/api/users/me/push-preferences").body()
+
+    override suspend fun updatePushPreferences(chatEnabled: Boolean, activityEnabled: Boolean) {
+        client.put("/api/users/me/push-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody(UpdatePushPreferencesRequest(chatEnabled, activityEnabled))
+        }
+    }
 }
