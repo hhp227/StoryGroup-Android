@@ -12,6 +12,10 @@ struct GroupReportsView: View {
 
     private let profileViewModel: ProfileViewModel
 
+    /// 신고된 게시글 상세→작성자(본인) 프로필→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 —
+    /// 호출부 2곳(MainShellView는 onLogout 직접, GroupDetailView는 자신의 릴레이)이 채운다
+    private let onAccountDeleted: () -> Void
+
     @StateObject private var groupReportsViewModel: GroupReportsViewModel
 
     /// 신고된 게시글 탭 → 상세 push(메뉴가 아니라 행 탭이지만 상태 push 관용구 유지)
@@ -208,7 +212,8 @@ struct GroupReportsView: View {
                 groupId: groupId,
                 postId: postId,
                 chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                onAccountDeleted: onAccountDeleted
             )
         }
     }
@@ -221,10 +226,16 @@ struct GroupReportsView: View {
         )
     }
 
-    init(groupId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(
+        groupId: Int64,
+        chatViewModel: ChatViewModel,
+        profileViewModel: ProfileViewModel,
+        onAccountDeleted: @escaping () -> Void
+    ) {
         self.groupId = groupId
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
+        self.onAccountDeleted = onAccountDeleted
         _groupReportsViewModel = StateObject(wrappedValue: GroupReportsViewModel(groupId: groupId))
     }
 }

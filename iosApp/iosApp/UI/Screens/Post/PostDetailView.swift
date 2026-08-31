@@ -20,6 +20,12 @@ struct PostDetailView: View {
 
     private let profileViewModel: ProfileViewModel
 
+    /// 작성자가 본인일 때 프로필 시트 "프로필 수정"→계정 설정→회원 탈퇴 체인 끝에서
+    /// 로그아웃까지 이어 붙이는 콜백 — 호출부 6곳(MainShellView/GroupDetailView/SearchView/
+    /// GroupAlbumTab/GroupReportsView/HomeView) 전부가 각자의 onLogout/relay로 채운다.
+    /// 기본값을 두지 않아 새 호출부가 생기면 컴파일이 깨져 배선 누락을 강제로 잡는다
+    private let onAccountDeleted: () -> Void
+
     @Environment(\.sgColors) private var colors
 
     @Environment(\.dismiss) private var dismiss
@@ -170,9 +176,10 @@ struct PostDetailView: View {
         }
     }
 
-    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례)
+    /// 세션 ProfileViewModel을 넘겨 저장 성공 시 셸 헤더가 갱신되게 한다(MainShellView 선례).
+    /// 회원 탈퇴 성공은 호출부가 준 onAccountDeleted로 이어 붙인다(신설 로그아웃 경로 없음)
     private var accountSettingsDestination: some View {
-        AccountSettingsView(profileViewModel: profileViewModel)
+        AccountSettingsView(profileViewModel: profileViewModel, onAccountDeleted: onAccountDeleted)
     }
 
     /// 프로필 시트 dismiss 완료 후 후속 push 실행 — 드래그로 닫으면 followUp이 nil이라 아무 일 없다
@@ -490,11 +497,18 @@ struct PostDetailView: View {
         .background(colors.paper)
     }
     
-    init(groupId: Int64, postId: Int64, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(
+        groupId: Int64,
+        postId: Int64,
+        chatViewModel: ChatViewModel,
+        profileViewModel: ProfileViewModel,
+        onAccountDeleted: @escaping () -> Void
+    ) {
         self.groupId = groupId
         self.postId = postId
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
+        self.onAccountDeleted = onAccountDeleted
         _postDetailViewModel = StateObject(wrappedValue: PostDetailViewModel(groupId: groupId, postId: postId))
     }
 }

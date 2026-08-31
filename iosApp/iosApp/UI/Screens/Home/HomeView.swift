@@ -14,13 +14,23 @@ struct HomeView: View {
 
     private let profileViewModel: ProfileViewModel
 
+    /// 게시글 상세→작성자(본인) 프로필→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 —
+    /// DestinationView(MainShellView 직계)가 이미 쥔 onLogout을 그대로 넘긴다
+    private let onAccountDeleted: () -> Void
+
     var body: some View {
-        HomeContent(viewModel: homeViewModel, chatViewModel: chatViewModel, profileViewModel: profileViewModel)
+        HomeContent(
+            viewModel: homeViewModel,
+            chatViewModel: chatViewModel,
+            profileViewModel: profileViewModel,
+            onAccountDeleted: onAccountDeleted
+        )
     }
 
-    init(chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel, onAccountDeleted: @escaping () -> Void) {
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
+        self.onAccountDeleted = onAccountDeleted
     }
 }
 
@@ -33,6 +43,9 @@ private struct HomeContent: View {
     let chatViewModel: ChatViewModel
 
     let profileViewModel: ProfileViewModel
+
+    /// 게시글 상세→작성자(본인) 프로필→계정 설정→회원 탈퇴 체인 끝 로그아웃 릴레이 — HomeView가 전달만
+    let onAccountDeleted: () -> Void
 
     /// Compose collectAsLazyPagingItems 미러 — 뷰 수명 동안 페이징 스트림 구독을 유지한다
     @StateObject private var lazyPagingItems: LazyPagingItems<Post>
@@ -183,7 +196,8 @@ private struct HomeContent: View {
                                 groupId: post.groupId,
                                 postId: post.id,
                                 chatViewModel: chatViewModel,
-                                profileViewModel: profileViewModel
+                                profileViewModel: profileViewModel,
+                                onAccountDeleted: onAccountDeleted
                             )
                         } label: {
                             SGPostCard(
@@ -205,7 +219,12 @@ private struct HomeContent: View {
         }
     }
 
-    init(viewModel: HomeViewModel, chatViewModel: ChatViewModel, profileViewModel: ProfileViewModel) {
+    init(
+        viewModel: HomeViewModel,
+        chatViewModel: ChatViewModel,
+        profileViewModel: ProfileViewModel,
+        onAccountDeleted: @escaping () -> Void
+    ) {
         // Compose와 동일: 상태에서 pagingData만 뽑아낸 스트림을 collectAsLazyPagingItems로 수집
         // (Kotlin: viewModel.uiState.map { it.pagingData }.distinctUntilChanged())
         let pagingDataPublisher = viewModel.$uiState.map { $0.pagingData }.removeDuplicates { $0 === $1 }
@@ -213,6 +232,7 @@ private struct HomeContent: View {
         self.viewModel = viewModel
         self.chatViewModel = chatViewModel
         self.profileViewModel = profileViewModel
+        self.onAccountDeleted = onAccountDeleted
         _lazyPagingItems = StateObject(wrappedValue: pagingDataPublisher.collectAsLazyPagingItems())
     }
 }

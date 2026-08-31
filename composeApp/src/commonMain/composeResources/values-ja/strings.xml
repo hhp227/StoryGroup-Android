@@ -453,6 +453,10 @@
     <string name="account_error_password_short">新しいパスワードは8文字以上にしてください。</string>
     <string name="account_error_password_mismatch">新しいパスワードが一致しません。</string>
     <string name="account_error_password_change">パスワードの変更に失敗しました。</string>
+    <string name="account_delete_account">退会する</string>
+    <string name="account_delete_confirm">本当に退会しますか？元に戻せません。投稿・コメント・チャットは「退会したユーザー」として残ります。</string>
+    <string name="account_delete_action">退会</string>
+    <string name="account_error_delete_account">退会に失敗しました。</string>
     <string name="app_settings_theme_mood">テーマムード</string>
     <string name="app_settings_mood_warm">やさしい（ウォーム）</string>
     <string name="app_settings_mood_vibrant">カジュアル（ビビッド）</string>
@@ -463,6 +467,14 @@
     <string name="app_settings_nav_style">ナビゲーションスタイル</string>
     <string name="app_settings_nav_tabs">標準（タブ — 大画面ではレール）</string>
     <string name="app_settings_nav_drawer">レガシー（ドロワー）</string>
+    <string name="app_settings_notifications">通知</string>
+    <string name="app_settings_push_chat">チャット通知</string>
+    <string name="app_settings_push_chat_desc">グループチャット・DMメッセージのプッシュ</string>
+    <string name="app_settings_push_activity">アクティビティ通知</string>
+    <string name="app_settings_push_activity_desc">コメント・いいね・お知らせなどのプッシュ</string>
+    <string name="app_settings_push_hint">オフにすると、このアカウントのすべての端末でそのプッシュ通知が届かなくなります。アプリ内の通知一覧とバッジはそのままです。</string>
+    <string name="app_settings_push_error_load">通知設定を読み込めませんでした。</string>
+    <string name="app_settings_push_error_save">通知設定を保存できませんでした。</string>
     <string name="blocked_error_load">ブロックリストを読み込めませんでした。</string>
     <string name="blocked_empty_title">ブロックしたユーザーはいません。</string>
     <string name="blocked_empty_subtitle">ブロックするとそのユーザーの投稿・コメント・チャットが非表示になり、お互いにDMを送れなくなります。</string>

@@ -235,14 +235,18 @@ struct MainShellView: View {
                 onGroupUpdated: {
                     // 그룹 정보 수정 저장 — 목록 카드의 이름·커버 갱신 신호(pop 없음)
                     navigationViewModel.onAction(.publishResult(.groupsChanged))
-                }
+                },
+                // 설정 탭 "내 프로필"/멤버 시트 체인 끝 회원 탈퇴 → 기존 onLogout 재사용(신설 없음)
+                onAccountDeleted: onLogout
             )
         case .postDetail(let groupId, let postId):
             PostDetailView(
                 groupId: groupId,
                 postId: postId,
                 chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                // 작성자(본인) 프로필→계정 설정 체인 끝 회원 탈퇴 → 기존 onLogout 재사용(신설 없음)
+                onAccountDeleted: onLogout
             )
         case .chatRoom(let chatRoomId, let groupId, let title):
             ChatRoomView(
@@ -282,13 +286,17 @@ struct MainShellView: View {
             GroupReportsView(
                 groupId: groupId,
                 chatViewModel: chatViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                // 신고된 게시글→작성자(본인) 프로필 체인 끝 회원 탈퇴 → 기존 onLogout 재사용(신설 없음)
+                onAccountDeleted: onLogout
             )
         case .call(let chatRoomId, let title, let ring, let video):
             CallView(chatRoomId: chatRoomId, title: title, ring: ring, video: video)
         case .accountSettings:
-            // 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다
-            AccountSettingsView(profileViewModel: profileViewModel)
+            // 세션 ProfileViewModel을 넘겨 저장 성공 시 프로필 탭/드로어 헤더가 갱신되게 한다.
+            // 회원 탈퇴 성공(accountDeleted)은 여기서 셸이 쥔 기존 onLogout으로 이어 붙인다
+            // (Compose AppNavHost.kt onAccountDeleted = onLogout 미러)
+            AccountSettingsView(profileViewModel: profileViewModel, onAccountDeleted: onLogout)
         case .appSettings:
             SGSettingsView(theme: theme)
         case .blockedUsers:
@@ -311,7 +319,9 @@ struct MainShellView: View {
                 chatViewModel: chatViewModel,
                 theme: theme,
                 profileViewModel: profileViewModel,
-                onGroupsRefreshNeeded: { navigationViewModel.onAction(.publishResult(.groupsChanged)) }
+                onGroupsRefreshNeeded: { navigationViewModel.onAction(.publishResult(.groupsChanged)) },
+                // 검색 결과 체인 끝 회원 탈퇴 → 기존 onLogout 재사용(신설 없음)
+                onAccountDeleted: onLogout
             )
         }
     }
@@ -414,7 +424,9 @@ struct DestinationView: View {
     var body: some View {
         switch destination {
         case .home:
-            HomeView(chatViewModel: chatViewModel, profileViewModel: profileViewModel)
+            // 홈 피드→게시글 상세→작성자(본인) 프로필 체인 끝 회원 탈퇴 → DestinationView가 이미
+            // 쥔 onLogout을 그대로 넘긴다(ProfileView onLogout과 같은 클로저, 신설 없음)
+            HomeView(chatViewModel: chatViewModel, profileViewModel: profileViewModel, onAccountDeleted: onLogout)
         case .groups:
             GroupsView(
                 onOpenGroup: onOpenGroup,

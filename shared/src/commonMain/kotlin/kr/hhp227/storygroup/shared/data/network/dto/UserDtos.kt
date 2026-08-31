@@ -31,6 +31,12 @@ data class ChangePasswordRequest(
     val newPassword: String
 )
 
+// 회원 탈퇴 — DELETE /api/users/me 요청 바디(비밀번호 재확인)
+@Serializable
+data class DeleteAccountRequest(
+    val password: String
+)
+
 @Serializable
 data class BlockedUserResponse(
     val userId: Long,
@@ -56,5 +62,20 @@ data class PublicProfileResponse(
     val bio: String? = null,
     val statusMessage: String? = null,
     val createdAt: String = ""
+)
+
+// 푸시 종류별 on/off — GET/PUT /api/users/me/push-preferences 계약과 1:1
+// (StoryGroup-WebApp user/dto/UserDtos.kt PushPreferencesResponse·UpdatePushPreferencesRequest)
+@Serializable
+data class PushPreferencesResponse(
+    val chatEnabled: Boolean = true,
+    val activityEnabled: Boolean = true
+)
+
+// 전체 교체 — 토글 하나만 바꿔도 두 값 모두 보낸다
+@Serializable
+data class UpdatePushPreferencesRequest(
+    val chatEnabled: Boolean,
+    val activityEnabled: Boolean
 )
 

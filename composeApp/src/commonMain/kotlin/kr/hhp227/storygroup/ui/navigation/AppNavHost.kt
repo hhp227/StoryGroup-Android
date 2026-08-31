@@ -45,6 +45,9 @@ import kr.hhp227.storygroup.ui.theme.ThemeState
 fun AppNavHost(
     navController: NavHostController,
     themeState: ThemeState,
+    // 회원 탈퇴 성공 시 배선 — App.kt SessionContent의 onLogout(onSessionEnd+LoginViewModel.Action.Logout)을
+    // 그대로 재사용한다(설계 §6, 별도 로그아웃 경로를 새로 만들지 않는다)
+    onLogout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(navController = navController, startDestination = Route.Shell, modifier = modifier) {
@@ -128,7 +131,10 @@ fun AppNavHost(
         }
         composable<Route.AccountSettings> {
             DestinationSurface {
-                AccountSettingsScreen(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+                AccountSettingsScreen(
+                    onAccountDeleted = onLogout,
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                )
             }
         }
         composable<Route.BlockedUsers> {

@@ -462,6 +462,10 @@
     <string name="account_error_password_short">The new password must be at least 8 characters.</string>
     <string name="account_error_password_mismatch">The new passwords do not match.</string>
     <string name="account_error_password_change">Could not change the password.</string>
+    <string name="account_delete_account">Delete account</string>
+    <string name="account_delete_confirm">Are you sure you want to delete your account? This cannot be undone. Your posts, comments, and chats will remain marked as from a \'deleted user\'.</string>
+    <string name="account_delete_action">Delete account</string>
+    <string name="account_error_delete_account">Could not delete your account.</string>
     <string name="app_settings_theme_mood">Theme mood</string>
     <string name="app_settings_mood_warm">Cozy (warm)</string>
     <string name="app_settings_mood_vibrant">Casual (vivid)</string>
@@ -472,6 +476,14 @@
     <string name="app_settings_nav_style">Navigation style</string>
     <string name="app_settings_nav_tabs">Default (tabs — rail on wide screens)</string>
     <string name="app_settings_nav_drawer">Legacy (drawer)</string>
+    <string name="app_settings_notifications">Notifications</string>
+    <string name="app_settings_push_chat">Chat notifications</string>
+    <string name="app_settings_push_chat_desc">Push for group chat and direct messages</string>
+    <string name="app_settings_push_activity">Activity notifications</string>
+    <string name="app_settings_push_activity_desc">Push for comments, likes, notices and more</string>
+    <string name="app_settings_push_hint">Turning one off stops that push on every device of this account. In-app notifications and badges stay as they are.</string>
+    <string name="app_settings_push_error_load">Could not load notification settings.</string>
+    <string name="app_settings_push_error_save">Could not save notification settings.</string>
     <string name="blocked_error_load">Could not load blocked users.</string>
     <string name="blocked_empty_title">No blocked users.</string>
     <string name="blocked_empty_subtitle">Blocking hides that person\'s posts, comments, and chats from you, and neither of you can send direct messages.</string>
