@@ -10,6 +10,7 @@ import kr.hhp227.storygroup.shared.data.repository.MediaRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NetworkStatusRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.NotificationRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.PostRepositoryImpl
+import kr.hhp227.storygroup.shared.data.repository.PushTokenRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.RtcRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.SearchRepositoryImpl
 import kr.hhp227.storygroup.shared.data.repository.UserRepositoryImpl
@@ -22,6 +23,7 @@ import kr.hhp227.storygroup.shared.data.source.MediaRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.NetworkStatusDataSource
 import kr.hhp227.storygroup.shared.data.source.NotificationRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.PostRemoteDataSourceImpl
+import kr.hhp227.storygroup.shared.data.source.PushTokenRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.RtcRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.SearchRemoteDataSourceImpl
 import kr.hhp227.storygroup.shared.data.source.UserRemoteDataSourceImpl
@@ -38,6 +40,7 @@ import kr.hhp227.storygroup.shared.domain.repository.MediaRepository
 import kr.hhp227.storygroup.shared.domain.repository.NetworkStatusRepository
 import kr.hhp227.storygroup.shared.domain.repository.NotificationRepository
 import kr.hhp227.storygroup.shared.domain.repository.PostRepository
+import kr.hhp227.storygroup.shared.domain.repository.PushTokenRepository
 import kr.hhp227.storygroup.shared.domain.repository.RtcRepository
 import kr.hhp227.storygroup.shared.domain.repository.SearchRepository
 import kr.hhp227.storygroup.shared.domain.repository.UserRepository
@@ -107,6 +110,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcCallEventsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ObserveRtcSignalsUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.OpenDirectRoomUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.ProcessGroupReportUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.RegisterPushTokenUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RegisterUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RejectJoinRequestUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.RemoveFriendUseCase
@@ -121,6 +125,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.SendCallInviteUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.SendRtcSignalUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.TogglePostLikeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UnblockUserUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.UnregisterPushTokenUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UpdateMyProfileUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.UploadChatFileUseCase
@@ -154,6 +159,7 @@ class AppContainer(
     private val rtcRepository: RtcRepository = RtcRepositoryImpl(RtcRemoteDataSourceImpl(apiClient, tokenStorage))
     private val searchRepository: SearchRepository = SearchRepositoryImpl(SearchRemoteDataSourceImpl(apiClient))
     private val networkStatusRepository: NetworkStatusRepository = NetworkStatusRepositoryImpl(networkStatusDataSource)
+    private val pushTokenRepository: PushTokenRepository = PushTokenRepositoryImpl(PushTokenRemoteDataSourceImpl(apiClient))
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
@@ -254,4 +260,7 @@ class AppContainer(
 
     // 인터넷 연결 배너 — 앱 루트(App.kt)가 구독한다. iosApp 공용
     val observeNetworkAlertStateUseCase = ObserveNetworkAlertStateUseCase(networkStatusRepository)
+
+    val registerPushTokenUseCase = RegisterPushTokenUseCase(pushTokenRepository)
+    val unregisterPushTokenUseCase = UnregisterPushTokenUseCase(pushTokenRepository)
 }

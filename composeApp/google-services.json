@@ -1,0 +1,35 @@
+{
+  "project_info": {
+    "project_number": "476947981226",
+    "firebase_url": "https://application-bb416.firebaseio.com",
+    "project_id": "application-bb416",
+    "storage_bucket": "application-bb416.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476947981226:android:83998a84c51c0869",
+        "android_client_info": {
+          "package_name": "com.hhp227.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPFGE8kxQXMn2hqUKdVmbjpR_FDe55_rw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476947981226-qf60l5glmo3q4pqibm21ehatqilakclo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

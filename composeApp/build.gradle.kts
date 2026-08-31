@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     // Navigation Compose 타입 세이프 라우트(@Serializable)용
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
@@ -36,6 +37,9 @@ kotlin {
             implementation(libs.androidx.media3.effect)
             implementation(libs.androidx.media3.common)
             implementation(libs.androidx.work.runtime)
+            // 백그라운드 푸시 알림 — FCM 신호 수신 (Task 9)
+            implementation(libs.firebase.messaging)
+            implementation(libs.androidx.lifecycle.process)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

@@ -40,6 +40,7 @@ import kr.hhp227.storygroup.ui.navigation.MainDestination
 import kr.hhp227.storygroup.ui.navigation.NavigationAction
 import kr.hhp227.storygroup.ui.navigation.NavigationEvent
 import kr.hhp227.storygroup.ui.navigation.PaneMode
+import kr.hhp227.storygroup.ui.navigation.PushDeepLink
 import kr.hhp227.storygroup.ui.navigation.currentPaneRouteAsState
 import kr.hhp227.storygroup.ui.navigation.paneModeFor
 import kr.hhp227.storygroup.ui.navigation.sessionNavigationViewModel
@@ -56,7 +57,15 @@ import kr.hhp227.storygroup.ui.theme.ThemeState
 
 /** 루트 — 테마 적용 후 세션 상태(LoginViewModel)에 따라 인증 플로우/메인 쉘을 라우팅한다 */
 @Composable
-fun App(container: AppContainer) {
+fun App(
+    container: AppContainer,
+    // 푸시 탭 딥링크 — Android MainActivity만 공급(Desktop·Preview는 null)
+    pendingDeepLink: PushDeepLink? = null,
+    onConsumeDeepLink: () -> Unit = {},
+    // 세션 시작/종료 훅 — Android가 알림 퍼미션 요청·FCM 토큰 등록/해제에 쓴다
+    onSessionStart: () -> Unit = {},
+    onSessionEnd: () -> Unit = {}
+) {
     val themeState = remember { ThemeState(container.settingsStorage) }
     val darkTheme = when (themeState.nightMode) {
         NightMode.SYSTEM -> isSystemInDarkTheme()
@@ -82,7 +91,13 @@ fun App(container: AppContainer) {
                 if (loginUiState.isLoggedIn) {
                     SessionContent(
                         themeState = themeState,
-                        onLogout = { loginViewModel.onAction(LoginViewModel.Action.Logout) }
+                        pendingDeepLink = pendingDeepLink,
+                        onConsumeDeepLink = onConsumeDeepLink,
+                        onSessionStart = onSessionStart,
+                        onLogout = {
+                            onSessionEnd()
+                            loginViewModel.onAction(LoginViewModel.Action.Logout)
+                        }
                     )
                 } else {
                     AuthFlow()
@@ -104,7 +119,13 @@ private val TwoPaneBreakpoint = 900.dp
  * 네비게이션은 NavigationViewModel이 소유한다 — 여기엔 이벤트 → NavController 배선만 남는다.
  */
 @Composable
-private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
+private fun SessionContent(
+    themeState: ThemeState,
+    pendingDeepLink: PushDeepLink?,
+    onConsumeDeepLink: () -> Unit,
+    onSessionStart: () -> Unit,
+    onLogout: () -> Unit
+) {
     val sessionOwner = remember {
         object : ViewModelStoreOwner {
             override val viewModelStore = ViewModelStore()
@@ -122,6 +143,23 @@ private fun SessionContent(themeState: ThemeState, onLogout: () -> Unit) {
         // 수신 통화 배너(DM·그룹 방) — 개인 큐(공유 소켓)의 CALL_INVITE를 세션 전역에서 받는다
         val incomingCallViewModel = sessionViewModel { IncomingCallViewModel(it.observePersonalEventsUseCase) }
         val incomingCallUiState by incomingCallViewModel.uiState.collectAsState()
+
+        // 세션 진입 1회 — Android: 알림 퍼미션 요청 + FCM 토큰 등록
+        LaunchedEffect(Unit) { onSessionStart() }
+
+        // 푸시 탭 딥링크 소비(설계 §9) — 콜드 스타트여도 세션 컴포지션 후라 초기화 완료 상태
+        LaunchedEffect(pendingDeepLink) {
+            val link = pendingDeepLink ?: return@LaunchedEffect
+            when {
+                link.kind == "CHAT" && link.chatRoomId != null ->
+                    onNavigationAction(NavigationAction.NavigateToChatRoom(link.chatRoomId, link.groupId, link.roomTitle ?: ""))
+                link.postId != null && link.groupId != null ->
+                    onNavigationAction(NavigationAction.NavigateToPostDetail(link.groupId, link.postId))
+                link.groupId != null -> onNavigationAction(NavigationAction.NavigateToGroupDetail(link.groupId))
+                else -> onNavigationAction(NavigationAction.SelectTab(MainDestination.NOTIFICATIONS))
+            }
+            onConsumeDeepLink()
+        }
 
         LaunchedEffect(navigationViewModel) {
             navigationViewModel.event.collect { event ->
