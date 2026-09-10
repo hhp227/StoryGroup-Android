@@ -264,10 +264,10 @@ private struct GroupDetailContent: View {
                 viewModel.onAction(.refresh)
                 groupMembersViewModel.onAction(.refresh)
                 groupEventsViewModel.onAction(.refresh)
-                // Compose GroupDetailScreen onRefresh 미러 — 프레젠터가 직접 paging 스트림을 무효화한다
-                // (event 경유 트리거가 없어졌으므로 awaitRefresh 전에 refresh()를 명시적으로 태운다)
-                lazyPagingItems.refresh()
-                photoLazyPagingItems.refresh()
+                // Compose GroupDetailScreen onRefresh 미러 — 피드·앨범도 VM Refresh 이벤트를 거친다
+                // (HomeView .refreshable과 동일 경로 — 갱신 진입점을 하나로 유지한다)
+                groupFeedViewModel.onAction(.refresh)
+                groupAlbumViewModel.onAction(.refresh)
                 await lazyPagingItems.awaitRefresh()
                 await photoLazyPagingItems.awaitRefresh()
             }
@@ -318,6 +318,19 @@ private struct GroupDetailContent: View {
                         Image(systemName: "bubble.left.fill")
                     }
                 }
+            }
+        }
+        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해 같은 스트림이
+        // 새 세대(첫 페이지)를 방출한다. 뷰가 직접 refresh()를 부르던 이전 방식은 작성 복귀 직후
+        // 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이 유실됐다(HomeView와 동일 관용구)
+        .onReceive(groupFeedViewModel.event) { event in
+            switch event {
+            case .refresh: lazyPagingItems.refresh()
+            }
+        }
+        .onReceive(groupAlbumViewModel.event) { event in
+            switch event {
+            case .refresh: photoLazyPagingItems.refresh()
             }
         }
         // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 groupEditDestination 클로저 경로)
@@ -714,10 +727,10 @@ private struct GroupDetailContent: View {
 
     private var createPostDestination: some View {
         // 성공 시 그룹 피드·앨범을 첫 페이지부터 다시 읽는다(Compose GroupDetailScreen
-        // LaunchedEffect(refreshRequested) 미러 — 프레젠터가 직접 paging 스트림을 무효화한다)
+        // LaunchedEffect(refreshRequested) 미러 — HomeView와 동일하게 VM Refresh 이벤트를 거친다)
         CreatePostView(groupId: viewModel.groupId) {
-            lazyPagingItems.refresh()
-            photoLazyPagingItems.refresh()
+            groupFeedViewModel.onAction(.refresh)
+            groupAlbumViewModel.onAction(.refresh)
         }
     }
 

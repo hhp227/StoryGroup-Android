@@ -178,7 +178,7 @@ fun GroupDetailScreen(
         onOpenChatRoom = { chatRoomId, gid, title ->
             onNavigationAction(NavigationAction.NavigateToChatRoom(chatRoomId, gid, title))
         },
-        // 작성 화면이 남긴 결과 — 그룹 피드는 화면이 lazyPagingItems.refresh()로 갱신
+        // 작성 화면이 남긴 결과 — 그룹 피드·앨범은 VM Refresh 이벤트를 거쳐 갱신된다(홈과 동일)
         refreshRequested = NavResult.PostCreated(groupId) in pendingResults,
         onRefreshHandled = { onNavigationAction(NavigationAction.ConsumeResult(NavResult.PostCreated(groupId))) },
         // 설정 탭에서 삭제/나가기 성공 — 화면이 스스로 닫히고(pop) 그룹 목록을 갱신해야 한다
@@ -264,12 +264,29 @@ private fun GroupDetailContent(
         viewModel.onAction(GroupDetailViewModel.Action.Refresh)
         membersViewModel.onAction(GroupMembersViewModel.Action.Refresh)
     }
-    // 작성 화면에서 돌아온 결과 — 피드·앨범을 첫 페이지부터 다시 읽는다(프레젠터 직접 refresh)
+    // 작성 화면에서 돌아온 결과 — 피드·앨범을 첫 페이지부터 다시 읽는다(홈과 동일하게 VM 경유)
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
-            lazyPagingItems.refresh()
-            photoLazyPagingItems.refresh()
+            feedViewModel.onAction(GroupFeedViewModel.Action.Refresh)
+            albumViewModel.onAction(GroupAlbumViewModel.Action.Refresh)
             onRefreshHandled()
+        }
+    }
+    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해 같은 스트림이
+    // 새 세대(첫 페이지)를 방출한다. 뷰가 직접 refresh()를 부르던 이전 방식은 작성 복귀 직후
+    // 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이 유실됐다(HomeScreen과 동일 관용구)
+    LaunchedEffect(feedViewModel) {
+        feedViewModel.event.collect { event ->
+            when (event) {
+                GroupFeedViewModel.Event.Refresh -> lazyPagingItems.refresh()
+            }
+        }
+    }
+    LaunchedEffect(albumViewModel) {
+        albumViewModel.event.collect { event ->
+            when (event) {
+                GroupAlbumViewModel.Event.Refresh -> photoLazyPagingItems.refresh()
+            }
         }
     }
     // 그룹 정보 수정에서 돌아온 결과 — 커버·제목과 설정 탭 판정 그룹을 다시 읽는다
@@ -330,8 +347,8 @@ private fun GroupDetailContent(
         onRefresh = {
             viewModel.onAction(GroupDetailViewModel.Action.Refresh)
             membersViewModel.onAction(GroupMembersViewModel.Action.Refresh)
-            lazyPagingItems.refresh()
-            photoLazyPagingItems.refresh()
+            feedViewModel.onAction(GroupFeedViewModel.Action.Refresh)
+            albumViewModel.onAction(GroupAlbumViewModel.Action.Refresh)
             eventsViewModel.onAction(GroupEventsViewModel.Action.Refresh)
         },
         header = { _ ->

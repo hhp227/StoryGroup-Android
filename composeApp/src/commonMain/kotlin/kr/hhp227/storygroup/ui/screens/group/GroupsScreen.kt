@@ -141,10 +141,12 @@ private fun GroupsContent(
             }
         }
     }
-    // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러)
+    // 상세에서 나가기/삭제 후 복귀 — 목록을 첫 페이지부터 다시 읽는다(홈 refreshRequested 미러).
+    // 뷰가 직접 refresh()를 부르면 복귀 직후 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이
+    // 유실된다 — 위 Event 수집기와 같은 경로로 태운다(홈·그룹 상세와 동일 규약)
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
-            lazyPagingItems.refresh()
+            viewModel.onAction(GroupsViewModel.Action.Refresh)
             onRefreshHandled()
         }
     }
