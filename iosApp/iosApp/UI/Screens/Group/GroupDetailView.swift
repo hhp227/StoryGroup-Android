@@ -320,19 +320,6 @@ private struct GroupDetailContent: View {
                 }
             }
         }
-        // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해 같은 스트림이
-        // 새 세대(첫 페이지)를 방출한다. 뷰가 직접 refresh()를 부르던 이전 방식은 작성 복귀 직후
-        // 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이 유실됐다(HomeView와 동일 관용구)
-        .onReceive(groupFeedViewModel.event) { event in
-            switch event {
-            case .refresh: lazyPagingItems.refresh()
-            }
-        }
-        .onReceive(groupAlbumViewModel.event) { event in
-            switch event {
-            case .refresh: photoLazyPagingItems.refresh()
-            }
-        }
         // 설정 탭 일회성 이벤트 — 삭제/나가기 성공 시 화면 닫기(저장 갱신은 groupEditDestination 클로저 경로)
         .onReceive(groupSettingsViewModel.event) { event in
             switch event {
@@ -727,7 +714,7 @@ private struct GroupDetailContent: View {
 
     private var createPostDestination: some View {
         // 성공 시 그룹 피드·앨범을 첫 페이지부터 다시 읽는다(Compose GroupDetailScreen
-        // LaunchedEffect(refreshRequested) 미러 — HomeView와 동일하게 VM Refresh 이벤트를 거친다)
+        // LaunchedEffect(refreshRequested) 미러 — VM이 트리거로 스트림을 갈아끼운다)
         CreatePostView(groupId: viewModel.groupId) {
             groupFeedViewModel.onAction(.refresh)
             groupAlbumViewModel.onAction(.refresh)

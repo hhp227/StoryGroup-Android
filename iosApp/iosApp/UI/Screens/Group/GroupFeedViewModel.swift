@@ -3,13 +3,16 @@ import Foundation
 import Shared
 
 /// 소식 탭 — composeApp GroupFeedViewModel.kt와 1:1 미러(탭별 VM 분리, 레거시 탭 Fragment VM 구조).
-/// 피드는 UiState에 담기는 최신 PagingData. 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다
-/// — 뷰가 직접 refresh()를 부르면 복귀 직후 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이
-/// 유실된다(HomeViewModel과 동일 규약).
+/// 피드는 UiState에 담기는 최신 PagingData. 갱신은 VM이 스트림을 통째로 갈아끼우는 방식이다 —
+/// Compose 쪽 상세는 NavHost 목적지라 글쓰기 복귀 때 화면이 새로 만들어지는데, 그 첫 프레임엔
+/// 일회성 Event도 프레젠터 refresh()도 닿지 못한다. 트리거는 상태라서 타이밍과 무관하다.
 final class GroupFeedViewModel: MviViewModel {
+    typealias Event = Never
+
     @Published private(set) var uiState = UiState()
 
-    let event = PassthroughSubject<Event, Never>()
+    // 스트림을 통째로 갈아끼우는 트리거 — 복귀 첫 프레임에 유실되지 않도록 이벤트가 아닌 상태다
+    private let refreshTrigger = CurrentValueSubject<Int, Never>(0)
 
     let groupId: Int64
 
@@ -38,8 +41,8 @@ final class GroupFeedViewModel: MviViewModel {
 
     func onAction(_ action: Action) {
         switch action {
-        // 글쓰기 성공·당겨서 새로고침 시 발화 — 화면이 refresh()로 첫 페이지부터 다시 읽는다
-        case .refresh: event.send(.refresh)
+        // 글쓰기 성공·당겨서 새로고침 — 새 PagingSource가 첫 페이지부터 다시 읽는다
+        case .refresh: refreshTrigger.send(refreshTrigger.value + 1)
         case .toggleLike(let post): toggleLike(post)
         case .dismissLikeError: uiState.likeError = nil
         }
@@ -68,8 +71,10 @@ final class GroupFeedViewModel: MviViewModel {
         self.togglePostLikeUseCase = togglePostLikeUseCase
 
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        getGroupPostsPagingDataUseCase(groupId: groupId)
-            .cachedIn()
+        // (Kotlin: refreshTrigger.flatMapLatest { useCase(groupId) }.cachedIn(viewModelScope))
+        refreshTrigger
+            .map { _ in getGroupPostsPagingDataUseCase(groupId: groupId).cachedIn() }
+            .switchToLatest()
             .sink { [weak self] in self?.setPagingData($0) }
             .store(in: &cancellables)
         KotlinFlowPublisher<Post> { onEach in
@@ -99,9 +104,5 @@ final class GroupFeedViewModel: MviViewModel {
         case refresh
         case toggleLike(Post)
         case dismissLikeError
-    }
-
-    enum Event {
-        case refresh
     }
 }

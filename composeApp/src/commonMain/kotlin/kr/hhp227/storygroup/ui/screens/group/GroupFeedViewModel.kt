@@ -7,13 +7,13 @@ import app.cash.paging.cachedIn
 import app.cash.paging.filter
 import app.cash.paging.map
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -31,10 +31,12 @@ import storygroup.composeapp.generated.resources.post_error_like
 
 /**
  * 소식 탭 — 레거시 PostFragment의 VM 미러(탭별 VM 분리). 피드는 UiState에 담기는 최신
- * PagingData(Paging-CRUD 샘플 패턴). 갱신은 화면이 Event를 받아 프레젠터 refresh()로 수행한다
- * — 뷰가 직접 refresh()를 부르면 복귀 직후 프레젠터가 아직 첫 PagingData를 받기 전이라
- * 호출이 유실된다(HomeViewModel과 동일 규약). 수정/차단/삭제는 재조회 대신 현재 스냅샷에서
- * 그 항목만 패치한다.
+ * PagingData(Paging-CRUD 샘플 패턴). 갱신은 VM이 스트림을 통째로 갈아끼우는 방식이다 —
+ * 이 화면은 NavHost 목적지라 글쓰기가 위에 push되면 컴포지션이 통째로 dispose되고 복귀 때
+ * 새로 만들어진다(홈은 셸 소속이라 살아남는다). 그 첫 프레임에 일회성 Event를 쏘면 아직
+ * 구독자가 없어 유실되고, 프레젠터 refresh()도 아직 PagingData를 못 받아 삼켜진다.
+ * 트리거는 상태라서 복귀 타이밍과 무관하게 새 세대가 UiState로 흘러간다.
+ * 수정/차단/삭제는 재조회 대신 현재 스냅샷에서 그 항목만 패치한다.
  * iosApp GroupFeedViewModel.swift와 1:1 미러
  */
 class GroupFeedViewModel(
@@ -44,12 +46,14 @@ class GroupFeedViewModel(
     observeUserBlocksUseCase: ObserveUserBlocksUseCase,
     observePostDeletionsUseCase: ObservePostDeletionsUseCase,
     private val togglePostLikeUseCase: TogglePostLikeUseCase
-) : ViewModel(), MviViewModel<GroupFeedViewModel.UiState, GroupFeedViewModel.Action, GroupFeedViewModel.Event> {
+) : ViewModel(), MviViewModel<GroupFeedViewModel.UiState, GroupFeedViewModel.Action, Nothing> {
     private val _uiState = MutableStateFlow(UiState())
     override val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _event = MutableSharedFlow<Event>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    override val event: Flow<Event> = _event.asSharedFlow()
+    override val event: Flow<Nothing> = emptyFlow()
+
+    // 스트림을 통째로 갈아끼우는 트리거 — 복귀 첫 프레임에 유실되지 않도록 이벤트가 아닌 상태다
+    private val refreshTrigger = MutableStateFlow(0)
 
     private fun setPagingData(pagingData: PagingData<Post>) {
         _uiState.update { it.copy(pagingData = pagingData) }
@@ -82,8 +86,8 @@ class GroupFeedViewModel(
 
     override fun onAction(action: Action) {
         when (action) {
-            // 글쓰기 성공·당겨서 새로고침 시 발화 — 화면이 refresh()로 첫 페이지부터 다시 읽는다
-            Action.Refresh -> _event.tryEmit(Event.Refresh)
+            // 글쓰기 성공·당겨서 새로고침 — 새 PagingSource가 첫 페이지부터 다시 읽는다
+            Action.Refresh -> refreshTrigger.update { it + 1 }
             is Action.ToggleLike -> toggleLike(action.post)
             Action.DismissLikeError -> _uiState.update { it.copy(likeError = null) }
         }
@@ -104,7 +108,9 @@ class GroupFeedViewModel(
 
     init {
         // UseCase는 cachedIn 없는 Flow를 반환하므로 프레젠테이션 경계인 여기서 캐시를 적용한다
-        getGroupPostsPagingDataUseCase(groupId)
+        @OptIn(ExperimentalCoroutinesApi::class)
+        refreshTrigger
+            .flatMapLatest { getGroupPostsPagingDataUseCase(groupId) }
             .cachedIn(viewModelScope)
             .onEach(::setPagingData)
             .launchIn(viewModelScope)
@@ -132,9 +138,5 @@ class GroupFeedViewModel(
         data object Refresh : Action
         data class ToggleLike(val post: Post) : Action
         data object DismissLikeError : Action
-    }
-
-    sealed interface Event {
-        data object Refresh : Event
     }
 }

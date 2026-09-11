@@ -264,29 +264,13 @@ private fun GroupDetailContent(
         viewModel.onAction(GroupDetailViewModel.Action.Refresh)
         membersViewModel.onAction(GroupMembersViewModel.Action.Refresh)
     }
-    // 작성 화면에서 돌아온 결과 — 피드·앨범을 첫 페이지부터 다시 읽는다(홈과 동일하게 VM 경유)
+    // 작성 화면에서 돌아온 결과 — 피드·앨범을 첫 페이지부터 다시 읽는다. VM이 트리거(상태)로
+    // 스트림을 갈아끼우므로, 이 화면이 복귀와 함께 새로 컴포즈되는 시점과 무관하게 반영된다
     LaunchedEffect(refreshRequested) {
         if (refreshRequested) {
             feedViewModel.onAction(GroupFeedViewModel.Action.Refresh)
             albumViewModel.onAction(GroupAlbumViewModel.Action.Refresh)
             onRefreshHandled()
-        }
-    }
-    // VM의 일회성 갱신 이벤트 — 프레젠터 refresh()가 활성 PagingSource를 무효화해 같은 스트림이
-    // 새 세대(첫 페이지)를 방출한다. 뷰가 직접 refresh()를 부르던 이전 방식은 작성 복귀 직후
-    // 프레젠터가 아직 첫 PagingData를 받기 전이라 호출이 유실됐다(HomeScreen과 동일 관용구)
-    LaunchedEffect(feedViewModel) {
-        feedViewModel.event.collect { event ->
-            when (event) {
-                GroupFeedViewModel.Event.Refresh -> lazyPagingItems.refresh()
-            }
-        }
-    }
-    LaunchedEffect(albumViewModel) {
-        albumViewModel.event.collect { event ->
-            when (event) {
-                GroupAlbumViewModel.Event.Refresh -> photoLazyPagingItems.refresh()
-            }
         }
     }
     // 그룹 정보 수정에서 돌아온 결과 — 커버·제목과 설정 탭 판정 그룹을 다시 읽는다
