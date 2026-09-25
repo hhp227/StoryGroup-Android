@@ -147,7 +147,8 @@ struct SGComposerField: View {
     }
 }
 
-/// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러
+/// 웹 .btn-primary 미러(accent 채움, warm=캡슐/vibrant=8pt) — Compose SgPrimaryButton 미러.
+/// leading은 텍스트 앞 아이콘(예: 구글 로고) — 로딩 중엔 스피너가 대신한다
 struct SGPrimaryButton: View {
     let title: String
 
@@ -156,6 +157,8 @@ struct SGPrimaryButton: View {
     var enabled: Bool = true
 
     var isLoading: Bool = false
+
+    var leading: AnyView? = nil
 
     let action: () -> Void
 
@@ -167,6 +170,8 @@ struct SGPrimaryButton: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: colors.inkFaint))
+                } else if let leading {
+                    leading
                 }
                 Text(title).font(.system(size: 16, weight: .bold))
             }

@@ -102,7 +102,19 @@ struct GoogleSignInSection: View {
                 Rectangle().fill(colors.stoneBorder).frame(height: 1)
             }
             Spacer().frame(height: 20)
-            SGPrimaryButton(title: "Google로 계속하기", enabled: enabled, action: startGoogleSignIn)
+            SGPrimaryButton(
+                title: "Google로 계속하기",
+                enabled: enabled,
+                // 구글 브랜드 4색 G(Assets GoogleG, 벡터) — 핑크 버튼 위에서도 보이도록 흰 원 배지(Compose GoogleLogo 미러)
+                leading: AnyView(
+                    Image("GoogleG")
+                        .resizable()
+                        .frame(width: 14, height: 14)
+                        .frame(width: 22, height: 22)
+                        .background(Circle().fill(Color.white))
+                ),
+                action: startGoogleSignIn
+            )
             Spacer().frame(height: 20)
         }
     }

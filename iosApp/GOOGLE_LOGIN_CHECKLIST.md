@@ -15,7 +15,7 @@
 4. [ ] Xcode: File > Packages > Resolve Package Versions — GoogleSignIn 8.x 해석, 빌드 성공
    - Swift 컴파일 확인 포인트: `LoginWithGoogleUseCase.withIdToken(idToken:)`, `DeleteAccountUseCase.invoke(password:confirmText:)`, `GoogleAuthConfig.shared.IOS_CLIENT_ID`, `Profile.hasPassword`, `kGIDSignInErrorDomain`/`GIDSignInError.canceled`
 5. [ ] 실기기: 로그인 화면 "Google로 계속하기" → 계정 선택 → 홈 진입
-5-1. [ ] 구글 버튼이 로그인 버튼과 같은 SGPrimaryButton 모양인지(로그인·가입 화면 모두 — 공용 `GoogleSignInSection`은 LoginView.swift 안 struct). 가입 화면에서 구글 로그인 → 바로 홈 진입
+5-1. [ ] 구글 버튼이 로그인 버튼과 같은 SGPrimaryButton 모양인지(로그인·가입 화면 모두 — 공용 `GoogleSignInSection`은 LoginView.swift 안 struct). 가입 화면에서 구글 로그인 → 바로 홈 진입. 버튼 앞 흰 원+4색 G 로고(Assets `GoogleG.imageset` SVG 벡터 보존 — 안 보이면 SVG 대신 PDF로 교체)
 6. [ ] 시트에서 취소 → 에러 문구 없음
 7. [ ] 기존 이메일 계정과 같은 구글 계정 → 같은 사용자로 로그인(자동 연결)
 8. [ ] 구글 전용 계정: 계정 설정에서 비밀번호 변경 카드 숨김, 탈퇴 칸에 "탈퇴" 입력 시에만 버튼 활성 → 탈퇴 성공 후 로그인 화면
