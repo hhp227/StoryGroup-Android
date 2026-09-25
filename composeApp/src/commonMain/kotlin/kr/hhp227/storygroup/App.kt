@@ -77,7 +77,7 @@ fun App(
         CompositionLocalProvider(LocalAppContainer provides container) {
             // 세션 게이트 — 화면(LoginScreen)도 default parameter로 같은 인스턴스를 선언해 쓴다
             val loginViewModel = viewModel {
-                LoginViewModel(container.isLoggedInUseCase, container.loginUseCase, container.logoutUseCase)
+                LoginViewModel(container.isLoggedInUseCase, container.loginUseCase, container.loginWithGoogleUseCase, container.logoutUseCase)
             }
             val loginUiState by loginViewModel.uiState.collectAsState()
 

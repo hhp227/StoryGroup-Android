@@ -12,7 +12,9 @@ data class ProfileResponse(
     val profileImg: String? = null,
     val bio: String? = null,
     val statusMessage: String? = null,
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+    // 구서버 호환 기본값 true — 비밀번호 UI를 유지하는 쪽이 안전
+    val hasPassword: Boolean = true
 )
 
 // PATCH는 부분 갱신이 아니라 전체 교체 — null을 보내면 해당 필드가 지워지므로
@@ -33,8 +35,10 @@ data class ChangePasswordRequest(
 
 // 회원 탈퇴 — DELETE /api/users/me 요청 바디(비밀번호 재확인)
 @Serializable
+// 비밀번호 계정은 password, 구글 전용 계정은 confirmText("탈퇴") — null 필드는 explicitNulls=false로 생략된다
 data class DeleteAccountRequest(
-    val password: String
+    val password: String? = null,
+    val confirmText: String? = null
 )
 
 @Serializable

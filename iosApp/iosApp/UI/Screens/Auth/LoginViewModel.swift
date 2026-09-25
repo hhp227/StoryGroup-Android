@@ -11,11 +11,15 @@ final class LoginViewModel: MviViewModel {
 
     private let loginUseCase: LoginUseCase
 
+    private let loginWithGoogleUseCase: LoginWithGoogleUseCase
+
     private let logoutUseCase: LogoutUseCase
 
     func onAction(_ action: Action) {
         switch action {
         case .login(let email, let password): login(email: email, password: password)
+        case .googleLogin(let idToken): googleLogin(idToken: idToken)
+        case .googleLoginFailed(let message): uiState.error = message ?? "구글 로그인에 실패했습니다."
         case .logout: logout()
         case .clearError: uiState.error = nil
         }
@@ -38,6 +42,24 @@ final class LoginViewModel: MviViewModel {
         }
     }
 
+    /// 자격 증명 획득(GIDSignIn 시트)은 화면 몫 — VM은 받은 ID 토큰을 서버 로그인으로만 잇는다
+    private func googleLogin(idToken: String) {
+        if uiState.isLoading { return }
+
+        uiState.isLoading = true
+        uiState.error = nil
+        Task { @MainActor in
+            do {
+                _ = try await loginWithGoogleUseCase.withIdToken(idToken: idToken)
+                uiState.isLoading = false
+                uiState.isLoggedIn = true
+            } catch {
+                uiState.isLoading = false
+                uiState.error = error.kotlinMessage(fallback: "구글 로그인에 실패했습니다.")
+            }
+        }
+    }
+
     private func logout() {
         Task { @MainActor in
             try? await logoutUseCase.invoke()
@@ -48,9 +70,11 @@ final class LoginViewModel: MviViewModel {
     init(
         isLoggedInUseCase: IsLoggedInUseCase = AppContainer.shared.isLoggedInUseCase,
         loginUseCase: LoginUseCase = AppContainer.shared.loginUseCase,
+        loginWithGoogleUseCase: LoginWithGoogleUseCase = AppContainer.shared.loginWithGoogleUseCase,
         logoutUseCase: LogoutUseCase = AppContainer.shared.logoutUseCase
     ) {
         self.loginUseCase = loginUseCase
+        self.loginWithGoogleUseCase = loginWithGoogleUseCase
         self.logoutUseCase = logoutUseCase
         uiState = UiState(isLoggedIn: isLoggedInUseCase.invoke())
     }
@@ -63,6 +87,9 @@ final class LoginViewModel: MviViewModel {
 
     enum Action {
         case login(email: String, password: String)
+        case googleLogin(idToken: String)
+        /// GIDSignIn 자체가 실패한 경우 — 취소는 여기로 오지 않는다
+        case googleLoginFailed(message: String?)
         case logout
         case clearError
     }

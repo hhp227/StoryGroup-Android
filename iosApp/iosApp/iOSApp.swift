@@ -1,3 +1,4 @@
+import GoogleSignIn
 import SwiftUI
 
 @main
@@ -8,6 +9,10 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                // GIDSignIn 인증 후 앱 복귀 URL(reversed client ID scheme) 처리
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
+                }
         }
     }
 }

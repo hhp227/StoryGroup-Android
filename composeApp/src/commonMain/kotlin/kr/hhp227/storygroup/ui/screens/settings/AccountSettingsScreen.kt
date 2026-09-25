@@ -64,6 +64,7 @@ import storygroup.composeapp.generated.resources.account_current_password
 import storygroup.composeapp.generated.resources.account_delete_account
 import storygroup.composeapp.generated.resources.account_delete_action
 import storygroup.composeapp.generated.resources.account_delete_confirm
+import storygroup.composeapp.generated.resources.account_delete_confirm_text_label
 import storygroup.composeapp.generated.resources.account_new_password
 import storygroup.composeapp.generated.resources.account_password_changed
 import storygroup.composeapp.generated.resources.account_saved
@@ -122,6 +123,8 @@ fun AccountSettingsScreen(
     // 직전 실패 문구(예: "현재 비밀번호가 올바르지 않습니다")가 입력 전인데 먼저 보이는 문제 방지.
     // VM은 세션 스코프(uiState)가 다이얼로그보다 오래 살아 에러가 자연 소멸하지 않으므로 화면 로컬로 게이트.
     var deleteAttempted by remember { mutableStateOf(false) }
+    // 비밀번호 없는(구글 전용) 계정 — 비밀번호 변경 숨김, 탈퇴는 "탈퇴" 문구 확인. 로드 전엔 비밀번호 계정으로 본다
+    val hasPassword = uiState.profile?.hasPassword != false
     val pickProfileImage = rememberImagePickerLauncher { picked ->
         onAction(AccountSettingsViewModel.Action.ChangeProfileImage(picked.bytes, picked.fileName, picked.contentType))
     }
@@ -284,7 +287,8 @@ fun AccountSettingsScreen(
                         )
                     }
                 }
-                SgCard(modifier = Modifier.fillMaxWidth()) {
+                // 구글 전용 계정은 비밀번호가 없어 변경 카드를 숨긴다(로드 전엔 기존처럼 보임)
+                if (hasPassword) SgCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             stringResource(Res.string.account_change_password),
@@ -365,6 +369,7 @@ fun AccountSettingsScreen(
     }
     if (confirmingDelete) {
         DeleteAccountDialog(
+            hasPassword = hasPassword,
             password = deletePassword,
             onPasswordChange = { deletePassword = it },
             isLoading = uiState.isDeletingAccount,
@@ -377,11 +382,20 @@ fun AccountSettingsScreen(
             },
             onConfirm = {
                 deleteAttempted = true
-                onAction(AccountSettingsViewModel.Action.DeleteAccount(deletePassword))
+                // 입력 칸은 하나 — 계정 종류에 따라 비밀번호 또는 확인 문구로 보낸다
+                onAction(
+                    AccountSettingsViewModel.Action.DeleteAccount(
+                        password = deletePassword.takeIf { hasPassword },
+                        confirmText = deletePassword.takeUnless { hasPassword }
+                    )
+                )
             }
         )
     }
 }
+
+// 서버 UserService.DELETE_CONFIRM_TEXT와 같은 값 — 언어와 무관하게 이 문구를 입력받는다
+private const val DELETE_CONFIRM_TEXT = "탈퇴"
 
 /**
  * 회원 탈퇴 확인 다이얼로그 — GroupSettingsTab CloseConfirmDialog(삭제/나가기) 관용구 미러
@@ -389,6 +403,7 @@ fun AccountSettingsScreen(
  */
 @Composable
 private fun DeleteAccountDialog(
+    hasPassword: Boolean,
     password: String,
     onPasswordChange: (String) -> Unit,
     isLoading: Boolean,
@@ -411,8 +426,12 @@ private fun DeleteAccountDialog(
                 SgTextField(
                     value = password,
                     onValueChange = onPasswordChange,
-                    label = stringResource(Res.string.account_current_password),
-                    isPassword = true,
+                    label = if (hasPassword) {
+                        stringResource(Res.string.account_current_password)
+                    } else {
+                        stringResource(Res.string.account_delete_confirm_text_label)
+                    },
+                    isPassword = hasPassword,
                     enabled = !isLoading
                 )
                 error?.let {
@@ -429,7 +448,7 @@ private fun DeleteAccountDialog(
                     }
                     Button(
                         onClick = onConfirm,
-                        enabled = !isLoading && password.isNotBlank(),
+                        enabled = !isLoading && if (hasPassword) password.isNotBlank() else password.trim() == DELETE_CONFIRM_TEXT,
                         shape = SgTheme.shapes.button,
                         modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(

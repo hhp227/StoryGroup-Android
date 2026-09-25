@@ -98,6 +98,7 @@ import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupByCodeUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.JoinGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LeaveGroupUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.LoginWithGoogleUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkAllNotificationsAsReadUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.MarkChatMessagesReadUseCase
@@ -166,6 +167,7 @@ class AppContainer(
 
     val isLoggedInUseCase = IsLoggedInUseCase(authRepository)
     val loginUseCase = LoginUseCase(authRepository)
+    val loginWithGoogleUseCase = LoginWithGoogleUseCase(authRepository)
     val logoutUseCase = LogoutUseCase(authRepository)
     val registerUseCase = RegisterUseCase(authRepository)
     val getMyProfileUseCase = GetMyProfileUseCase(userRepository)

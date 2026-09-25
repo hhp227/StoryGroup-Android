@@ -40,6 +40,10 @@ kotlin {
             // 백그라운드 푸시 알림 — FCM 신호 수신 (Task 9)
             implementation(libs.firebase.messaging)
             implementation(libs.androidx.lifecycle.process)
+            // 구글 로그인 — Credential Manager 계정 선택 시트가 ID 토큰을 준다(설계 2026-09-25 §5.2)
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.playServicesAuth)
+            implementation(libs.googleid)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

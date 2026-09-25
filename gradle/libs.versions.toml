@@ -23,6 +23,8 @@ androidx-work = "2.9.1"
 google-services = "4.4.2"
 firebase-messaging = "24.1.0"
 androidx-lifecycle-process = "2.8.7"
+androidx-credentials = "1.5.0"
+googleid = "1.1.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -64,6 +66,9 @@ getstream-webrtc = { module = "io.getstream:stream-webrtc-android", version.ref 
 # Desktop 동영상 압축(ffmpeg 바이너리 번들) — 배포 용량 증가는 사용자 승인됨(§7)
 jave-all-deps = { module = "ws.schild:jave-all-deps", version.ref = "jave" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
+androidx-credentials-playServicesAuth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidx-lifecycle-process" }
 
 [plugins]

@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- 구글 로그인(GIDSignIn) 인증 후 앱 복귀 — iOS OAuth 클라이언트의 reversed client ID.
+	     클라이언트 ID 자체는 코드(GoogleAuthConfig.IOS_CLIENT_ID → GIDConfiguration)로 넘긴다 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.476947981226-secvodgec6d81r3a92incikmv8hsukhf</string>
+			</array>
+		</dict>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>

@@ -25,7 +25,7 @@ interface UserRemoteDataSource {
     suspend fun getMyProfile(): ProfileResponse
     suspend fun updateMyProfile(name: String, profileImg: String?, bio: String?, statusMessage: String?): ProfileResponse
     suspend fun changePassword(currentPassword: String, newPassword: String)
-    suspend fun deleteAccount(password: String)
+    suspend fun deleteAccount(password: String?, confirmText: String?)
     suspend fun reportUser(userId: Long, reason: String?)
     suspend fun blockUser(userId: Long)
     suspend fun unblockUser(userId: Long)
@@ -52,10 +52,10 @@ class UserRemoteDataSourceImpl(private val client: HttpClient) : UserRemoteDataS
         }
     }
 
-    override suspend fun deleteAccount(password: String) {
+    override suspend fun deleteAccount(password: String?, confirmText: String?) {
         client.delete("/api/users/me") {
             contentType(ContentType.Application.Json)
-            setBody(DeleteAccountRequest(password))
+            setBody(DeleteAccountRequest(password, confirmText))
         }
     }
 

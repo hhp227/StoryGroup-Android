@@ -156,6 +156,9 @@
     <string name="login_action">ログイン</string>
     <string name="login_no_account">アカウントをお持ちではありませんか？</string>
     <string name="login_error">ログインに失敗しました。</string>
+    <string name="login_google">Googleで続ける</string>
+    <string name="login_or">または</string>
+    <string name="login_google_error">Googleログインに失敗しました。</string>
     <string name="register_title">一緒に楽しむ仲間のための場所</string>
     <string name="register_subtitle">StoryGroupに登録してグループを作りましょう。</string>
     <string name="register_in_progress">登録中...</string>
@@ -456,6 +459,7 @@
     <string name="account_delete_account">退会する</string>
     <string name="account_delete_confirm">本当に退会しますか？元に戻せません。投稿・コメント・チャットは「退会したユーザー」として残ります。</string>
     <string name="account_delete_action">退会</string>
+    <string name="account_delete_confirm_text_label">確認のため「탈퇴」と入力してください</string>
     <string name="account_error_delete_account">退会に失敗しました。</string>
     <string name="app_settings_theme_mood">テーマムード</string>
     <string name="app_settings_mood_warm">やさしい（ウォーム）</string>

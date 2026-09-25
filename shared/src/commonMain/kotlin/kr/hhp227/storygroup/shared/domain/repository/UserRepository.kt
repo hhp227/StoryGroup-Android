@@ -27,10 +27,11 @@ interface UserRepository {
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
 
     /**
-     * 회원 탈퇴 — DELETE /api/users/me(비밀번호 재확인). 성공 시 호출측이 기존 로그아웃 플로우로
-     * 세션을 정리한다. 비밀번호 불일치(400)·소유 그룹이 있는 경우(409) 서버 메시지를 그대로 보여준다.
+     * 회원 탈퇴 — DELETE /api/users/me. 비밀번호 계정은 password 재확인, 비밀번호 없는(구글 전용)
+     * 계정은 confirmText="탈퇴". 성공 시 호출측이 기존 로그아웃 플로우로 세션을 정리한다.
+     * 비밀번호/확인 문구 불일치(400)·소유 그룹이 있는 경우(409) 서버 메시지를 그대로 보여준다.
      */
-    suspend fun deleteAccount(password: String): Result<Unit>
+    suspend fun deleteAccount(password: String?, confirmText: String?): Result<Unit>
 
     /**
      * 사용자 신고 — POST /api/users/{userId}/report. 접수는 앱 운영자의 신고 관리로 간다

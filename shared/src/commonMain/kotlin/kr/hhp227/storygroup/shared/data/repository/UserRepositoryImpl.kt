@@ -39,10 +39,10 @@ class UserRepositoryImpl(private val userRemoteDataSource: UserRemoteDataSource)
     override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
         runCatching { userRemoteDataSource.changePassword(currentPassword, newPassword) }
 
-    override suspend fun deleteAccount(password: String): Result<Unit> =
+    override suspend fun deleteAccount(password: String?, confirmText: String?): Result<Unit> =
         runCatching {
             try {
-                userRemoteDataSource.deleteAccount(password)
+                userRemoteDataSource.deleteAccount(password, confirmText)
             } catch (e: ClientRequestException) {
                 // 비밀번호 불일치(400)/미탈퇴 그룹 존재(409)가 일상 실패 경로 — Ktor 예외 원문 대신
                 // 서버 에러 본문의 사용자 문구를 그대로 보여준다(joinByCode 선례)
@@ -92,7 +92,8 @@ private fun ProfileResponse.toDomain() = Profile(
     profileImg = profileImg,
     bio = bio,
     statusMessage = statusMessage,
-    isAdmin = isAdmin
+    isAdmin = isAdmin,
+    hasPassword = hasPassword
 )
 
 private fun BlockedUserResponse.toDomain() = BlockedUser(

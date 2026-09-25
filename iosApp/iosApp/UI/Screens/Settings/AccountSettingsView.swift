@@ -53,6 +53,11 @@ struct AccountSettingsView: View {
     /// VM은 화면(push)보다 오래 살 수 있어 에러가 자연 소멸하지 않으므로 화면 로컬로 게이트.
     @State private var deleteAttempted = false
 
+    /// 비밀번호 없는(구글 전용) 계정 — 비밀번호 변경 숨김, 탈퇴는 "탈퇴" 문구 확인. 로드 전엔 비밀번호 계정으로 본다
+    private var hasPassword: Bool {
+        accountSettingsViewModel.uiState.profile?.hasPassword ?? true
+    }
+
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,6 +65,7 @@ struct AccountSettingsView: View {
             .overlay {
                 if confirmingDelete {
                     DeleteAccountDialog(
+                        hasPassword: hasPassword,
                         password: $deletePassword,
                         isLoading: accountSettingsViewModel.uiState.isDeletingAccount,
                         // 이번 오픈에서 한 번이라도 제출했을 때만 VM 에러를 노출(위 deleteAttempted 주석 참고)
@@ -71,7 +77,13 @@ struct AccountSettingsView: View {
                         },
                         onConfirm: {
                             deleteAttempted = true
-                            accountSettingsViewModel.onAction(.deleteAccount(password: deletePassword))
+                            // 입력 칸은 하나 — 계정 종류에 따라 비밀번호 또는 확인 문구로 보낸다
+                            accountSettingsViewModel.onAction(
+                                .deleteAccount(
+                                    password: hasPassword ? deletePassword : nil,
+                                    confirmText: hasPassword ? nil : deletePassword
+                                )
+                            )
                         }
                     )
                 }
@@ -134,7 +146,9 @@ struct AccountSettingsView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     profileCard
-                    passwordCard
+                    if hasPassword {
+                        passwordCard
+                    }
                     deleteAccountRow
                 }
                 .padding(16)
@@ -274,6 +288,11 @@ struct AccountSettingsView: View {
 /// 회원 탈퇴 확인 다이얼로그 — PostDetailView의 ActionConfirmDialog(신고·차단) 관용구 미러
 /// + 본인 확인용 비밀번호 필드. 성공하면 accountDeleted 이벤트로 화면이 닫고 로그아웃 흐름으로 넘어간다.
 private struct DeleteAccountDialog: View {
+    /// 서버 UserService.DELETE_CONFIRM_TEXT와 같은 값
+    private static let confirmText = "탈퇴"
+
+    let hasPassword: Bool
+
     @Binding var password: String
 
     let isLoading: Bool
@@ -287,7 +306,8 @@ private struct DeleteAccountDialog: View {
     @Environment(\.sgColors) private var colors
 
     private var canConfirm: Bool {
-        !isLoading && !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let input = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !isLoading && (hasPassword ? !input.isEmpty : input == Self.confirmText)
     }
 
     var body: some View {
@@ -301,7 +321,12 @@ private struct DeleteAccountDialog: View {
                     Text("정말 탈퇴하시겠어요? 되돌릴 수 없으며, 작성한 게시글·댓글·채팅은 '탈퇴한 사용자'로 남습니다.")
                         .font(.subheadline)
                         .foregroundColor(colors.ink)
-                    SGTextField(label: "현재 비밀번호", text: $password, isSecure: true, enabled: !isLoading)
+                    SGTextField(
+                        label: hasPassword ? "현재 비밀번호" : "확인을 위해 \"\(Self.confirmText)\"를 입력하세요",
+                        text: $password,
+                        isSecure: hasPassword,
+                        enabled: !isLoading
+                    )
                     if let error {
                         Text(error).font(.caption).foregroundColor(colors.rust)
                     }

@@ -62,7 +62,7 @@ class AccountSettingsViewModel(
             is Action.ChangePassword ->
                 changePassword(action.currentPassword, action.newPassword, action.confirmPassword)
             is Action.ChangeProfileImage -> changeProfileImage(action.bytes, action.fileName, action.contentType)
-            is Action.DeleteAccount -> deleteAccount(action.password)
+            is Action.DeleteAccount -> deleteAccount(action.password, action.confirmText)
         }
     }
 
@@ -178,14 +178,15 @@ class AccountSettingsViewModel(
     /**
      * 회원 탈퇴 — 성공 시 Event.AccountDeleted만 발화하고 세션 정리(로그아웃)는 화면 호출부가
      * 기존 onLogout 경로로 이어서 처리한다(설계 §6, 이 VM은 세션에 관여하지 않는다).
-     * 실패 시 서버 한국어 안내(400 현재 비밀번호 불일치/409 미삭제 그룹 존재)를 그대로 노출한다.
+     * 비밀번호 계정은 password, 비밀번호 없는(구글 전용) 계정은 confirmText("탈퇴")로 본인 확인한다.
+     * 실패 시 서버 한국어 안내(400 비밀번호/확인 문구 불일치, 409 미삭제 그룹 존재)를 그대로 노출한다.
      */
-    private fun deleteAccount(password: String) {
+    private fun deleteAccount(password: String?, confirmText: String?) {
         if (_uiState.value.isDeletingAccount) return
 
         _uiState.update { it.copy(isDeletingAccount = true, deleteAccountError = null) }
         viewModelScope.launch {
-            runCatching { deleteAccountUseCase(password) }
+            runCatching { deleteAccountUseCase(password, confirmText) }
                 .onSuccess {
                     _uiState.update { it.copy(isDeletingAccount = false) }
                     _event.tryEmit(Event.AccountDeleted)
@@ -229,7 +230,7 @@ class AccountSettingsViewModel(
             val confirmPassword: String
         ) : Action
         class ChangeProfileImage(val bytes: ByteArray, val fileName: String, val contentType: String) : Action
-        data class DeleteAccount(val password: String) : Action
+        data class DeleteAccount(val password: String?, val confirmText: String?) : Action
     }
 
     sealed interface Event {

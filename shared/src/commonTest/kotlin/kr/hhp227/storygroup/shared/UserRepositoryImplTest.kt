@@ -25,7 +25,7 @@ class UserRepositoryImplTest {
         override suspend fun getMyProfile(): ProfileResponse = error?.let { throw it } ?: profile!!
         override suspend fun updateMyProfile(name: String, profileImg: String?, bio: String?, statusMessage: String?): ProfileResponse = throw UnsupportedOperationException()
         override suspend fun changePassword(currentPassword: String, newPassword: String) = throw UnsupportedOperationException()
-        override suspend fun deleteAccount(password: String) = throw UnsupportedOperationException()
+        override suspend fun deleteAccount(password: String?, confirmText: String?) = throw UnsupportedOperationException()
         override suspend fun reportUser(userId: Long, reason: String?) = throw UnsupportedOperationException()
         override suspend fun blockUser(userId: Long) = throw UnsupportedOperationException()
         override suspend fun unblockUser(userId: Long) = throw UnsupportedOperationException()
@@ -43,7 +43,7 @@ class UserRepositoryImplTest {
         val repository = UserRepositoryImpl(
             FakeUserRemoteDataSource(
                 // ProfileResponse에 필수 필드가 더 있으면 named 인자 더미로 채운다 — 검증 대상은 매핑 통과뿐
-                profile = ProfileResponse(id = 1L, name = "홍희표", email = "a@b.c", profileImg = null, bio = null, statusMessage = null, isAdmin = false)
+                profile = ProfileResponse(id = 1L, name = "홍희표", email = "a@b.c", profileImg = null, bio = null, statusMessage = null, isAdmin = false, hasPassword = false)
             )
         )
 
@@ -51,6 +51,7 @@ class UserRepositoryImplTest {
 
         assertTrue(result.isSuccess)
         assertEquals("홍희표", result.getOrThrow().name)
+        assertEquals(false, result.getOrThrow().hasPassword)
         assertEquals(1L, result.getOrThrow().id)
     }
 

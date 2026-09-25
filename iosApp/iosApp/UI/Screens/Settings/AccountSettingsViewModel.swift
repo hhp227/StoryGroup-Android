@@ -36,8 +36,8 @@ final class AccountSettingsViewModel: MviViewModel {
             changePassword(currentPassword: currentPassword, newPassword: newPassword, confirmPassword: confirmPassword)
         case .changeProfileImage(let data, let fileName, let contentType):
             changeProfileImage(data: data, fileName: fileName, contentType: contentType)
-        case .deleteAccount(let password):
-            deleteAccount(password: password)
+        case .deleteAccount(let password, let confirmText):
+            deleteAccount(password: password, confirmText: confirmText)
         }
     }
 
@@ -171,15 +171,16 @@ final class AccountSettingsViewModel: MviViewModel {
 
     /// 회원 탈퇴 — 성공 시 Event.accountDeleted만 발화하고 세션 정리(로그아웃)는 화면 호출부가
     /// 기존 onLogout 경로로 이어서 처리한다(이 VM은 세션에 관여하지 않는다).
-    /// 실패 시 서버 한국어 안내(400 현재 비밀번호 불일치/409 미삭제 그룹 존재)를 그대로 노출한다.
-    private func deleteAccount(password: String) {
+    /// 비밀번호 계정은 password, 비밀번호 없는(구글 전용) 계정은 confirmText("탈퇴")로 본인 확인한다.
+    /// 실패 시 서버 한국어 안내(400 비밀번호/확인 문구 불일치, 409 미삭제 그룹 존재)를 그대로 노출한다.
+    private func deleteAccount(password: String?, confirmText: String?) {
         if uiState.isDeletingAccount { return }
 
         uiState.isDeletingAccount = true
         uiState.deleteAccountError = nil
         Task { @MainActor in
             do {
-                try await deleteAccountUseCase.invoke(password: password)
+                try await deleteAccountUseCase.invoke(password: password, confirmText: confirmText)
                 uiState.isDeletingAccount = false
                 event.send(.accountDeleted)
             } catch {
@@ -227,7 +228,7 @@ final class AccountSettingsViewModel: MviViewModel {
         case saveProfile(name: String, bio: String, statusMessage: String)
         case changePassword(currentPassword: String, newPassword: String, confirmPassword: String)
         case changeProfileImage(data: Data, fileName: String, contentType: String)
-        case deleteAccount(password: String)
+        case deleteAccount(password: String?, confirmText: String?)
     }
 
     enum Event {

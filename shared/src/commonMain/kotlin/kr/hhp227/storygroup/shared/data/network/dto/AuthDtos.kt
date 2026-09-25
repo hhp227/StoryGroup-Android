@@ -18,6 +18,19 @@ data class LoginRequest(
 )
 
 @Serializable
+data class GoogleLoginRequest(
+    val idToken: String
+)
+
+// Desktop 루프백 PKCE — 교환은 서버(/api/auth/google/code)가 한다
+@Serializable
+data class GoogleCodeLoginRequest(
+    val code: String,
+    val codeVerifier: String,
+    val redirectUri: String
+)
+
+@Serializable
 data class RefreshTokenRequest(
     val refreshToken: String
 )

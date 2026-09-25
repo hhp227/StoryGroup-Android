@@ -9,7 +9,9 @@ data class Profile(
     val bio: String? = null,
     val statusMessage: String? = null,
     // 운영자 메뉴 노출용 — 실제 인가는 서버가 다시 검사한다
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+    // 비밀번호 없는(구글 전용) 계정이면 false — 비밀번호 변경 숨김·탈퇴는 문구 확인
+    val hasPassword: Boolean = true
 )
 
 /**
