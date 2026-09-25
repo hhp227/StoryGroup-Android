@@ -52,10 +52,16 @@ import storygroup.composeapp.generated.resources.register_title
 fun RegisterScreen(
     onRegistered: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: RegisterViewModel = screenViewModel { RegisterViewModel(it.registerUseCase) }
+    viewModel: RegisterViewModel = screenViewModel { RegisterViewModel(it.registerUseCase) },
+    // 구글은 가입=로그인 — 성공하면 세션 VM의 isLoggedIn이 바뀌어 App이 바로 세션 화면으로 넘어간다
+    loginViewModel: LoginViewModel = screenViewModel {
+        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.loginWithGoogleUseCase, it.logoutUseCase)
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val onAction = viewModel::onAction
+    val loginUiState by loginViewModel.uiState.collectAsState()
+    val isBusy = uiState.isLoading || loginUiState.isLoading
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -126,6 +132,11 @@ fun RegisterScreen(
             isLoading = uiState.isLoading
         )
         Spacer(Modifier.height(20.dp))
+        GoogleSignInSection(enabled = !isBusy, onAction = loginViewModel::onAction)
+        loginUiState.error?.let { error ->
+            Text(error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
+            Spacer(Modifier.height(20.dp))
+        }
         Row {
             Text(stringResource(Res.string.register_has_account), style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
@@ -134,9 +145,10 @@ fun RegisterScreen(
                 style = SgTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = SgTheme.colors.accent,
-                modifier = Modifier.clickable(enabled = !uiState.isLoading) {
-                    // 화면을 떠나며 자기 에러를 정리한다(이전엔 AuthFlow 몫)
+                modifier = Modifier.clickable(enabled = !isBusy) {
+                    // 화면을 떠나며 자기 에러를 정리한다(이전엔 AuthFlow 몫) — 구글 에러는 로그인 화면으로 새지 않게 함께
                     onAction(RegisterViewModel.Action.ClearError)
+                    loginViewModel.onAction(LoginViewModel.Action.ClearError)
                     onNavigateToLogin()
                 }
             )

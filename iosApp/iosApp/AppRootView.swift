@@ -65,6 +65,7 @@ struct AuthFlowView: View {
     var body: some View {
         if showRegister {
             RegisterView(
+                loginViewModel: loginViewModel,
                 onRegistered: {
                     justRegistered = true
                     showRegister = false

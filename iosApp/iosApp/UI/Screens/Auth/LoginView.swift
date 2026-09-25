@@ -65,29 +65,7 @@ struct LoginView: View {
                     }
                 )
                 Spacer().frame(height: 20)
-                // iOS OAuth 클라이언트 ID가 없으면(콘솔 생성 전) 버튼 자체를 숨긴다
-                if isGoogleAvailable {
-                    HStack(spacing: 12) {
-                        Rectangle().fill(colors.stoneBorder).frame(height: 1)
-                        Text("또는").font(.caption).foregroundColor(colors.inkSoft)
-                        Rectangle().fill(colors.stoneBorder).frame(height: 1)
-                    }
-                    Spacer().frame(height: 20)
-                    Button(action: startGoogleSignIn) {
-                        Text("Google로 계속하기")
-                            .font(.system(size: 16, weight: .bold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: colors.radiusButton ?? 20, style: .continuous)
-                                    .stroke(colors.stoneBorder, lineWidth: 1)
-                            )
-                            .foregroundColor(colors.ink)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(loginViewModel.uiState.isLoading)
-                    Spacer().frame(height: 20)
-                }
+                GoogleSignInSection(loginViewModel: loginViewModel, enabled: !loginViewModel.uiState.isLoading)
                 HStack(spacing: 6) {
                     Text("아직 계정이 없나요?")
                         .font(.subheadline)
@@ -104,9 +82,29 @@ struct LoginView: View {
         }
         .background(colors.paper.ignoresSafeArea())
     }
+}
 
-    private var isGoogleAvailable: Bool {
-        !GoogleAuthConfig.shared.IOS_CLIENT_ID.isEmpty
+/// "또는" 구분선 + 구글 버튼(로그인 버튼과 같은 SGPrimaryButton) — 로그인·가입 화면 공용(Compose GoogleSignInSection 미러).
+/// 구글은 가입과 로그인이 한 경로라 두 화면 모두 세션 VM(LoginViewModel)으로 보낸다.
+/// iOS 클라이언트 ID가 없으면 섹션 자체를 그리지 않는다. 아래 여백은 섹션이 포함한다
+struct GoogleSignInSection: View {
+    @ObservedObject var loginViewModel: LoginViewModel
+
+    let enabled: Bool
+
+    @Environment(\.sgColors) private var colors
+
+    var body: some View {
+        if !GoogleAuthConfig.shared.IOS_CLIENT_ID.isEmpty {
+            HStack(spacing: 12) {
+                Rectangle().fill(colors.stoneBorder).frame(height: 1)
+                Text("또는").font(.caption).foregroundColor(colors.inkSoft)
+                Rectangle().fill(colors.stoneBorder).frame(height: 1)
+            }
+            Spacer().frame(height: 20)
+            SGPrimaryButton(title: "Google로 계속하기", enabled: enabled, action: startGoogleSignIn)
+            Spacer().frame(height: 20)
+        }
     }
 
     /// GIDSignIn 시트 → ID 토큰(aud=iOS 클라이언트, 백엔드 허용 목록에 포함). 취소는 조용히 무시한다

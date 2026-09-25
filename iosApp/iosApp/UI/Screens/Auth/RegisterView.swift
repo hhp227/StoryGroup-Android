@@ -3,6 +3,9 @@ import SwiftUI
 /// 가입 — 웹 /register·Compose RegisterScreen 미러. 성공 시 상위(AuthFlowView)가 로그인으로 되돌린다.
 struct RegisterView: View {
     @StateObject private var registerViewModel = RegisterViewModel()
+
+    /// 구글은 가입=로그인 — 성공하면 세션 VM의 isLoggedIn이 바뀌어 루트가 바로 세션 화면으로 넘어간다
+    @ObservedObject var loginViewModel: LoginViewModel
     
     @Environment(\.sgColors) private var colors
     
@@ -15,6 +18,10 @@ struct RegisterView: View {
     @State private var email = ""
     
     @State private var password = ""
+
+    private var isBusy: Bool {
+        registerViewModel.uiState.isLoading || loginViewModel.uiState.isLoading
+    }
 
     var body: some View {
         ScrollView {
@@ -65,16 +72,25 @@ struct RegisterView: View {
                     }
                 )
                 Spacer().frame(height: 20)
+                GoogleSignInSection(loginViewModel: loginViewModel, enabled: !isBusy)
+                if let googleError = loginViewModel.uiState.error {
+                    Text(googleError).font(.caption).foregroundColor(colors.rust)
+                    Spacer().frame(height: 20)
+                }
                 HStack(spacing: 6) {
                     Text("이미 계정이 있나요?")
                         .font(.subheadline)
                         .foregroundColor(colors.inkSoft)
-                    Button(action: onNavigateToLogin) {
+                    Button(action: {
+                        // 구글 에러가 로그인 화면으로 새지 않게 정리하고 떠난다
+                        loginViewModel.onAction(.clearError)
+                        onNavigateToLogin()
+                    }) {
                         Text("로그인")
                             .font(.subheadline.bold())
                             .foregroundColor(colors.accent)
                     }
-                    .disabled(registerViewModel.uiState.isLoading)
+                    .disabled(isBusy)
                 }
             }
             .padding(.horizontal, 24)
