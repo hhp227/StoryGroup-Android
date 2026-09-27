@@ -76,6 +76,8 @@ struct LoginView: View {
                     }
                     .disabled(loginViewModel.uiState.isLoading)
                 }
+                // 계정 안내 문구는 가운데 정렬(Compose LoginScreen·웹 미러)
+                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, 24)
         }

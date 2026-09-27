@@ -92,6 +92,8 @@ struct RegisterView: View {
                     }
                     .disabled(isBusy)
                 }
+                // 계정 안내 문구는 가운데 정렬(Compose RegisterScreen·웹 미러)
+                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, 24)
         }

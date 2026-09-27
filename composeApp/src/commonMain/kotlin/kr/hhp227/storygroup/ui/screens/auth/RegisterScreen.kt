@@ -137,7 +137,8 @@ fun RegisterScreen(
             Text(error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
             Spacer(Modifier.height(20.dp))
         }
-        Row {
+        // 계정 안내 문구는 가운데 정렬(웹 로그인·가입 화면 미러)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Text(stringResource(Res.string.register_has_account), style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))
             Text(
