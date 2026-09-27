@@ -118,10 +118,11 @@ class LoginViewModel(
     sealed interface Action {
         data class Login(val email: String, val password: String) : Action
         data class GoogleLogin(val credential: GoogleCredential) : Action
-        data class AppleLogin(val credential: AppleExchangeCredential) : Action
-        data class AppleLoginFailed(val message: String?) : Action
         /** 런처(플랫폼 UI) 자체가 실패한 경우 — 취소는 여기로 오지 않는다 */
         data class GoogleLoginFailed(val message: String?) : Action
+        data class AppleLogin(val credential: AppleExchangeCredential) : Action
+        /** 런처(플랫폼 UI) 자체가 실패한 경우 — 취소는 여기로 오지 않는다 */
+        data class AppleLoginFailed(val message: String?) : Action
         data object Logout : Action
         data object ClearError : Action
     }

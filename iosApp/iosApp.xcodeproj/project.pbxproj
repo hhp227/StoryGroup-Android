@@ -98,6 +98,7 @@
 		A1010062AABBCCDDEEFF0062 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011062AABBCCDDEEFF0062 /* AppDelegate.swift */; };
 		A1010063AABBCCDDEEFF0063 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011063AABBCCDDEEFF0063 /* PushRegistrar.swift */; };
 		A1010064AABBCCDDEEFF0064 /* PendingPushRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011064AABBCCDDEEFF0064 /* PendingPushRoute.swift */; };
+		A1010066AABBCCDDEEFF0066 /* SocialSignInSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1011066AABBCCDDEEFF0066 /* SocialSignInSection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -191,6 +192,7 @@
 		A1011063AABBCCDDEEFF0063 /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
 		A1011064AABBCCDDEEFF0064 /* PendingPushRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPushRoute.swift; sourceTree = "<group>"; };
 		A1011065AABBCCDDEEFF0065 /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
+		A1011066AABBCCDDEEFF0066 /* SocialSignInSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialSignInSection.swift; sourceTree = "<group>"; };
 		FEA9D4AD37B8EF9BE110840A /* StoryGroup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StoryGroup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -302,6 +304,7 @@
 				A101100AAABBCCDDEEFF000A /* LoginViewModel.swift */,
 				A1011011AABBCCDDEEFF0011 /* RegisterView.swift */,
 				A101101AAABBCCDDEEFF001A /* RegisterViewModel.swift */,
+				A1011066AABBCCDDEEFF0066 /* SocialSignInSection.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -712,6 +715,7 @@
 				A1010062AABBCCDDEEFF0062 /* AppDelegate.swift in Sources */,
 				A1010063AABBCCDDEEFF0063 /* PushRegistrar.swift in Sources */,
 				A1010064AABBCCDDEEFF0064 /* PendingPushRoute.swift in Sources */,
+				A1010066AABBCCDDEEFF0066 /* SocialSignInSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

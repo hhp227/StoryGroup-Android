@@ -12,6 +12,7 @@ final class LoginViewModel: MviViewModel {
     private let loginUseCase: LoginUseCase
 
     private let loginWithGoogleUseCase: LoginWithGoogleUseCase
+
     private let loginWithAppleUseCase: LoginWithAppleUseCase
 
     private let logoutUseCase: LogoutUseCase
