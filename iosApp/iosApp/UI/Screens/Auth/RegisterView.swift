@@ -72,7 +72,7 @@ struct RegisterView: View {
                     }
                 )
                 Spacer().frame(height: 20)
-                GoogleSignInSection(loginViewModel: loginViewModel, enabled: !isBusy)
+                SocialSignInSection(loginViewModel: loginViewModel, enabled: !isBusy)
                 if let googleError = loginViewModel.uiState.error {
                     Text(googleError).font(.caption).foregroundColor(colors.rust)
                     Spacer().frame(height: 20)

@@ -42,31 +42,17 @@ class LoopbackOAuth(
     suspend fun authorize(): GoogleCredential.AuthCode? {
         val verifier = Pkce.newVerifier()
         val state = Pkce.randomUrlSafe(16)
-        val result = CompletableDeferred<Map<String, String>>()
-        val server = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
-        server.createContext("/") { exchange ->
-            val params = parseQuery(exchange.requestURI.rawQuery)
-            val body = DONE_HTML.toByteArray(Charsets.UTF_8)
-            exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-            // 파비콘 등 code/error 없는 요청은 무시하고 진짜 콜백만 완료시킨다
-            if ("code" in params || "error" in params) result.complete(params)
-        }
-        server.start()
-        try {
-            val redirectUri = "http://127.0.0.1:${server.address.port}"
+        var redirectUri = ""
+        val params = awaitLoopbackCallback(timeoutMillis) { port ->
+            redirectUri = "http://127.0.0.1:$port"
             val authUrl = buildAuthUrl(redirectUri, Pkce.challenge(verifier), state)
             lastAuthUrl = authUrl
             openBrowser(authUrl)
-            val params = withTimeout(timeoutMillis) { result.await() }
-            if (params["state"] != state) throw IllegalStateException("로그인 응답이 올바르지 않습니다")
-            if (params["error"] == "access_denied") return null
-            val code = params["code"] ?: throw IllegalStateException("구글 로그인에 실패했습니다: ${params["error"]}")
-            return GoogleCredential.AuthCode(code = code, codeVerifier = verifier, redirectUri = redirectUri)
-        } finally {
-            server.stop(0)
         }
+        if (params["state"] != state) throw IllegalStateException("로그인 응답이 올바르지 않습니다")
+        if (params["error"] == "access_denied") return null
+        val code = params["code"] ?: throw IllegalStateException("구글 로그인에 실패했습니다: ${params["error"]}")
+        return GoogleCredential.AuthCode(code = code, codeVerifier = verifier, redirectUri = redirectUri)
     }
 
     internal fun buildAuthUrl(redirectUri: String, challenge: String, state: String): String {
@@ -83,13 +69,39 @@ class LoopbackOAuth(
         return AUTH_ENDPOINT + "?" + params.entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
     }
 
-    private fun parseQuery(rawQuery: String?): Map<String, String> =
-        rawQuery.orEmpty().split("&").filter { it.contains('=') }
-            .associate { it.substringBefore('=') to URLDecoder.decode(it.substringAfter('='), "UTF-8") }
-
     private companion object {
         const val AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-        const val DONE_HTML = "<!doctype html><meta charset=utf-8><title>StoryGroup</title>" +
-            "<p style=\"font-family:sans-serif;padding:2em\">로그인 처리가 끝났습니다. StoryGroup 앱으로 돌아가세요.</p>"
     }
 }
+
+/**
+ * 127.0.0.1 임의 포트 1회용 서버 — code/error가 담긴 첫 요청의 쿼리를 돌려주고 항상 닫는다.
+ * 구글(LoopbackOAuth)·애플(AppleLoopbackAuth) 공용. 시간 초과는 TimeoutCancellationException
+ */
+internal suspend fun awaitLoopbackCallback(timeoutMillis: Long, onListening: (port: Int) -> Unit): Map<String, String> {
+    val result = CompletableDeferred<Map<String, String>>()
+    val server = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
+    server.createContext("/") { exchange ->
+        val params = parseLoopbackQuery(exchange.requestURI.rawQuery)
+        val body = LOOPBACK_DONE_HTML.toByteArray(Charsets.UTF_8)
+        exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
+        exchange.sendResponseHeaders(200, body.size.toLong())
+        exchange.responseBody.use { it.write(body) }
+        // 파비콘 등 code/error 없는 요청은 무시하고 진짜 콜백만 완료시킨다
+        if ("code" in params || "error" in params) result.complete(params)
+    }
+    server.start()
+    try {
+        onListening(server.address.port)
+        return withTimeout(timeoutMillis) { result.await() }
+    } finally {
+        server.stop(0)
+    }
+}
+
+private fun parseLoopbackQuery(rawQuery: String?): Map<String, String> =
+    rawQuery.orEmpty().split("&").filter { it.contains('=') }
+        .associate { it.substringBefore('=') to URLDecoder.decode(it.substringAfter('='), "UTF-8") }
+
+private const val LOOPBACK_DONE_HTML = "<!doctype html><meta charset=utf-8><title>StoryGroup</title>" +
+    "<p style=\"font-family:sans-serif;padding:2em\">로그인 처리가 끝났습니다. StoryGroup 앱으로 돌아가세요.</p>"

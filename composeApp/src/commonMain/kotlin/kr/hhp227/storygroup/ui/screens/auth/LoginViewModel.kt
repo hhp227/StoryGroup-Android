@@ -11,12 +11,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.hhp227.storygroup.shared.domain.usecase.IsLoggedInUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginUseCase
+import kr.hhp227.storygroup.shared.domain.usecase.LoginWithAppleUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LoginWithGoogleUseCase
 import kr.hhp227.storygroup.shared.domain.usecase.LogoutUseCase
+import kr.hhp227.storygroup.ui.auth.AppleExchangeCredential
 import kr.hhp227.storygroup.ui.auth.GoogleCredential
 import kr.hhp227.storygroup.ui.mvi.MviViewModel
 import org.jetbrains.compose.resources.getString
 import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.login_apple_error
 import storygroup.composeapp.generated.resources.login_error
 import storygroup.composeapp.generated.resources.login_google_error
 
@@ -25,6 +28,7 @@ class LoginViewModel(
     isLoggedInUseCase: IsLoggedInUseCase,
     private val loginUseCase: LoginUseCase,
     private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
+    private val loginWithAppleUseCase: LoginWithAppleUseCase,
     private val logoutUseCase: LogoutUseCase
 ) : ViewModel(), MviViewModel<LoginViewModel.UiState, LoginViewModel.Action, Nothing> {
     private val _uiState = MutableStateFlow(UiState(isLoggedIn = isLoggedInUseCase()))
@@ -39,6 +43,10 @@ class LoginViewModel(
             is Action.GoogleLogin -> googleLogin(action.credential)
             is Action.GoogleLoginFailed -> viewModelScope.launch {
                 _uiState.update { it.copy(error = action.message ?: getString(Res.string.login_google_error)) }
+            }
+            is Action.AppleLogin -> appleLogin(action.credential)
+            is Action.AppleLoginFailed -> viewModelScope.launch {
+                _uiState.update { it.copy(error = action.message ?: getString(Res.string.login_apple_error)) }
             }
             Action.Logout -> logout()
             Action.ClearError -> _uiState.update { it.copy(error = null) }
@@ -80,6 +88,20 @@ class LoginViewModel(
         }
     }
 
+    // Android·Desktop — 런처가 받은 콜백 코드+verifier를 서버 토큰으로 교환
+    private fun appleLogin(credential: AppleExchangeCredential) {
+        if (_uiState.value.isLoading) return
+
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            runCatching { loginWithAppleUseCase.withExchangeCode(credential.code, credential.verifier) }
+                .onSuccess { _uiState.update { it.copy(isLoading = false, isLoggedIn = true) } }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: getString(Res.string.login_apple_error)) }
+                }
+        }
+    }
+
     private fun logout() {
         viewModelScope.launch {
             logoutUseCase()
@@ -96,6 +118,8 @@ class LoginViewModel(
     sealed interface Action {
         data class Login(val email: String, val password: String) : Action
         data class GoogleLogin(val credential: GoogleCredential) : Action
+        data class AppleLogin(val credential: AppleExchangeCredential) : Action
+        data class AppleLoginFailed(val message: String?) : Action
         /** 런처(플랫폼 UI) 자체가 실패한 경우 — 취소는 여기로 오지 않는다 */
         data class GoogleLoginFailed(val message: String?) : Action
         data object Logout : Action

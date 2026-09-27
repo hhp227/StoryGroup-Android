@@ -12,6 +12,7 @@ final class LoginViewModel: MviViewModel {
     private let loginUseCase: LoginUseCase
 
     private let loginWithGoogleUseCase: LoginWithGoogleUseCase
+    private let loginWithAppleUseCase: LoginWithAppleUseCase
 
     private let logoutUseCase: LogoutUseCase
 
@@ -20,6 +21,9 @@ final class LoginViewModel: MviViewModel {
         case .login(let email, let password): login(email: email, password: password)
         case .googleLogin(let idToken): googleLogin(idToken: idToken)
         case .googleLoginFailed(let message): uiState.error = message ?? "구글 로그인에 실패했습니다."
+        case .appleLogin(let identityToken, let authorizationCode, let firstName, let lastName):
+            appleLogin(identityToken: identityToken, authorizationCode: authorizationCode, firstName: firstName, lastName: lastName)
+        case .appleLoginFailed(let message): uiState.error = message ?? "애플 로그인에 실패했습니다."
         case .logout: logout()
         case .clearError: uiState.error = nil
         }
@@ -60,6 +64,30 @@ final class LoginViewModel: MviViewModel {
         }
     }
 
+    /// ASAuthorization 시트는 화면 몫 — VM은 받은 identityToken(+최초 이름)을 서버 로그인으로만 잇는다
+    private func appleLogin(identityToken: String, authorizationCode: String?, firstName: String?, lastName: String?) {
+        if uiState.isLoading { return }
+
+        uiState.isLoading = true
+        uiState.error = nil
+        Task { @MainActor in
+            do {
+                _ = try await loginWithAppleUseCase.withIdentityToken(
+                    identityToken: identityToken,
+                    authorizationCode: authorizationCode,
+                    clientType: "IOS",
+                    firstName: firstName,
+                    lastName: lastName
+                )
+                uiState.isLoading = false
+                uiState.isLoggedIn = true
+            } catch {
+                uiState.isLoading = false
+                uiState.error = error.kotlinMessage(fallback: "애플 로그인에 실패했습니다.")
+            }
+        }
+    }
+
     private func logout() {
         Task { @MainActor in
             try? await logoutUseCase.invoke()
@@ -71,10 +99,12 @@ final class LoginViewModel: MviViewModel {
         isLoggedInUseCase: IsLoggedInUseCase = AppContainer.shared.isLoggedInUseCase,
         loginUseCase: LoginUseCase = AppContainer.shared.loginUseCase,
         loginWithGoogleUseCase: LoginWithGoogleUseCase = AppContainer.shared.loginWithGoogleUseCase,
+        loginWithAppleUseCase: LoginWithAppleUseCase = AppContainer.shared.loginWithAppleUseCase,
         logoutUseCase: LogoutUseCase = AppContainer.shared.logoutUseCase
     ) {
         self.loginUseCase = loginUseCase
         self.loginWithGoogleUseCase = loginWithGoogleUseCase
+        self.loginWithAppleUseCase = loginWithAppleUseCase
         self.logoutUseCase = logoutUseCase
         uiState = UiState(isLoggedIn: isLoggedInUseCase.invoke())
     }
@@ -90,6 +120,9 @@ final class LoginViewModel: MviViewModel {
         case googleLogin(idToken: String)
         /// GIDSignIn 자체가 실패한 경우 — 취소는 여기로 오지 않는다
         case googleLoginFailed(message: String?)
+        case appleLogin(identityToken: String, authorizationCode: String?, firstName: String?, lastName: String?)
+        /// ASAuthorization 자체가 실패한 경우 — 취소는 여기로 오지 않는다
+        case appleLoginFailed(message: String?)
         case logout
         case clearError
     }

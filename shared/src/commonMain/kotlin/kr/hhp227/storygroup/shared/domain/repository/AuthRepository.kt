@@ -19,6 +19,18 @@ interface AuthRepository {
     /** Desktop 루프백 PKCE 인가 코드로 로그인 — 코드 교환은 서버 몫 */
     suspend fun loginWithGoogleCode(code: String, codeVerifier: String, redirectUri: String): Result<AuthTokens>
 
+    /** iOS 네이티브 애플 로그인 — 이름은 최초 1회만(없으면 null) */
+    suspend fun loginWithApple(
+        identityToken: String,
+        authorizationCode: String?,
+        clientType: String,
+        firstName: String?,
+        lastName: String?
+    ): Result<AuthTokens>
+
+    /** Android·Desktop — 백엔드 콜백이 준 코드를 verifier와 함께 토큰으로 교환 */
+    suspend fun exchangeAppleCode(code: String, verifier: String): Result<AuthTokens>
+
     /** 서버 호출 성패와 무관하게 로컬 세션은 정리된다 */
     suspend fun logout(): Result<Unit>
 }

@@ -30,6 +30,23 @@ data class GoogleCodeLoginRequest(
     val redirectUri: String
 )
 
+// iOS 네이티브(clientType=IOS) — 이름은 최초 인가 1회만 온다
+@Serializable
+data class AppleLoginRequest(
+    val identityToken: String,
+    val authorizationCode: String?,
+    val clientType: String,
+    val firstName: String?,
+    val lastName: String?
+)
+
+// Android·Desktop — 백엔드 콜백이 준 60초 코드 + 앱이 만든 verifier
+@Serializable
+data class AppleExchangeRequest(
+    val code: String,
+    val verifier: String
+)
+
 @Serializable
 data class RefreshTokenRequest(
     val refreshToken: String

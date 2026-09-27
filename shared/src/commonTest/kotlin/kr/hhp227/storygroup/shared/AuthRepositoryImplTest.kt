@@ -1,6 +1,7 @@
 package kr.hhp227.storygroup.shared
 
 import kotlinx.coroutines.test.runTest
+import kr.hhp227.storygroup.shared.data.network.dto.AppleLoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.TokenResponse
 import kr.hhp227.storygroup.shared.data.network.dto.UserSummaryResponse
 import kr.hhp227.storygroup.shared.data.repository.AuthRepositoryImpl
@@ -21,6 +22,16 @@ class AuthRepositoryImplTest {
         override suspend fun loginWithGoogleCode(code: String, codeVerifier: String, redirectUri: String): TokenResponse {
             lastCode = Triple(code, codeVerifier, redirectUri)
             return TokenResponse(accessToken = "a-code", refreshToken = "r", expiresIn = 1800)
+        }
+        var lastApple: AppleLoginRequest? = null
+        var lastExchange: Pair<String, String>? = null
+        override suspend fun loginWithApple(request: AppleLoginRequest): TokenResponse {
+            lastApple = request
+            return TokenResponse(accessToken = "a-apple", refreshToken = "r", expiresIn = 1800)
+        }
+        override suspend fun exchangeAppleCode(code: String, verifier: String): TokenResponse {
+            lastExchange = code to verifier
+            return TokenResponse(accessToken = "a-exchange", refreshToken = "r", expiresIn = 1800)
         }
         override suspend fun logout(refreshToken: String) = Unit
         override fun clearAuthTokenCache() { cacheCleared++ }
@@ -54,5 +65,28 @@ class AuthRepositoryImplTest {
 
         assertEquals(Triple("c", "v", "http://127.0.0.1:1234"), remote.lastCode)
         assertEquals("a-code", storage.saved?.accessToken)
+    }
+
+    @Test
+    fun loginWithAppleSendsNameOnceAndSavesTokens() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val storage = FakeTokenStorage()
+
+        AuthRepositoryImpl(remote, storage).loginWithApple("idt", "code", "IOS", "길동", "홍")
+
+        assertEquals(AppleLoginRequest("idt", "code", "IOS", "길동", "홍"), remote.lastApple)
+        assertEquals("a-apple", storage.saved?.accessToken)
+        assertEquals(1, remote.cacheCleared)
+    }
+
+    @Test
+    fun exchangeAppleCodeSavesTokens() = runTest {
+        val remote = FakeAuthRemoteDataSource()
+        val storage = FakeTokenStorage()
+
+        AuthRepositoryImpl(remote, storage).exchangeAppleCode("c", "v")
+
+        assertEquals("c" to "v", remote.lastExchange)
+        assertEquals("a-exchange", storage.saved?.accessToken)
     }
 }

@@ -55,7 +55,7 @@ fun RegisterScreen(
     viewModel: RegisterViewModel = screenViewModel { RegisterViewModel(it.registerUseCase) },
     // 구글은 가입=로그인 — 성공하면 세션 VM의 isLoggedIn이 바뀌어 App이 바로 세션 화면으로 넘어간다
     loginViewModel: LoginViewModel = screenViewModel {
-        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.loginWithGoogleUseCase, it.logoutUseCase)
+        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.loginWithGoogleUseCase, it.loginWithAppleUseCase, it.logoutUseCase)
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -132,7 +132,7 @@ fun RegisterScreen(
             isLoading = uiState.isLoading
         )
         Spacer(Modifier.height(20.dp))
-        GoogleSignInSection(enabled = !isBusy, onAction = loginViewModel::onAction)
+        SocialSignInSection(enabled = !isBusy, onAction = loginViewModel::onAction)
         loginUiState.error?.let { error ->
             Text(error, style = SgTheme.typography.bodySmall, color = SgTheme.colors.rust)
             Spacer(Modifier.height(20.dp))

@@ -159,6 +159,8 @@
     <string name="login_google">Googleで続ける</string>
     <string name="login_or">または</string>
     <string name="login_google_error">Googleログインに失敗しました。</string>
+    <string name="login_apple">Appleで続ける</string>
+    <string name="login_apple_error">Appleでのログインに失敗しました。</string>
     <string name="register_title">一緒に楽しむ仲間のための場所</string>
     <string name="register_subtitle">StoryGroupに登録してグループを作りましょう。</string>
     <string name="register_in_progress">登録中...</string>

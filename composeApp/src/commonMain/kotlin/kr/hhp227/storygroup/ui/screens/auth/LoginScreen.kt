@@ -50,7 +50,7 @@ fun LoginScreen(
     justRegistered: Boolean,
     onNavigateToRegister: () -> Unit,
     viewModel: LoginViewModel = screenViewModel {
-        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.loginWithGoogleUseCase, it.logoutUseCase)
+        LoginViewModel(it.isLoggedInUseCase, it.loginUseCase, it.loginWithGoogleUseCase, it.loginWithAppleUseCase, it.logoutUseCase)
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -120,7 +120,7 @@ fun LoginScreen(
             isLoading = uiState.isLoading
         )
         Spacer(Modifier.height(20.dp))
-        GoogleSignInSection(enabled = !uiState.isLoading, onAction = onAction)
+        SocialSignInSection(enabled = !uiState.isLoading, onAction = onAction)
         Row {
             Text(stringResource(Res.string.login_no_account), style = SgTheme.typography.bodyMedium, color = SgTheme.colors.inkSoft)
             Spacer(Modifier.width(6.dp))

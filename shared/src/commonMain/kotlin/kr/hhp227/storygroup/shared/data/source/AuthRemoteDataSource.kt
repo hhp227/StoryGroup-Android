@@ -7,6 +7,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kr.hhp227.storygroup.shared.data.network.clearAuthTokenCache
+import kr.hhp227.storygroup.shared.data.network.dto.AppleExchangeRequest
+import kr.hhp227.storygroup.shared.data.network.dto.AppleLoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.GoogleCodeLoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.GoogleLoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.LoginRequest
@@ -21,6 +23,8 @@ interface AuthRemoteDataSource {
     suspend fun login(email: String, password: String): TokenResponse
     suspend fun loginWithGoogle(idToken: String): TokenResponse
     suspend fun loginWithGoogleCode(code: String, codeVerifier: String, redirectUri: String): TokenResponse
+    suspend fun loginWithApple(request: AppleLoginRequest): TokenResponse
+    suspend fun exchangeAppleCode(code: String, verifier: String): TokenResponse
     suspend fun logout(refreshToken: String)
 
     /** Bearer 플러그인의 loadTokens 캐시 초기화 — HttpClient 내부 상태 전용, 로그인/로그아웃 후 반드시 호출 */
@@ -50,6 +54,18 @@ class AuthRemoteDataSourceImpl(private val client: HttpClient) : AuthRemoteDataS
         client.post("/api/auth/google/code") {
             contentType(ContentType.Application.Json)
             setBody(GoogleCodeLoginRequest(code, codeVerifier, redirectUri))
+        }.body()
+
+    override suspend fun loginWithApple(request: AppleLoginRequest): TokenResponse =
+        client.post("/api/auth/apple") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+
+    override suspend fun exchangeAppleCode(code: String, verifier: String): TokenResponse =
+        client.post("/api/auth/apple/exchange") {
+            contentType(ContentType.Application.Json)
+            setBody(AppleExchangeRequest(code, verifier))
         }.body()
 
     override suspend fun logout(refreshToken: String) {

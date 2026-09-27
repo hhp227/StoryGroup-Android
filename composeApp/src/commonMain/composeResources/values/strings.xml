@@ -167,6 +167,8 @@
     <string name="login_google">Continue with Google</string>
     <string name="login_or">or</string>
     <string name="login_google_error">Google sign-in failed.</string>
+    <string name="login_apple">Continue with Apple</string>
+    <string name="login_apple_error">Apple sign-in failed.</string>
     <string name="register_title">A place for people who do things together</string>
     <string name="register_subtitle">Join StoryGroup and create your own group.</string>
     <string name="register_in_progress">Signing up...</string>

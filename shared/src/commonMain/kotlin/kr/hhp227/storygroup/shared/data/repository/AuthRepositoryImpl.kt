@@ -6,6 +6,7 @@ import kotlin.io.encoding.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kr.hhp227.storygroup.shared.data.network.dto.AppleLoginRequest
 import kr.hhp227.storygroup.shared.data.network.dto.ErrorResponse
 import kr.hhp227.storygroup.shared.data.network.dto.TokenResponse
 import kr.hhp227.storygroup.shared.data.network.dto.UserSummaryResponse
@@ -47,6 +48,21 @@ class AuthRepositoryImpl(
         runCatching {
             saveTokens(serverMessageOnFailure { authRemoteDataSource.loginWithGoogleCode(code, codeVerifier, redirectUri) })
         }
+
+    override suspend fun loginWithApple(
+        identityToken: String,
+        authorizationCode: String?,
+        clientType: String,
+        firstName: String?,
+        lastName: String?
+    ): Result<AuthTokens> = runCatching {
+        saveTokens(serverMessageOnFailure {
+            authRemoteDataSource.loginWithApple(AppleLoginRequest(identityToken, authorizationCode, clientType, firstName, lastName))
+        })
+    }
+
+    override suspend fun exchangeAppleCode(code: String, verifier: String): Result<AuthTokens> =
+        runCatching { saveTokens(serverMessageOnFailure { authRemoteDataSource.exchangeAppleCode(code, verifier) }) }
 
     private fun saveTokens(response: TokenResponse): AuthTokens =
         AuthTokens(response.accessToken, response.refreshToken).also {

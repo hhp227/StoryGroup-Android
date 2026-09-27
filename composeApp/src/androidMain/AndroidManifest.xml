@@ -37,6 +37,15 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 애플 로그인 복귀(설계 2026-09-27 §5.2) — 백엔드 콜백 페이지가 storygroup://auth/apple?code&nonce 로 연다 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="storygroup" android:host="auth" android:pathPrefix="/apple" />
+            </intent-filter>
         </activity>
         <service
             android:name="kr.hhp227.storygroup.ui.rtc.ScreenShareService"

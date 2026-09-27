@@ -22,6 +22,7 @@ import kr.hhp227.storygroup.push.StoryGroupMessagingService
 import kr.hhp227.storygroup.shared.di.AppContainer
 import kr.hhp227.storygroup.shared.data.storage.InMemoryTokenStorage
 import kr.hhp227.storygroup.shared.domain.model.PushPlatform
+import kr.hhp227.storygroup.ui.auth.AppleAuthRedirects
 import kr.hhp227.storygroup.ui.navigation.PushDeepLink
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
         val container = (application as StoryGroupApplication).container
         pendingDeepLink.value = intent?.extras?.toPushDeepLink()
+        AppleAuthRedirects.handle(intent?.data)
 
         setContent {
             App(
@@ -70,6 +72,8 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         pendingDeepLink.value = intent.extras?.toPushDeepLink()
+        // 애플 로그인 복귀 — 대기 중인 런처가 없으면(프로세스 재시작 등) 버려지고 사용자가 다시 누른다
+        AppleAuthRedirects.handle(intent.data)
     }
 }
 
