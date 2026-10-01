@@ -17,3 +17,8 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+# 설계 스펙·구현 계획은 로컬 전용(원격 제외, 2026-09-26)
+docs/
+# 릴리스 서명 키 — 원격 제외
+keystore.properties
+*.jks
