@@ -139,6 +139,16 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "kr.hhp227.storygroup"
             packageVersion = "1.0.0"
+
+            windows {
+                iconFile.set(project.file("icons/app_icon.ico"))
+            }
+            macOS {
+                iconFile.set(project.file("icons/app_icon.icns"))
+            }
+            linux {
+                iconFile.set(project.file("icons/app_icon.png"))
+            }
         }
     }
 }

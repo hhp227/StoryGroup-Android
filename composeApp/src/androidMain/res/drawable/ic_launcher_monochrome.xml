@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- StoryGroup 런처 단색(테마 아이콘): 꼬리 달린 말풍선 원 3개(1024 좌표).
+     어댑티브 아이콘은 108dp 중 가운데 72dp만 보이므로 2/3로 줄여 66dp 안전 영역 안에 둔다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.6667"
+        android:scaleY="0.6667"
+        android:translateY="-16.7">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M220 590a210 210 0 1 1 420 0a210 210 0 1 1 -420 0zM410 760Q346 818 248 836L318 700z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillAlpha="0.55"
+            android:pathData="M468 398a160 160 0 1 1 320 0a160 160 0 1 1 -320 0zM745 421L847 478Q777 508 712 498z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillAlpha="0.55"
+            android:pathData="M558 660a122 122 0 1 1 244 0a122 122 0 1 1 -244 0zM737 731L769 814Q714 797 680 759z" />
+    </group>
+</vector>

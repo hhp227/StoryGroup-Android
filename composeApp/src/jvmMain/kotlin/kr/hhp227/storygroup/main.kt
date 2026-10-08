@@ -17,6 +17,9 @@ import kr.hhp227.storygroup.shared.data.storage.FileKeyValueStorage
 import kr.hhp227.storygroup.ui.DesktopLaunchScreen
 import kr.hhp227.storygroup.ui.theme.StoryGroupTheme
 import kr.hhp227.storygroup.ui.util.JvmImageCompressor
+import org.jetbrains.compose.resources.painterResource
+import storygroup.composeapp.generated.resources.Res
+import storygroup.composeapp.generated.resources.app_icon
 
 fun main() {
     val container = AppContainer(
@@ -30,6 +33,7 @@ fun main() {
         Window(
             onCloseRequest = ::exitApplication,
             title = "StoryGroup",
+            icon = painterResource(Res.drawable.app_icon),
             state = rememberWindowState(width = 1100.dp, height = 800.dp)
         ) {
             // 데스크톱 스플래시(ConCafe App.kt 미러) — 잠깐 브랜드 화면을 보여준 뒤 본 화면으로 전환.
